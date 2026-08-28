@@ -90,6 +90,13 @@ main {
   border-color: var(--accent);
 }
 
+/* iOS Safari gives input[type=date] a hidden intrinsic
+   -webkit-min-logical-width (based on locale date format) that
+   overrides width:100% and pushes it past the card's edge. */
+.field-row input[type="date"] {
+  -webkit-min-logical-width: 1px;
+}
+
 button[type="submit"] {
   width: 100%;
   background: var(--accent);
