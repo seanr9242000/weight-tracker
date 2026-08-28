@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Weight Tracker</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Weight">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <h1>Weight Tracker</h1>
+  </header>
+
+  <main>
+    <section class="card">
+      <form id="entry-form">
+        <div class="field-row">
+          <label for="weight-input">Weight (lbs)</label>
+          <input id="weight-input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" required>
+        </div>
+        <div class="field-row">
+          <label for="date-input">Date</label>
+          <input id="date-input" type="date" required>
+        </div>
+        <button type="submit">Add Entry</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Trend</h2>
+      <canvas id="chart" width="600" height="240"></canvas>
+      <p id="chart-empty" class="empty-message">Add at least two entries to see a trend line.</p>
+    </section>
+
+    <section class="card">
+      <h2>History</h2>
+      <ul id="entry-list" class="entry-list"></ul>
+      <p id="list-empty" class="empty-message">No entries yet.</p>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
