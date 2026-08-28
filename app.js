@@ -112,12 +112,20 @@ function renderChart(entries) {
   });
 }
 
-document.getElementById("date-input").valueAsDate = new Date();
+const dateInput = document.getElementById("date-input");
+const dateDisplay = document.getElementById("date-display");
+
+function syncDateDisplay() {
+  dateDisplay.textContent = dateInput.value ? formatDate(dateInput.value) : "";
+}
+
+dateInput.valueAsDate = new Date();
+syncDateDisplay();
+dateInput.addEventListener("change", syncDateDisplay);
 
 document.getElementById("entry-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const weightInput = document.getElementById("weight-input");
-  const dateInput = document.getElementById("date-input");
 
   const weight = parseFloat(weightInput.value);
   const date = dateInput.value;
