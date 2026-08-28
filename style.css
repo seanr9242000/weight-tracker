@@ -79,10 +79,16 @@ main {
   border-radius: 10px;
   color: var(--text);
   font-size: 17px;
-  padding: 10px 12px;
+  padding: 0 12px;
+  height: 44px;
   width: 100%;
   min-width: 0;
   max-width: 100%;
+}
+
+.field-row input[type="date"]::-webkit-date-and-time-value {
+  padding: 0;
+  text-align: left;
 }
 
 .field-row input:focus {
