@@ -81,6 +81,8 @@ main {
   font-size: 17px;
   padding: 10px 12px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .field-row input:focus {
