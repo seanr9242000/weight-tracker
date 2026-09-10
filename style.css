@@ -98,6 +98,45 @@ main {
   gap: 16px;
 }
 
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+}
+
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* An author rule setting display:flex outranks the browser's default
+   [hidden]{display:none}, so without this the "inactive" tab panel
+   would still render. Higher specificity than .tab-panel restores it. */
+.tab-panel[hidden] {
+  display: none;
+}
+
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -230,6 +269,96 @@ button[type="submit"]:active {
     0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
+.run-type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.run-type-btn {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.run-type-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.timer-display {
+  text-align: center;
+  font-size: 56px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+
+.timer-btn {
+  width: 100%;
+  background: linear-gradient(180deg, rgba(17, 17, 17, 0.94), rgba(17, 17, 17, 0.82));
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+  color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.timer-btn.running {
+  background: linear-gradient(180deg, rgba(185, 28, 28, 0.94), rgba(185, 28, 28, 0.8));
+  border-color: rgba(185, 28, 28, 0.6);
+}
+
+.timer-btn:active {
+  transform: scale(0.98);
+}
+
+.run-save-form {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.run-save-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.run-save-actions button[type="submit"] {
+  flex: 2;
+}
+
+.secondary-btn {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 canvas {
   width: 100%;
   height: auto;
@@ -271,6 +400,27 @@ canvas {
 .entry-list .entry-weight {
   font-size: 18px;
   font-weight: 800;
+}
+
+.entry-list .entry-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.entry-list .entry-type-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+
+.entry-list .entry-meta {
+  color: var(--text-dim);
+  font-size: 13px;
 }
 
 .entry-list .delete-btn {

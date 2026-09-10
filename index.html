@@ -21,34 +21,78 @@
   </header>
 
   <main>
-    <section class="card glass-card">
-      <form id="entry-form">
-        <div class="field-row">
-          <label for="weight-input">Weight (lbs)</label>
-          <input id="weight-input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" required>
-        </div>
-        <div class="field-row">
-          <label for="date-input">Date</label>
-          <div class="date-field">
-            <div class="date-display" id="date-display"></div>
-            <input id="date-input" type="date" class="date-input-overlay" required>
+    <div class="tab-bar glass" role="tablist">
+      <button type="button" class="tab-btn" data-tab="weight-panel" role="tab">Weight</button>
+      <button type="button" class="tab-btn" data-tab="runs-panel" role="tab">Runs</button>
+    </div>
+
+    <div id="weight-panel" class="tab-panel">
+      <section class="card glass-card">
+        <form id="entry-form">
+          <div class="field-row">
+            <label for="weight-input">Weight (lbs)</label>
+            <input id="weight-input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" required>
           </div>
+          <div class="field-row">
+            <label for="date-input">Date</label>
+            <div class="date-field">
+              <div class="date-display" id="date-display"></div>
+              <input id="date-input" type="date" class="date-input-overlay" required>
+            </div>
+          </div>
+          <button type="submit">Add Entry</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Trend</h2>
+        <canvas id="chart" width="600" height="240"></canvas>
+        <p id="chart-empty" class="empty-message">Add at least two entries to see a trend line.</p>
+      </section>
+
+      <section class="card">
+        <h2>History</h2>
+        <ul id="entry-list" class="entry-list"></ul>
+        <p id="list-empty" class="empty-message">No entries yet.</p>
+      </section>
+    </div>
+
+    <div id="runs-panel" class="tab-panel" hidden>
+      <section class="card glass-card">
+        <div class="run-type-toggle" id="run-type-toggle">
+          <button type="button" class="run-type-btn active" data-type="run">Run</button>
+          <button type="button" class="run-type-btn" data-type="walk">Walk</button>
         </div>
-        <button type="submit">Add Entry</button>
-      </form>
-    </section>
 
-    <section class="card">
-      <h2>Trend</h2>
-      <canvas id="chart" width="600" height="240"></canvas>
-      <p id="chart-empty" class="empty-message">Add at least two entries to see a trend line.</p>
-    </section>
+        <div class="timer-display" id="timer-display">0:00</div>
 
-    <section class="card">
-      <h2>History</h2>
-      <ul id="entry-list" class="entry-list"></ul>
-      <p id="list-empty" class="empty-message">No entries yet.</p>
-    </section>
+        <button type="button" id="timer-btn" class="timer-btn">Start</button>
+
+        <form id="run-save-form" class="run-save-form" hidden>
+          <div class="field-row">
+            <label for="run-distance-input">Distance (mi)</label>
+            <input id="run-distance-input" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" required>
+          </div>
+          <div class="field-row">
+            <label for="run-date-input">Date</label>
+            <div class="date-field">
+              <div class="date-display" id="run-date-display"></div>
+              <input id="run-date-input" type="date" class="date-input-overlay" required>
+            </div>
+          </div>
+          <div class="run-save-actions">
+            <button type="button" id="run-discard-btn" class="secondary-btn">Discard</button>
+            <button type="submit">Save Run</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>History</h2>
+        <ul id="run-list" class="entry-list"></ul>
+        <p id="run-list-empty" class="empty-message">No runs yet.</p>
+      </section>
+    </div>
   </main>
 </div>
 
