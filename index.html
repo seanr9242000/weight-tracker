@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Weight">
 <link rel="apple-touch-icon" href="icon-192.png">
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -65,8 +66,12 @@
         </div>
 
         <div class="timer-display" id="timer-display">0:00</div>
+        <div class="live-distance" id="live-distance" hidden>0.00 mi</div>
 
         <button type="button" id="timer-btn" class="timer-btn">Start</button>
+        <p class="gps-status" id="gps-status"></p>
+
+        <div id="live-map" class="route-map" hidden></div>
 
         <form id="run-save-form" class="run-save-form" hidden>
           <div class="field-row">
@@ -94,8 +99,14 @@
       </section>
     </div>
   </main>
+
+  <div id="route-modal" class="route-modal glass" hidden>
+    <button type="button" id="route-modal-close" class="secondary-btn route-modal-close">Close</button>
+    <div id="route-modal-map" class="route-map route-modal-map"></div>
+  </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

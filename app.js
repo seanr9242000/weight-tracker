@@ -57,6 +57,26 @@ function formatPace(totalSeconds, miles) {
   return `${mins}:${String(secs).padStart(2, "0")} /mi`;
 }
 
+const EARTH_RADIUS_MILES = 3958.8;
+
+function haversineMiles(lat1, lon1, lat2, lon2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_MILES * Math.asin(Math.sqrt(a));
+}
+
+function totalPathDistance(path) {
+  let miles = 0;
+  for (let i = 1; i < path.length; i++) {
+    miles += haversineMiles(path[i - 1].lat, path[i - 1].lng, path[i].lat, path[i].lng);
+  }
+  return miles;
+}
+
 /* Binds a hidden native date input to a styled display div (see the
    date-field markup) and keeps the display text in sync. Used for
    both the weight entry date and the run entry date. */
@@ -203,10 +223,13 @@ for (const btn of tabButtons) {
 
 activateTab(localStorage.getItem(ACTIVE_TAB_KEY) === "runs-panel" ? "runs-panel" : "weight-panel");
 
-/* ---- Runs: timer + history ---- */
+/* ---- Runs: timer + GPS tracking + map + history ---- */
 
 const runTypeToggle = document.getElementById("run-type-toggle");
 const timerDisplay = document.getElementById("timer-display");
+const liveDistanceEl = document.getElementById("live-distance");
+const gpsStatusEl = document.getElementById("gps-status");
+const liveMapEl = document.getElementById("live-map");
 const timerBtn = document.getElementById("timer-btn");
 const runSaveForm = document.getElementById("run-save-form");
 const runDistanceInput = document.getElementById("run-distance-input");
@@ -216,6 +239,13 @@ const runDateField = bindDateField(runDateInput, document.getElementById("run-da
 let runType = "run";
 let timerInterval = null;
 let stoppedDurationSeconds = 0;
+let currentPath = [];
+let watchId = null;
+
+let liveMap = null;
+let livePolyline = null;
+let liveMarker = null;
+let liveMapCentered = false;
 
 function setRunType(type) {
   runType = type;
@@ -237,30 +267,146 @@ function readActiveRun() {
   }
 }
 
+function persistActiveRunPath() {
+  const active = readActiveRun();
+  if (!active) return;
+  active.path = currentPath;
+  localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify(active));
+}
+
 function tickTimerDisplay(startedAt) {
   const elapsed = Math.floor((Date.now() - startedAt) / 1000);
   timerDisplay.textContent = formatDuration(elapsed);
 }
 
-function enterRunningState(startedAt) {
+function ensureLiveMap() {
+  if (liveMap) return liveMap;
+  liveMap = L.map(liveMapEl, { zoomControl: false, attributionControl: true });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(liveMap);
+  livePolyline = L.polyline([], { color: "#111111", weight: 4 }).addTo(liveMap);
+  liveMarker = L.circleMarker([0, 0], {
+    radius: 6,
+    color: "#111111",
+    fillColor: "#ffffff",
+    fillOpacity: 1,
+    weight: 2,
+  });
+  return liveMap;
+}
+
+function updateLiveMapFromPath() {
+  liveDistanceEl.textContent = `${totalPathDistance(currentPath).toFixed(2)} mi`;
+  if (currentPath.length === 0) return;
+
+  const latLngs = currentPath.map((p) => [p.lat, p.lng]);
+  livePolyline.setLatLngs(latLngs);
+  const last = latLngs[latLngs.length - 1];
+  if (!liveMap.hasLayer(liveMarker)) liveMarker.addTo(liveMap);
+  liveMarker.setLatLng(last);
+
+  if (!liveMapCentered) {
+    liveMap.setView(last, 17);
+    liveMapCentered = true;
+  } else {
+    liveMap.panTo(last);
+  }
+}
+
+function setGpsStatus(text) {
+  gpsStatusEl.textContent = text;
+}
+
+function onGeoPosition(position) {
+  const { latitude, longitude } = position.coords;
+  currentPath.push({ lat: latitude, lng: longitude });
+  persistActiveRunPath();
+  updateLiveMapFromPath();
+  setGpsStatus("");
+}
+
+function onGeoError(err) {
+  if (err.code === err.PERMISSION_DENIED) {
+    setGpsStatus("Location access denied — enter distance manually when you stop.");
+  } else if (err.code === err.TIMEOUT) {
+    setGpsStatus("Waiting for GPS signal…");
+  } else {
+    setGpsStatus("Location unavailable — enter distance manually when you stop.");
+  }
+}
+
+function startGeolocationTracking() {
+  if (!("geolocation" in navigator)) {
+    setGpsStatus("Location isn't supported on this device — enter distance manually.");
+    return;
+  }
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = navigator.geolocation.watchPosition(onGeoPosition, onGeoError, {
+    enableHighAccuracy: true,
+    maximumAge: 5000,
+    timeout: 15000,
+  });
+}
+
+function stopGeolocationTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+}
+
+/* GPS tracking only runs reliably while this tab is open and the
+   screen is on - iOS suspends background web-app JS, so watchPosition
+   pauses during that gap. Re-arming the watch on visibilitychange
+   recovers as soon as the app is foregrounded again. */
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && timerInterval !== null) {
+    startGeolocationTracking();
+  }
+});
+
+function enterRunningState(startedAt, opts) {
+  const resuming = Boolean(opts && opts.resume);
+
   timerBtn.hidden = false;
   timerBtn.textContent = "Stop";
   timerBtn.classList.add("running");
   runTypeToggle.querySelectorAll("button").forEach((b) => (b.disabled = true));
   runSaveForm.hidden = true;
+
+  liveMapEl.hidden = false;
+  liveDistanceEl.hidden = false;
+  ensureLiveMap();
+  if (!resuming) {
+    livePolyline.setLatLngs([]);
+    if (liveMap.hasLayer(liveMarker)) liveMap.removeLayer(liveMarker);
+  }
+  liveMapCentered = false;
+  updateLiveMapFromPath();
+  setTimeout(() => liveMap.invalidateSize(), 50);
+
   tickTimerDisplay(startedAt);
   timerInterval = setInterval(() => tickTimerDisplay(startedAt), 1000);
+
+  startGeolocationTracking();
 }
 
 function enterIdleState() {
   clearInterval(timerInterval);
   timerInterval = null;
+  stopGeolocationTracking();
   timerBtn.hidden = false;
   timerBtn.textContent = "Start";
   timerBtn.classList.remove("running");
   runTypeToggle.querySelectorAll("button").forEach((b) => (b.disabled = false));
   timerDisplay.textContent = "0:00";
   runSaveForm.hidden = true;
+  liveMapEl.hidden = true;
+  liveDistanceEl.hidden = true;
+  setGpsStatus("");
+  currentPath = [];
 }
 
 function enterReviewState(durationSeconds) {
@@ -268,21 +414,27 @@ function enterReviewState(durationSeconds) {
   timerDisplay.textContent = formatDuration(durationSeconds);
   timerBtn.hidden = true;
   runSaveForm.hidden = false;
-  runDistanceInput.value = "";
+
+  const gpsDistance = totalPathDistance(currentPath);
+  runDistanceInput.value = currentPath.length > 1 ? gpsDistance.toFixed(2) : "";
+
   runDateField.reset();
   runDistanceInput.focus();
+  runDistanceInput.select();
 }
 
 timerBtn.addEventListener("click", () => {
   if (timerInterval === null && timerBtn.textContent === "Start") {
     const startedAt = Date.now();
-    localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify({ startedAt, type: runType }));
+    currentPath = [];
+    localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify({ startedAt, type: runType, path: [] }));
     enterRunningState(startedAt);
   } else {
     const active = readActiveRun();
     localStorage.removeItem(ACTIVE_RUN_KEY);
     clearInterval(timerInterval);
     timerInterval = null;
+    stopGeolocationTracking();
     timerBtn.textContent = "Start";
     timerBtn.classList.remove("running");
     const durationSeconds = active ? Math.floor((Date.now() - active.startedAt) / 1000) : 0;
@@ -300,18 +452,76 @@ runSaveForm.addEventListener("submit", (e) => {
   const date = runDateInput.value;
   if (!Number.isFinite(distance) || !date) return;
 
-  const runs = loadRuns();
-  runs.push({
+  const run = {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     date,
     type: runType,
     durationSeconds: stoppedDurationSeconds,
     distanceMiles: distance,
-  });
+  };
+  if (currentPath.length > 1) {
+    run.path = currentPath.slice();
+  }
+
+  const runs = loadRuns();
+  runs.push(run);
   saveRuns(runs);
 
   enterIdleState();
   renderRunList();
+});
+
+/* ---- Route viewer modal ---- */
+
+let routeModalMap = null;
+let routeModalPolyline = null;
+let routeModalMarkers = [];
+
+function ensureRouteModalMap() {
+  if (routeModalMap) return routeModalMap;
+  routeModalMap = L.map("route-modal-map", { zoomControl: true, attributionControl: true });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(routeModalMap);
+  routeModalPolyline = L.polyline([], { color: "#111111", weight: 4 }).addTo(routeModalMap);
+  return routeModalMap;
+}
+
+function openRouteModal(path) {
+  document.getElementById("route-modal").hidden = false;
+  const map = ensureRouteModalMap();
+
+  routeModalMarkers.forEach((m) => map.removeLayer(m));
+  routeModalMarkers = [];
+
+  const latLngs = path.map((p) => [p.lat, p.lng]);
+  routeModalPolyline.setLatLngs(latLngs);
+
+  const startMarker = L.circleMarker(latLngs[0], {
+    radius: 7,
+    color: "#16a34a",
+    fillColor: "#16a34a",
+    fillOpacity: 1,
+    weight: 2,
+  }).addTo(map);
+  const endMarker = L.circleMarker(latLngs[latLngs.length - 1], {
+    radius: 7,
+    color: "#b91c1c",
+    fillColor: "#b91c1c",
+    fillOpacity: 1,
+    weight: 2,
+  }).addTo(map);
+  routeModalMarkers.push(startMarker, endMarker);
+
+  setTimeout(() => {
+    map.invalidateSize();
+    map.fitBounds(routeModalPolyline.getBounds(), { padding: [24, 24] });
+  }, 50);
+}
+
+document.getElementById("route-modal-close").addEventListener("click", () => {
+  document.getElementById("route-modal").hidden = true;
 });
 
 function renderRunList() {
@@ -344,6 +554,17 @@ function renderRunList() {
     metaSpan.textContent = `${formatDate(run.date)} · ${formatPace(run.durationSeconds, run.distanceMiles)}`;
     left.appendChild(metaSpan);
 
+    const actions = document.createElement("div");
+    actions.className = "entry-actions";
+
+    if (run.path && run.path.length > 1) {
+      const routeBtn = document.createElement("button");
+      routeBtn.className = "route-btn";
+      routeBtn.textContent = "Route";
+      routeBtn.addEventListener("click", () => openRouteModal(run.path));
+      actions.appendChild(routeBtn);
+    }
+
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "delete-btn";
     deleteBtn.textContent = "Delete";
@@ -352,21 +573,24 @@ function renderRunList() {
       saveRuns(remaining);
       renderRunList();
     });
+    actions.appendChild(deleteBtn);
 
     li.appendChild(left);
-    li.appendChild(deleteBtn);
+    li.appendChild(actions);
     list.appendChild(li);
   }
 }
 
 /* Resume a run that was in progress when the app was last closed or
    backgrounded. The elapsed time is derived from the stored start
-   timestamp, not accumulated ticks, so it stays correct across any
-   gap while the app was suspended. */
+   timestamp (not accumulated ticks) and the GPS path from what was
+   already persisted, so both stay correct across any gap while the
+   app was suspended. */
 const activeRunOnLoad = readActiveRun();
 if (activeRunOnLoad) {
   setRunType(activeRunOnLoad.type);
-  enterRunningState(activeRunOnLoad.startedAt);
+  currentPath = activeRunOnLoad.path || [];
+  enterRunningState(activeRunOnLoad.startedAt, { resume: true });
 } else {
   enterIdleState();
 }
