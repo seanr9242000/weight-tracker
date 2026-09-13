@@ -337,6 +337,13 @@ button[type="submit"]:active {
   border-radius: 24px;
 }
 
+/* Same fix as .tab-panel[hidden]: an author display:flex rule
+   overrides the browser's default [hidden]{display:none}, so without
+   this override the modal renders even while hidden. */
+.route-modal[hidden] {
+  display: none;
+}
+
 .route-modal-close {
   align-self: flex-end;
   width: auto;
