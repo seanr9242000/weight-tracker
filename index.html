@@ -22,11 +22,6 @@
   </header>
 
   <main>
-    <div class="tab-bar glass" role="tablist">
-      <button type="button" class="tab-btn" data-tab="weight-panel" role="tab">Weight</button>
-      <button type="button" class="tab-btn" data-tab="runs-panel" role="tab">Runs</button>
-    </div>
-
     <div id="weight-panel" class="tab-panel">
       <section class="card glass-card">
         <form id="entry-form">
@@ -99,6 +94,27 @@
       </section>
     </div>
   </main>
+
+  <nav class="bottom-nav glass" role="tablist">
+    <button type="button" class="nav-btn active" data-tab="weight-panel" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="9" width="4" height="6" rx="1"></rect>
+        <rect x="18" y="9" width="4" height="6" rx="1"></rect>
+        <line x1="6" y1="12" x2="18" y2="12"></line>
+      </svg>
+      <span>Weight</span>
+    </button>
+    <button type="button" class="nav-btn" data-tab="runs-panel" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="13" r="8"></circle>
+        <line x1="12" y1="13" x2="12" y2="9"></line>
+        <line x1="12" y1="13" x2="15" y2="14"></line>
+        <line x1="9" y1="2" x2="15" y2="2"></line>
+        <line x1="12" y1="2" x2="12" y2="5"></line>
+      </svg>
+      <span>Runs</span>
+    </button>
+  </nav>
 
   <div id="route-modal" class="route-modal glass" hidden>
     <button type="button" id="route-modal-close" class="secondary-btn route-modal-close">Close</button>

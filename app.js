@@ -206,7 +206,7 @@ document.getElementById("entry-form").addEventListener("submit", (e) => {
 
 /* ---- Tabs ---- */
 
-const tabButtons = document.querySelectorAll(".tab-btn");
+const tabButtons = document.querySelectorAll(".nav-btn");
 
 function activateTab(tabId) {
   for (const btn of tabButtons) {
