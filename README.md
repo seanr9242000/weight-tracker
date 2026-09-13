@@ -1,9 +1,10 @@
-# Weight Tracker
+# Weight & Save
 
-A minimal, installable weight-tracking PWA. Log a weight entry with a
-date, see your history, and see a simple trend line. All data is
-stored locally on your device (`localStorage`) — nothing is sent to a
-server, and it works offline once installed.
+A minimal, installable PWA for tracking weight and runs/walks. Log a
+weight entry with a date, see your history and trend line; track a
+run or walk with a live timer, GPS distance, and route map. All data
+is stored locally on your device (`localStorage`) — nothing is sent
+to a server, and the Weight tab works offline once installed.
 
 ## Installing on iPhone
 
@@ -11,8 +12,8 @@ server, and it works offline once installed.
    iOS install support).
 2. Tap the **Share** icon (square with an arrow) in the toolbar.
 3. Scroll down and tap **Add to Home Screen**.
-4. Tap **Add**. A "Weight" icon appears on your home screen and opens
-   full-screen like a normal app.
+4. Tap **Add**. A "Weight & Save" icon appears on your home screen and
+   opens full-screen like a normal app.
 
 ## Local development
 

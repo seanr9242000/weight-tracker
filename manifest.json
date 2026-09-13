@@ -1,6 +1,6 @@
 {
-  "name": "Weight Tracker",
-  "short_name": "Weight",
+  "name": "Weight & Save",
+  "short_name": "W & Save",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
