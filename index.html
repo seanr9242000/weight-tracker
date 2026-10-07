@@ -51,6 +51,23 @@
         <ul id="entry-list" class="entry-list"></ul>
         <p id="list-empty" class="empty-message">No entries yet.</p>
       </section>
+
+      <section class="card">
+        <h2>Progress Photos</h2>
+        <div class="photo-actions">
+          <div class="field-row photo-date-row">
+            <label for="photo-date-input">Date</label>
+            <div class="date-field">
+              <div class="date-display" id="photo-date-display"></div>
+              <input id="photo-date-input" type="date" class="date-input-overlay" required>
+            </div>
+          </div>
+          <label for="photo-file-input" class="secondary-btn photo-add-btn">Add Photo</label>
+          <input id="photo-file-input" type="file" accept="image/*" class="photo-file-input" hidden>
+        </div>
+        <div id="photo-grid" class="photo-grid"></div>
+        <p id="photo-grid-empty" class="empty-message">No photos yet.</p>
+      </section>
     </div>
 
     <div id="runs-panel" class="tab-panel" hidden>
@@ -124,6 +141,15 @@
   <div id="route-modal" class="route-modal glass" hidden>
     <button type="button" id="route-modal-close" class="secondary-btn route-modal-close">Close</button>
     <div id="route-modal-map" class="route-map route-modal-map"></div>
+  </div>
+
+  <div id="photo-modal" class="route-modal glass" hidden>
+    <button type="button" id="photo-modal-close" class="secondary-btn route-modal-close">Close</button>
+    <img id="photo-modal-img" class="photo-modal-img" alt="Progress photo">
+    <div class="photo-modal-footer">
+      <span id="photo-modal-date"></span>
+      <button type="button" id="photo-modal-delete" class="delete-btn">Delete</button>
+    </div>
   </div>
 </div>
 

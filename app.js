@@ -2,6 +2,8 @@ const STORAGE_KEY = "weight-tracker-entries";
 const RUNS_STORAGE_KEY = "weight-tracker-runs";
 const ACTIVE_RUN_KEY = "weight-tracker-active-run";
 const ACTIVE_TAB_KEY = "weight-tracker-active-tab";
+const PHOTO_DB_NAME = "weight-tracker-photos";
+const PHOTO_STORE = "photos";
 
 function loadEntries() {
   try {
@@ -27,6 +29,81 @@ function loadRuns() {
 
 function saveRuns(runs) {
   localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
+}
+
+/* Photos are stored in IndexedDB rather than localStorage - images are
+   far too large for localStorage's ~5-10MB quota, and IndexedDB is
+   built for binary blobs. */
+function openPhotoDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(PHOTO_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(PHOTO_STORE, { keyPath: "id" });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function addPhoto(record) {
+  const db = await openPhotoDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, "readwrite");
+    tx.objectStore(PHOTO_STORE).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getAllPhotos() {
+  const db = await openPhotoDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(PHOTO_STORE, "readonly").objectStore(PHOTO_STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deletePhotoRecord(id) {
+  const db = await openPhotoDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PHOTO_STORE, "readwrite");
+    tx.objectStore(PHOTO_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* Downscales and re-encodes a picked photo before storing it, so a
+   multi-MB phone photo doesn't balloon storage - 1280px/JPEG q0.82
+   keeps a typical photo to a few hundred KB while staying sharp
+   enough for a progress-photo thumbnail/viewer. */
+function resizeImageFile(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("toBlob failed"))), "image/jpeg", quality);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("image load failed"));
+    };
+    img.src = url;
+  });
 }
 
 function sortedByDate(entries) {
@@ -202,6 +279,85 @@ document.getElementById("entry-form").addEventListener("submit", (e) => {
   weightInput.value = "";
   weightInput.focus();
   render();
+});
+
+/* ---- Progress photos ---- */
+
+const photoDateInput = document.getElementById("photo-date-input");
+const photoDateField = bindDateField(photoDateInput, document.getElementById("photo-date-display"));
+const photoFileInput = document.getElementById("photo-file-input");
+const photoGrid = document.getElementById("photo-grid");
+const photoGridEmpty = document.getElementById("photo-grid-empty");
+const photoModal = document.getElementById("photo-modal");
+const photoModalImg = document.getElementById("photo-modal-img");
+const photoModalDate = document.getElementById("photo-modal-date");
+const photoModalDeleteBtn = document.getElementById("photo-modal-delete");
+
+let photoObjectUrls = [];
+
+function revokePhotoObjectUrls() {
+  photoObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  photoObjectUrls = [];
+}
+
+async function renderPhotoGrid() {
+  const photos = await getAllPhotos();
+  const newestFirst = sortedByDate(photos).reverse();
+
+  revokePhotoObjectUrls();
+  photoGrid.innerHTML = "";
+  photoGridEmpty.style.display = newestFirst.length === 0 ? "block" : "none";
+
+  for (const photo of newestFirst) {
+    const url = URL.createObjectURL(photo.blob);
+    photoObjectUrls.push(url);
+
+    const thumb = document.createElement("button");
+    thumb.type = "button";
+    thumb.className = "photo-thumb";
+
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = `Progress photo from ${formatDate(photo.date)}`;
+    thumb.appendChild(img);
+
+    thumb.addEventListener("click", () => openPhotoModal(photo, url));
+    photoGrid.appendChild(thumb);
+  }
+}
+
+function openPhotoModal(photo, url) {
+  photoModalImg.src = url;
+  photoModalDate.textContent = formatDate(photo.date);
+  photoModal.hidden = false;
+
+  photoModalDeleteBtn.onclick = async () => {
+    await deletePhotoRecord(photo.id);
+    photoModal.hidden = true;
+    renderPhotoGrid();
+  };
+}
+
+document.getElementById("photo-modal-close").addEventListener("click", () => {
+  photoModal.hidden = true;
+});
+
+photoFileInput.addEventListener("change", async () => {
+  const file = photoFileInput.files[0];
+  photoFileInput.value = "";
+  if (!file) return;
+
+  const date = photoDateInput.value || new Date().toISOString().slice(0, 10);
+  const blob = await resizeImageFile(file, 1280, 0.82);
+
+  await addPhoto({
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    date,
+    blob,
+  });
+
+  photoDateField.reset();
+  renderPhotoGrid();
 });
 
 /* ---- Tabs ---- */
@@ -597,6 +753,7 @@ if (activeRunOnLoad) {
 
 render();
 renderRunList();
+renderPhotoGrid();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
