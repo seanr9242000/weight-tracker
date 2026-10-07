@@ -371,7 +371,15 @@ button[type="submit"]:active {
 }
 
 .photo-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
   margin-bottom: 16px;
+}
+
+.photo-date-row {
+  flex: 1;
+  margin-bottom: 0;
 }
 
 .photo-add-btn {
@@ -381,7 +389,7 @@ button[type="submit"]:active {
   text-align: center;
   height: 44px;
   padding: 0 16px;
-  width: 100%;
+  white-space: nowrap;
 }
 
 .photo-grid {

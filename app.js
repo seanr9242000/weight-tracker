@@ -294,6 +294,8 @@ document.getElementById("entry-form").addEventListener("submit", (e) => {
 
 /* ---- Progress photos ---- */
 
+const photoDateInput = document.getElementById("photo-date-input");
+const photoDateField = bindDateField(photoDateInput, document.getElementById("photo-date-display"));
 const photoFileInput = document.getElementById("photo-file-input");
 const photoGrid = document.getElementById("photo-grid");
 const photoGridEmpty = document.getElementById("photo-grid-empty");
@@ -356,13 +358,16 @@ photoFileInput.addEventListener("change", async () => {
   photoFileInput.value = "";
   if (!file) return;
 
+  const date = photoDateInput.value || todayLocalDateString();
   const blob = await resizeImageFile(file, 1280, 0.82);
 
   await addPhoto({
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    date: todayLocalDateString(),
+    date,
     blob,
   });
+
+  photoDateField.reset();
 
   renderPhotoGrid();
 });

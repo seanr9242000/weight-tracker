@@ -55,6 +55,13 @@
       <section class="card">
         <h2>Progress Photos</h2>
         <div class="photo-actions">
+          <div class="field-row photo-date-row">
+            <label for="photo-date-input">Date</label>
+            <div class="date-field">
+              <div class="date-display" id="photo-date-display"></div>
+              <input id="photo-date-input" type="date" class="date-input-overlay" required>
+            </div>
+          </div>
           <label for="photo-file-input" class="secondary-btn photo-add-btn">Add Photo</label>
           <input id="photo-file-input" type="file" accept="image/*" class="photo-file-input" hidden>
         </div>
@@ -115,17 +122,35 @@
       <span>Weight</span>
     </button>
     <button type="button" class="nav-btn" data-tab="runs-panel" role="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="15.4" cy="3.1" r="1.1" fill="currentColor" stroke="none"></circle>
-        <line x1="15.3" y1="5" x2="12" y2="10.3" stroke-width="1.8"></line>
-        <line x1="14.2" y1="6.5" x2="16.2" y2="5.2" stroke-width="1"></line>
-        <line x1="16.2" y1="5.2" x2="18.5" y2="6.3" stroke-width="0.9"></line>
-        <line x1="13" y1="7.3" x2="11" y2="9" stroke-width="1"></line>
-        <line x1="11" y1="9" x2="8.3" y2="8.3" stroke-width="0.9"></line>
-        <line x1="12.6" y1="10.6" x2="16.8" y2="10.8" stroke-width="1.5"></line>
-        <line x1="16.8" y1="10.8" x2="15.8" y2="16.8" stroke-width="1.15"></line>
-        <line x1="11.6" y1="10.9" x2="7" y2="13.2" stroke-width="1.5"></line>
-        <line x1="7" y1="13.2" x2="8.3" y2="19" stroke-width="1.15"></line>
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="15.4" cy="3.1" r="1.1"></circle>
+        <polygon points="14.54,4.52 11.24,9.82 12.76,10.78 16.06,5.48"></polygon>
+        <circle cx="15.3" cy="5" r="0.9"></circle>
+        <circle cx="12" cy="10.3" r="0.9"></circle>
+        <polygon points="14.47,6.92 16.47,5.62 15.93,4.78 13.93,6.08"></polygon>
+        <circle cx="14.2" cy="6.5" r="0.5"></circle>
+        <circle cx="16.2" cy="5.2" r="0.5"></circle>
+        <polygon points="16.01,5.61 18.31,6.71 18.69,5.89 16.39,4.79"></polygon>
+        <circle cx="16.2" cy="5.2" r="0.45"></circle>
+        <circle cx="18.5" cy="6.3" r="0.45"></circle>
+        <polygon points="12.68,6.92 10.68,8.62 11.32,9.38 13.32,7.68"></polygon>
+        <circle cx="13" cy="7.3" r="0.5"></circle>
+        <circle cx="11" cy="9" r="0.5"></circle>
+        <polygon points="11.11,8.56 8.41,7.86 8.19,8.74 10.89,9.44"></polygon>
+        <circle cx="11" cy="9" r="0.45"></circle>
+        <circle cx="8.3" cy="8.3" r="0.45"></circle>
+        <polygon points="12.56,11.35 16.76,11.55 16.84,10.05 12.64,9.85"></polygon>
+        <circle cx="12.6" cy="10.6" r="0.75"></circle>
+        <circle cx="16.8" cy="10.8" r="0.75"></circle>
+        <polygon points="16.23,10.71 15.23,16.71 16.37,16.89 17.37,10.89"></polygon>
+        <circle cx="16.8" cy="10.8" r="0.57"></circle>
+        <circle cx="15.8" cy="16.8" r="0.57"></circle>
+        <polygon points="11.26,10.23 6.66,12.53 7.34,13.87 11.94,11.57"></polygon>
+        <circle cx="11.6" cy="10.9" r="0.75"></circle>
+        <circle cx="7" cy="13.2" r="0.75"></circle>
+        <polygon points="6.44,13.33 7.74,19.13 8.86,18.87 7.56,13.07"></polygon>
+        <circle cx="7" cy="13.2" r="0.57"></circle>
+        <circle cx="8.3" cy="19" r="0.57"></circle>
       </svg>
       <span>Runs</span>
     </button>
