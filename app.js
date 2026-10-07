@@ -116,6 +116,17 @@ function formatDate(dateStr) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/* input.valueAsDate interprets the Date object in UTC, not local time,
+   so assigning `new Date()` to it can show tomorrow's date in the
+   evening for anyone west of UTC. Building the "YYYY-MM-DD" string
+   from local getters and setting .value directly avoids that. */
+function todayLocalDateString() {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 function formatDuration(totalSeconds) {
   const hrs = Math.floor(totalSeconds / 3600);
   const mins = Math.floor((totalSeconds % 3600) / 60);
@@ -161,10 +172,10 @@ function bindDateField(inputEl, displayEl) {
   function sync() {
     displayEl.textContent = inputEl.value ? formatDate(inputEl.value) : "";
   }
-  inputEl.valueAsDate = new Date();
+  inputEl.value = todayLocalDateString();
   sync();
   inputEl.addEventListener("change", sync);
-  return { reset: () => { inputEl.valueAsDate = new Date(); sync(); } };
+  return { reset: () => { inputEl.value = todayLocalDateString(); sync(); } };
 }
 
 function render() {
@@ -283,8 +294,6 @@ document.getElementById("entry-form").addEventListener("submit", (e) => {
 
 /* ---- Progress photos ---- */
 
-const photoDateInput = document.getElementById("photo-date-input");
-const photoDateField = bindDateField(photoDateInput, document.getElementById("photo-date-display"));
 const photoFileInput = document.getElementById("photo-file-input");
 const photoGrid = document.getElementById("photo-grid");
 const photoGridEmpty = document.getElementById("photo-grid-empty");
@@ -347,16 +356,14 @@ photoFileInput.addEventListener("change", async () => {
   photoFileInput.value = "";
   if (!file) return;
 
-  const date = photoDateInput.value || new Date().toISOString().slice(0, 10);
   const blob = await resizeImageFile(file, 1280, 0.82);
 
   await addPhoto({
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    date,
+    date: todayLocalDateString(),
     blob,
   });
 
-  photoDateField.reset();
   renderPhotoGrid();
 });
 
