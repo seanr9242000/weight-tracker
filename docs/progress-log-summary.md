@@ -61,3 +61,11 @@ trigger tips, progress stats). Schedule/taper logic sits in a
 DOM-free `coach-core.js` so a server-side ping job can reuse it.
 Tested in headless Edge (49 logic checks + a full UI click-through).
 Push reminders are next and need a Supabase project.
+
+Same session: added a project skill, `.claude/skills/phone-preview/`,
+that serves the app, loads every tab in headless Edge at true iPhone
+width (via a 390px iframe — headless Edge won't size a window below
+~500px), reports JS errors, and screenshots each tab in one command.
+Its first run caught an empty Progress card on the Habits tab before
+a taper is started; that card and the "Change start date" link are
+now hidden until a start date exists.

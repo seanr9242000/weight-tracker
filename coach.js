@@ -330,6 +330,8 @@ function renderHabits() {
 
   document.getElementById("taper-setup").hidden = Boolean(start);
   document.getElementById("taper-today").hidden = !start;
+  document.getElementById("habit-progress").hidden = !start;
+  document.getElementById("taper-restart-btn").hidden = !start;
   document.getElementById("doctor-note").hidden = localStorage.getItem(DOCTOR_NOTE_KEY) === "1";
   renderTaperPlan(start, today);
 

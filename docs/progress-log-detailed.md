@@ -77,3 +77,6 @@ Session total: ~20 min, 5 commits.
 | Time  | Change                                                  | Elapsed |
 |-------|------------------------------------------------------------|---------|
 | 23:48 | Add Today checklist and Habits (Zyn taper) tabs              | —      |
+| 23:52 | Add phone-preview project skill; hide empty taper cards before start | ~30 min |
+
+Session total: ~35 min, 2 commits.
