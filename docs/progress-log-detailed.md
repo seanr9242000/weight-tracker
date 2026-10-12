@@ -77,6 +77,7 @@ Session total: ~20 min, 5 commits.
 | Time  | Change                                                  | Elapsed |
 |-------|------------------------------------------------------------|---------|
 | 23:48 | Add Today checklist and Habits (Zyn taper) tabs              | —      |
-| 23:52 | Add phone-preview project skill; hide empty taper cards before start | ~30 min |
+| 23:52 | Add phone-preview project skill; hide empty taper cards before start | 4 min |
+| 00:17 (10-12) | Add push reminders: Supabase ping queue, send-pings function, Reminders card | 25 min |
 
-Session total: ~35 min, 2 commits.
+Session total: ~29 min between commits (planning interview + Phase 1 build preceded the first), 3 commits. Ran past midnight into 2026-10-12.

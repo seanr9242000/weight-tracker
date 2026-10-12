@@ -69,3 +69,23 @@ width (via a 390px iframe — headless Edge won't size a window below
 Its first run caught an empty Progress card on the Habits tab before
 a taper is started; that card and the "Change start date" link are
 now hidden until a start date exists.
+
+## 2026-10-12 — Push reminders go live (Phase 1 complete)
+Sean set up a free Supabase project, and the app now sends real iPhone
+push notifications. Every checklist item pings at its time and
+repeats every 15 minutes for up to an hour (the point it shows as
+Missed) until it's checked off or skipped, with nothing after 10:45
+PM. The app stays the source of truth: whenever the checklist
+changes, it writes the next 7 days of items and their status to
+Supabase, and a `send-pings` Edge Function, run by `pg_cron` every
+minute, sends whatever is due. Several items due in the same minute
+are combined into one notification. Sign-in is anonymous (one hidden
+account per installed app), because magic links on iOS open in Safari
+instead of the installed app. RLS keeps the rows private. The schema,
+function, and cron job live in `supabase/`; secrets are held only in
+Supabase (Vault and function secrets) and the Supabase CLI is
+installed at `~/bin/supabase.exe` for redeploys. Also fixed a
+recurring CSS bug for good: a global `[hidden] { display: none
+!important }`, after finding that the previous session's "hide Change
+start date" fix had been silently overridden by `.link-btn`'s
+`display: block`.

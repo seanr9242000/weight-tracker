@@ -244,6 +244,9 @@ function renderToday() {
 
   document.getElementById("edit-day-btn").textContent = editingDay ? "Done" : "Edit day";
   document.getElementById("edit-day-tools").hidden = !editingDay;
+
+  // reminders.js loads after this file; it skips the sync if nothing changed.
+  if (typeof schedulePingSync === "function") schedulePingSync();
 }
 
 document.getElementById("edit-day-btn").addEventListener("click", () => {

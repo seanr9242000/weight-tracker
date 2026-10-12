@@ -1,0 +1,6 @@
+# Only what the hosted project needs from this repo: send-pings is
+# called by pg_cron with an x-cron-secret header, not a user JWT.
+project_id = "weight-tracker"
+
+[functions.send-pings]
+verify_jwt = false

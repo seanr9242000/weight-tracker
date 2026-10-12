@@ -52,6 +52,15 @@
         <ul id="checklist" class="checklist"></ul>
         <p id="checklist-empty" class="empty-message">Nothing scheduled today.</p>
       </section>
+
+      <section class="card" id="reminders-card">
+        <div class="card-head">
+          <h2>Reminders</h2>
+          <button type="button" id="reminders-btn" class="pill-btn dark" hidden>Turn on</button>
+        </div>
+        <p class="hint" id="reminders-status"></p>
+        <button type="button" id="reminders-test-btn" class="link-btn" hidden>Send a test ping</button>
+      </section>
     </div>
 
     <div id="habits-panel" class="tab-panel" hidden>
@@ -278,5 +287,7 @@
 <script src="coach-core.js"></script>
 <script src="app.js"></script>
 <script src="coach.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
+<script defer src="reminders.js"></script>
 </body>
 </html>

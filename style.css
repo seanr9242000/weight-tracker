@@ -144,6 +144,13 @@ main {
   gap: 16px;
 }
 
+/* Any author display rule (e.g. .link-btn's display:block) outranks the
+   browser's default [hidden]{display:none}. This has bitten three
+   times, so make `hidden` always win. */
+[hidden] {
+  display: none !important;
+}
+
 /* An author rule setting display:flex outranks the browser's default
    [hidden]{display:none}, so without this the "inactive" tab panel
    would still render. Higher specificity than .tab-panel restores it. */
