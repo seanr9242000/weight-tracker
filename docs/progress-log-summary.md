@@ -89,3 +89,7 @@ recurring CSS bug for good: a global `[hidden] { display: none
 !important }`, after finding that the previous session's "hide Change
 start date" fix had been silently overridden by `.link-btn`'s
 `display: block`.
+
+Confirmed on Sean's iPhone the same day: turning reminders on and
+sending a test ping delivered a real notification to the installed
+app.
