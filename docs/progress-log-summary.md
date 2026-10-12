@@ -46,3 +46,18 @@ clear/compact — any fresh session working in this repo reads the logs
 first instead of needing the old conversation. Also established: get
 explicit approval before every commit and push to this repo, going
 forward (no more autocommitting).
+
+## 2026-10-11 — Turning it into a personal coach (Phase 1, local)
+After a long one-question-at-a-time interview (goals, schedule,
+nicotine, food, training, basketball role), planned a phased rebuild
+of the app into an accountability coach: daily schedule + pings + Zyn
+taper first, then food tracking, then a basketball-focused training
+program with an AI coach (Claude, $5/month hard cap), then weekly
+insights. Shipped the local part of Phase 1: a **Today** tab (daily
+checklist from a real weekly template, skip/miss reasons, per-day
+edits, weigh-in that writes to the weight log, streak and sleep) and a
+**Habits** tab (6-week Zyn taper, pouch counter, craving log with
+trigger tips, progress stats). Schedule/taper logic sits in a
+DOM-free `coach-core.js` so a server-side ping job can reuse it.
+Tested in headless Edge (49 logic checks + a full UI click-through).
+Push reminders are next and need a Supabase project.

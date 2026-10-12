@@ -69,3 +69,11 @@ Session total: ~20 min, 5 commits.
 | Time  | Change                                                  | Elapsed |
 |-------|------------------------------------------------------------|---------|
 | 23:58 | Set up detailed + summary progress logs, CLAUDE.md workflow rules | — |
+
+---
+
+## Session: 2026-10-11 — Coach Phase 1: Today checklist + Zyn taper
+
+| Time  | Change                                                  | Elapsed |
+|-------|------------------------------------------------------------|---------|
+| 23:48 | Add Today checklist and Habits (Zyn taper) tabs              | —      |

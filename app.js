@@ -376,12 +376,15 @@ photoFileInput.addEventListener("change", async () => {
 
 const tabButtons = document.querySelectorAll(".nav-btn");
 
+const tabIds = [...tabButtons].map((btn) => btn.dataset.tab);
+
 function activateTab(tabId) {
   for (const btn of tabButtons) {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
   }
-  document.getElementById("weight-panel").hidden = tabId !== "weight-panel";
-  document.getElementById("runs-panel").hidden = tabId !== "runs-panel";
+  for (const id of tabIds) {
+    document.getElementById(id).hidden = id !== tabId;
+  }
   localStorage.setItem(ACTIVE_TAB_KEY, tabId);
 }
 
@@ -389,7 +392,8 @@ for (const btn of tabButtons) {
   btn.addEventListener("click", () => activateTab(btn.dataset.tab));
 }
 
-activateTab(localStorage.getItem(ACTIVE_TAB_KEY) === "runs-panel" ? "runs-panel" : "weight-panel");
+const savedTab = localStorage.getItem(ACTIVE_TAB_KEY);
+activateTab(tabIds.includes(savedTab) ? savedTab : "today-panel");
 
 /* ---- Runs: timer + GPS tracking + map + history ---- */
 

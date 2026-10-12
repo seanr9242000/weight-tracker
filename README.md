@@ -1,10 +1,23 @@
 # Weight & Save
 
-A minimal, installable PWA for tracking weight and runs/walks. Log a
-weight entry with a date, see your history and trend line; track a
-run or walk with a live timer, GPS distance, and route map. All data
-is stored locally on your device (`localStorage`) — nothing is sent
-to a server, and the Weight tab works offline once installed.
+An installable PWA that's growing into a personal accountability
+coach. Four tabs:
+
+- **Today** — a daily checklist built from a weekly schedule (wake,
+  weigh-in, meals, lifts, league games, wind-down, lights out). Check
+  items off, skip or explain misses with a reason, and edit a single
+  day's plan without changing the weekly template. Shows completion,
+  streak, last night's sleep, and today's Zyn count.
+- **Habits** — a 6-week Zyn taper (fewer pouches, then 3 mg, then a
+  quit date), a pouch counter against the day's allowance, a craving
+  log with triggers and replacement tips, and progress stats.
+- **Weight** — weight entries, trend line, progress photos.
+- **Runs** — live timer, GPS distance, route map.
+
+Schedule/taper rules live in `coach-core.js` (no DOM, reusable for a
+future server-side ping job); the Today/Habits UI is `coach.js`. All
+data is stored locally on your device (`localStorage`/IndexedDB) for
+now — nothing is sent to a server.
 
 ## Installing on iPhone
 
@@ -31,5 +44,5 @@ Then open `http://localhost:8000` in a browser.
 - Data lives in the browser's local storage for this specific
   installed app — clearing Safari/site data will erase it. There is
   no backup/export yet.
-- A daily reminder notification was considered but deferred (see the
-  project plan) — revisit if wanted later.
+- Push reminders (repeat until checked off) are next: they need a
+  small backend (Supabase free tier) to send Web Push on schedule.
