@@ -90,5 +90,6 @@ Session total: ~35 min between commits (planning interview + Phase 1 build prece
 | Time  | Change                                                  | Elapsed |
 |-------|------------------------------------------------------------|---------|
 | 22:14 | Add Food tab (Phase 2a): planned meals, weekly budget, adaptive check-in | — |
+| 22:24 | phone-preview: add --interact click-through mode; Food UI tests in tests/ui | 10 min |
 
-Session total: 1 commit (brainstorm interview + spec + build + tests preceded it).
+Session total: ~10 min between commits (brainstorm interview + spec + build + tests preceded the first), 2 commits.

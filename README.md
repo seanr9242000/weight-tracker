@@ -58,6 +58,13 @@ Runs every `tests/*.test.html` page (schedule, taper, and food math)
 in headless Edge and prints `N/M passed` per page. Needs only Python
 and Microsoft Edge.
 
+Click-through UI tests (real app at iPhone width, with a screenshot of
+where each script ends):
+
+```
+python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js
+```
+
 ## Notes
 
 - Weight is stored in lbs only for now.
