@@ -1,0 +1,742 @@
+/* Food tab + the meal panel on Today's checklist. All the math lives in
+   food-core.js; this file is storage, seeding, and rendering. Loads
+   after coach.js and reuses its helpers (loadJSON, saveJSON, el, newId,
+   setCheckin, renderToday). Data stays in localStorage like the rest
+   of the app. */
+
+const FOOD_LIBRARY_KEY = "food-library";
+const FOOD_MEALS_KEY = "food-meals";
+const FOOD_LOG_KEY = "food-log";
+const FOOD_DAYS_KEY = "food-days";
+const FOOD_SETTINGS_KEY = "food-settings";
+const FOOD_HISTORY_KEY = "food-target-history";
+const FOOD_CHECKIN_KEY = "food-checkin-seen";
+const CLOSE_FOOD_LOG_ID = "close-food-log";
+const GOAL_PROMPT_AFTER_DAYS = 49; // ~7 weeks: the Zyn taper should be done
+
+const GOAL_OPTIONS = [
+  { mode: "cut", rate: -1, label: "Cut 1 lb/wk" },
+  { mode: "cut", rate: -0.75, label: "Cut 0.75 lb/wk" },
+  { mode: "cut", rate: -0.5, label: "Cut 0.5 lb/wk" },
+  { mode: "maintain", rate: 0, label: "Maintain / recomp" },
+  { mode: "bulk", rate: 0.25, label: "Lean bulk 0.25 lb/wk" },
+  { mode: "bulk", rate: 0.5, label: "Lean bulk 0.5 lb/wk" },
+];
+
+const fmt = (x) => Math.round(x).toLocaleString();
+
+/* ---- Storage + seeding ---- */
+
+/* Seed items are merged by id on every load, so new seed foods/meals
+   show up after an update without touching anything Sean edited. */
+function mergeSeed(key, seed) {
+  const stored = loadJSON(key, null);
+  if (!stored) {
+    const copy = seed.map((x) => ({ ...JSON.parse(JSON.stringify(x)), source: "seed" }));
+    saveJSON(key, copy);
+    return copy;
+  }
+  const ids = new Set(stored.map((x) => x.id));
+  const added = seed.filter((x) => !ids.has(x.id)).map((x) => ({ ...JSON.parse(JSON.stringify(x)), source: "seed" }));
+  if (added.length) saveJSON(key, [...stored, ...added]);
+  return [...stored, ...added];
+}
+
+function latestWeight() {
+  const entries = loadEntries();
+  if (!entries.length) return null;
+  return [...entries].sort((a, b) => a.date.localeCompare(b.date)).at(-1).weight;
+}
+
+function foodSettings() {
+  let s = loadJSON(FOOD_SETTINGS_KEY, null);
+  if (!s) {
+    s = defaultSettings(todayLocalDateString(), latestWeight());
+    saveJSON(FOOD_SETTINGS_KEY, s);
+  }
+  return s;
+}
+
+const foodLibrary = () => loadJSON(FOOD_LIBRARY_KEY, []);
+const foodMeals = () => loadJSON(FOOD_MEALS_KEY, []);
+const foodLog = () => loadJSON(FOOD_LOG_KEY, []);
+const foodDays = () => loadJSON(FOOD_DAYS_KEY, {});
+
+mergeSeed(FOOD_LIBRARY_KEY, FOOD_SEED_LIBRARY);
+mergeSeed(FOOD_MEALS_KEY, FOOD_SEED_MEALS);
+foodSettings();
+
+/* Every log entry goes through here. Logging into a checklist slot
+   (e.g. "lunch") also checks that item off, which stops its pings. */
+function logFood({ slot = "extra", name, servings = 1, n, confidence, ref }) {
+  const date = todayLocalDateString();
+  const log = foodLog();
+  log.push({ id: newId(), date, at: Date.now(), slot, name, servings, n, confidence, ref });
+  saveJSON(FOOD_LOG_KEY, log);
+  if (slot !== "extra") setCheckin(date, slot, { status: "done", at: Date.now() });
+  refreshFood();
+}
+
+function setDayComplete(dateStr, complete) {
+  const days = foodDays();
+  if (complete) days[dateStr] = { complete: true, at: Date.now() };
+  else delete days[dateStr];
+  saveJSON(FOOD_DAYS_KEY, days);
+  // The checklist item and the Food tab toggle are the same fact.
+  setCheckin(dateStr, CLOSE_FOOD_LOG_ID, complete ? { status: "done", at: Date.now() } : null);
+}
+
+/* Called from coach.js when the "Close food log" checkbox is tapped. */
+function closeFoodLog(dateStr, complete) {
+  setDayComplete(dateStr, complete);
+  refreshFood();
+}
+
+function refreshFood() {
+  renderFood();
+  renderToday();
+}
+
+function logMeal(meal, slot, addonIds) {
+  const { n, confidence } = mealNutrients(meal, foodLibrary(), addonIds);
+  logFood({ slot, name: meal.name, n, confidence, ref: { meal: meal.id, addons: addonIds } });
+}
+
+function logLibraryFood(food, slot) {
+  logFood({ slot, name: food.name, n: { ...food.n }, confidence: food.confidence, ref: { food: food.id } });
+}
+
+/* ---- Today: meal panel + fuel row (called from coach.js) ---- */
+
+const mealAddons = {}; // itemId -> Set of add-on food ids switched on
+
+function renderMealPanel(dateStr, item) {
+  const panel = el("div", "meal-panel");
+  const meal = plannedMealFor(foodMeals(), item.id, dateStr);
+  if (meal) {
+    const on = mealAddons[item.id] || (mealAddons[item.id] = new Set());
+    const { n } = mealNutrients(meal, foodLibrary(), [...on]);
+    panel.appendChild(el("div", "meal-name", meal.name));
+    panel.appendChild(el("div", "meal-detail", `${meal.detail ? meal.detail + " · " : ""}${fmt(n.kcal)} kcal · ${fmt(n.protein)} g protein`));
+    if (meal.addons && meal.addons.length) {
+      const row = el("div", "chip-row");
+      for (const addon of meal.addons) {
+        const chip = el("button", `chip small${on.has(addon.foodId) ? " active" : ""}`, addon.label);
+        chip.type = "button";
+        chip.addEventListener("click", () => {
+          if (on.has(addon.foodId)) on.delete(addon.foodId);
+          else on.add(addon.foodId);
+          renderToday();
+        });
+        row.appendChild(chip);
+      }
+      panel.appendChild(row);
+    }
+  }
+  const actions = el("div", "meal-actions");
+  if (meal) {
+    const planned = el("button", "pill-btn dark", "As planned");
+    planned.type = "button";
+    planned.addEventListener("click", () => {
+      logMeal(meal, item.id, [...(mealAddons[item.id] || [])]);
+      delete mealAddons[item.id];
+      closeMealPanel();
+    });
+    actions.appendChild(planned);
+  }
+  const other = el("button", "pill-btn", meal ? "Something else" : "Log food");
+  other.type = "button";
+  other.addEventListener("click", () => openFoodSheet({ slot: item.id, title: item.title, mode: item.id === "treat-meal" ? "takeout" : "recent" }));
+  actions.appendChild(other);
+  panel.appendChild(actions);
+  return panel;
+}
+
+function renderFuelRow(dateStr) {
+  const row = document.getElementById("today-fuel");
+  if (!row) return;
+  const s = foodSettings();
+  const log = foodLog();
+  const totals = dayTotals(log, dateStr);
+  const { guide } = dailyGuide(s, log, dateStr);
+  row.innerHTML = "";
+  for (const [label, value, goal, unit] of [["Food", totals.kcal, guide, "kcal"], ["Protein", totals.protein, s.protein, "g"]]) {
+    const cell = el("div", "fuel-cell");
+    const head = el("div", "fuel-head");
+    head.appendChild(el("span", "fuel-label", label));
+    head.appendChild(el("span", "fuel-value", `${fmt(value)} / ${fmt(goal)} ${unit}`));
+    cell.appendChild(head);
+    cell.appendChild(bar(value / goal, "neutral"));
+    row.appendChild(cell);
+  }
+}
+
+function bar(fraction, status) {
+  const track = el("div", "mini-bar");
+  const fill = el("div", `mini-bar-fill ${status}`);
+  fill.style.width = `${Math.min(100, Math.max(0, fraction * 100))}%`;
+  track.appendChild(fill);
+  return track;
+}
+
+/* ---- Food tab ---- */
+
+const MIN_SIGNALS_JUDGED_AT = 20 * 60; // 8 PM
+
+/* Protein and fiber build up over the day, so a low number at 9 AM
+   isn't a miss: they stay neutral until 8 PM or until the day is
+   closed. Limits (sugar, sodium) are judged right away. */
+function dayStatus(key, value, s, discovery, dateStr, days) {
+  const status = signalStatus(key, value, s, discovery);
+  const isMin = key === "protein" || key === "fiber";
+  const judged = dateStr < todayLocalDateString() || (days[dateStr] && days[dateStr].complete) || minutesNow() >= MIN_SIGNALS_JUDGED_AT;
+  return isMin && status !== "good" && !judged ? "neutral" : status;
+}
+
+function renderFood() {
+  const today = todayLocalDateString();
+  const s = foodSettings();
+  const log = foodLog();
+  const days = foodDays();
+  const discovery = inDiscovery(s, today);
+  const totals = dayTotals(log, today);
+  const g = dailyGuide(s, log, today);
+
+  // Hero
+  document.getElementById("food-kcal").textContent = fmt(totals.kcal);
+  document.getElementById("food-sub").textContent =
+    `of ${fmt(g.guide)} kcal today · ${fmt(Math.max(0, g.weekLeft))} left this week (${g.daysLeft} day${g.daysLeft === 1 ? "" : "s"})`;
+  const kcalBar = document.getElementById("food-kcal-bar");
+  kcalBar.style.width = `${Math.min(100, (totals.kcal / g.guide) * 100)}%`;
+  kcalBar.classList.toggle("warn", !discovery && totals.kcal > g.guide);
+  const protein = document.getElementById("food-protein");
+  protein.innerHTML = "";
+  const ph = el("div", "fuel-head");
+  ph.appendChild(el("span", "fuel-label", "Protein"));
+  ph.appendChild(el("span", "fuel-value", `${fmt(totals.protein)} / ${s.protein} g`));
+  protein.append(ph, bar(totals.protein / s.protein, dayStatus("protein", totals.protein, s, discovery, today, days)));
+
+  const badge = document.getElementById("food-badge");
+  if (discovery) {
+    const day = daysBetween(s.startDate, today) + 1;
+    badge.textContent = `Discovery · day ${day} of 14. Log honestly — no judging yet. This measures what you really eat.`;
+  } else if (g.over) {
+    badge.textContent = `This week is over budget by ${fmt(-g.weekLeft)} kcal. Don't crash — eat normal meals, protein first.`;
+  } else {
+    badge.textContent = "";
+  }
+  const est = estimatedShare(log, today);
+  document.getElementById("food-est").textContent = totals.kcal ? `${est}% estimated` : "";
+
+  renderQuickChips(log);
+  renderFoodLog(today, log, days);
+  renderSignals(today, totals, s, discovery, log, days);
+  renderWeek(today, s, log, days, discovery);
+  renderCheckin(today, s, log, days);
+  renderTargets(s);
+}
+
+function renderQuickChips(log) {
+  const row = document.getElementById("food-quick-chips");
+  row.innerHTML = "";
+  for (const food of foodLibrary().filter((f) => f.drink)) {
+    const chip = el("button", "chip drink", `+1 ${food.name}`);
+    chip.type = "button";
+    chip.addEventListener("click", () => logLibraryFood(food, "extra"));
+    row.appendChild(chip);
+  }
+  for (const e of recentFoods(log.filter((x) => !(x.n.alcohol > 0)), 6)) {
+    const chip = el("button", "chip", e.name);
+    chip.type = "button";
+    chip.addEventListener("click", () => relog(e));
+    row.appendChild(chip);
+  }
+}
+
+function relog(e) {
+  logFood({ slot: "extra", name: e.name, servings: e.servings, n: { ...e.n }, confidence: e.confidence, ref: e.ref });
+}
+
+function slotTitles(dateStr) {
+  const titles = { extra: "Other" };
+  for (const item of itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {}))) titles[item.id] = item.title;
+  return titles;
+}
+
+function renderFoodLog(today, log, days) {
+  const list = document.getElementById("food-log-list");
+  list.innerHTML = "";
+  const entries = log.filter((e) => e.date === today).sort((a, b) => a.at - b.at);
+  const titles = slotTitles(today);
+  for (const e of entries) {
+    const li = el("li", "food-entry");
+    li.tabIndex = 0;
+    const main = el("div", "food-entry-main");
+    main.appendChild(el("div", "food-entry-name", `${e.name}${e.servings !== 1 ? ` × ${e.servings}` : ""}`));
+    main.appendChild(el("div", "food-entry-meta", `${titles[e.slot] || "Other"}${e.confidence !== "exact" ? " · estimate" : ""}`));
+    const t = entryTotal(e);
+    const nums = el("div", "food-entry-nums");
+    nums.appendChild(el("div", "food-entry-kcal", fmt(t.kcal)));
+    nums.appendChild(el("div", "food-entry-meta", `${fmt(t.protein)} g P`));
+    li.append(main, nums);
+    li.addEventListener("click", () => openEditEntry(e));
+    list.appendChild(li);
+  }
+  document.getElementById("food-log-empty").hidden = entries.length > 0;
+  document.getElementById("food-complete").checked = Boolean(days[today] && days[today].complete);
+}
+
+const SIGNALS = [
+  { key: "fiber", label: "Fiber", unit: "g", goal: (s) => s.limits.fiber, kind: "min" },
+  { key: "addedSugar", label: "Added sugar", unit: "g", goal: (s) => s.limits.addedSugar, kind: "max" },
+  { key: "sodium", label: "Sodium", unit: "mg", goal: (s) => s.limits.sodium, kind: "max" },
+];
+
+function renderSignals(today, totals, s, discovery, log, days) {
+  const list = document.getElementById("food-signals");
+  list.innerHTML = "";
+  for (const sig of SIGNALS) {
+    const goal = sig.goal(s);
+    const value = totals[sig.key];
+    const status = dayStatus(sig.key, value, s, discovery, today, days);
+    const li = el("li", `signal ${status}`);
+    const head = el("div", "fuel-head");
+    head.appendChild(el("span", "fuel-label", sig.label));
+    head.appendChild(el("span", "fuel-value", `${fmt(value)} ${sig.kind === "min" ? "of" : "/"} ${fmt(goal)} ${sig.unit}${sig.kind === "max" ? " max" : ""}`));
+    li.append(head, bar(value / (sig.kind === "max" ? goal * 1.5 : goal), status));
+    list.appendChild(li);
+  }
+  const alcohol = weekAlcohol(log, today);
+  document.getElementById("food-alcohol").textContent = alcohol.drinks
+    ? `This week: ${alcohol.drinks} drink${alcohol.drinks === 1 ? "" : "s"} · ${fmt(alcohol.kcal)} kcal from alcohol`
+    : "No drinks logged this week.";
+}
+
+function renderWeek(today, s, log, days, discovery) {
+  const list = document.getElementById("food-week");
+  list.innerHTML = "";
+  // Future days show today's base guide plus their own bank. Asking
+  // dailyGuide about a future date would treat today's half-eaten
+  // total as final and inflate everything after it.
+  const bankFor = (d) => (s.bank && s.bank[parseLocalDate(d).getDay()]) || 0;
+  const todayGuide = dailyGuide(s, log, today);
+  const base = todayGuide.guide - bankFor(today);
+  for (const d of weekDates(today)) {
+    const future = d > today;
+    const before = s.startDate && d < s.startDate;
+    const t = dayTotals(log, d);
+    const guide = future ? Math.max(GUIDE_FLOOR, base + bankFor(d)) : dailyGuide(s, log, d).guide;
+    const li = el("li", `week-row${future ? " future" : ""}${d === today ? " today" : ""}`);
+    li.appendChild(el("span", "week-day", parseLocalDate(d).toLocaleDateString(undefined, { weekday: "short" })));
+    const status = !discovery && t.kcal > guide * 1.1 ? "warn" : "neutral";
+    li.appendChild(bar(future || before ? 0 : t.kcal / guide, status));
+    li.appendChild(el("span", "week-kcal", future ? fmt(guide) : before ? "—" : fmt(t.kcal)));
+    const hit = !future && !before && t.protein >= s.protein;
+    li.appendChild(el("span", `week-protein${hit ? " hit" : ""}`, ""));
+    const done = Boolean(days[d] && days[d].complete);
+    const mark = el("button", `week-complete${done ? " done" : ""}`, done ? "✓" : "");
+    mark.type = "button";
+    mark.disabled = future || before;
+    mark.setAttribute("aria-label", done ? "Mark day not fully logged" : "Mark day fully logged");
+    mark.addEventListener("click", () => closeFoodLog(d, !done));
+    li.appendChild(mark);
+    list.appendChild(li);
+  }
+}
+
+/* ---- Weekly check-in ---- */
+
+function renderCheckin(today, s, log, days) {
+  const card = document.getElementById("food-checkin");
+  const body = document.getElementById("food-checkin-body");
+  const week = weekDates(today)[0];
+  const seen = loadJSON(FOOD_CHECKIN_KEY, {});
+  const isSunday = parseLocalDate(today).getDay() === 0;
+  const p = proposeMaintenance(s, log, days, loadEntries(), today);
+  const goalPrompt = s.goal.mode === "maintain" && !s.goalPromptAnswered && s.startDate &&
+    daysBetween(s.startDate, today) >= GOAL_PROMPT_AFTER_DAYS;
+  const proposal = p.ready && p.worth && !seen[week];
+
+  body.innerHTML = "";
+  card.hidden = !(isSunday || proposal || goalPrompt);
+  if (card.hidden) return;
+
+  if (goalPrompt) {
+    body.appendChild(el("p", "lead", "About 7 weeks in — the Zyn taper should be wrapping up. Time to pick the next goal?"));
+    const row = el("div", "chip-row");
+    for (const opt of [GOAL_OPTIONS[2], GOAL_OPTIONS[3], GOAL_OPTIONS[4]]) {
+      const chip = el("button", "chip", opt.label);
+      chip.type = "button";
+      chip.addEventListener("click", () => {
+        saveSettings({ ...s, goal: { mode: opt.mode, rateLbPerWk: opt.rate }, goalPromptAnswered: true }, `Goal set to ${opt.label}`);
+      });
+      row.appendChild(chip);
+    }
+    body.appendChild(row);
+  }
+
+  if (!p.ready) {
+    const needDays = Math.max(0, 10 - p.completeDays);
+    const needWeighs = Math.max(0, 8 - p.weighIns);
+    body.appendChild(el("p", "hint",
+      `Learning your real maintenance: ${p.completeDays}/10 fully-logged days and ${p.weighIns}/8 weigh-ins over the last 3 weeks.` +
+      (needDays || needWeighs ? ` Need ${[needDays && `${needDays} more logged days`, needWeighs && `${needWeighs} more weigh-ins`].filter(Boolean).join(" and ")}.` : " Weigh-ins need to span at least 2 weeks.")));
+    return;
+  }
+
+  const trend = p.lbPerWeek === 0 ? "holding steady" : `${p.lbPerWeek > 0 ? "up" : "down"} ${Math.abs(p.lbPerWeek)} lb/week`;
+  const explain = `You averaged ${fmt(p.avgIntake)} kcal on ${p.completeDays} fully-logged days while your weight trended ${trend}. That puts real maintenance near ${fmt(p.observed)}.`;
+  if (!proposal) {
+    body.appendChild(el("p", "hint", `${explain} ${seen[week] ? "Already reviewed this week." : `Current estimate (${fmt(s.maintenance)}) is close enough — no change.`}`));
+    return;
+  }
+  body.appendChild(el("p", "lead", `${explain} Suggest moving maintenance ${fmt(s.maintenance)} → ${fmt(p.proposed)} (${p.delta > 0 ? "+" : ""}${p.delta}).`));
+  const pair = el("div", "button-pair");
+  const keep = el("button", "secondary-btn", "Keep");
+  keep.type = "button";
+  const accept = el("button", "primary-btn", "Accept");
+  accept.type = "button";
+  const decide = (accepted) => {
+    seen[week] = accepted ? "accepted" : "kept";
+    saveJSON(FOOD_CHECKIN_KEY, seen);
+    const reason = `Check-in: intake ${fmt(p.avgIntake)}, trend ${trend}`;
+    if (accepted) saveSettings({ ...s, maintenance: p.proposed }, reason);
+    else recordHistory(s, `${reason} (kept ${fmt(s.maintenance)})`, false);
+    refreshFood();
+  };
+  keep.addEventListener("click", () => decide(false));
+  accept.addEventListener("click", () => decide(true));
+  pair.append(keep, accept);
+  body.appendChild(pair);
+}
+
+function recordHistory(s, reason, accepted) {
+  const history = loadJSON(FOOD_HISTORY_KEY, []);
+  history.push({ date: todayLocalDateString(), maintenance: s.maintenance, target: targetCalories(s), reason, accepted });
+  saveJSON(FOOD_HISTORY_KEY, history);
+}
+
+function saveSettings(next, reason) {
+  saveJSON(FOOD_SETTINGS_KEY, next);
+  recordHistory(next, reason, true);
+  refreshFood();
+}
+
+/* ---- Targets / settings ---- */
+
+let settingsOpen = false;
+
+function renderTargets(s) {
+  const goal = GOAL_OPTIONS.find((o) => o.rate === s.goal.rateLbPerWk) || GOAL_OPTIONS[3];
+  document.getElementById("food-targets-summary").textContent =
+    `${goal.label} · ${fmt(targetCalories(s))} kcal/day (maintenance ${fmt(s.maintenance)}) · ${s.protein} g protein`;
+  document.getElementById("food-settings-btn").textContent = settingsOpen ? "Close" : "Edit";
+  const form = document.getElementById("food-settings-form");
+  form.hidden = !settingsOpen;
+  if (!settingsOpen) return;
+
+  const select = document.getElementById("fs-goal");
+  if (!select.options.length) {
+    GOAL_OPTIONS.forEach((o, i) => select.appendChild(new Option(o.label, String(i))));
+  }
+  select.value = String(GOAL_OPTIONS.indexOf(goal));
+  const fields = {
+    "fs-maintenance": s.maintenance, "fs-protein": s.protein, "fs-fiber": s.limits.fiber,
+    "fs-sugar": s.limits.addedSugar, "fs-sodium": s.limits.sodium, "fs-bank-sat": s.bank[6] || 0,
+    "fs-bank-sun": s.bank[0] || 0, "fs-age": s.profile.age, "fs-height": s.profile.heightCm,
+    "fs-activity": s.profile.activity,
+  };
+  for (const [id, value] of Object.entries(fields)) document.getElementById(id).value = value;
+
+  renderMealEditor();
+  const history = document.getElementById("food-history");
+  history.innerHTML = "";
+  for (const h of loadJSON(FOOD_HISTORY_KEY, []).slice(-8).reverse()) {
+    history.appendChild(el("li", "", `${formatDate(h.date)} · ${fmt(h.target)} kcal · ${h.reason}`));
+  }
+}
+
+function renderMealEditor() {
+  const wrap = document.getElementById("food-meal-editor");
+  wrap.innerHTML = "";
+  const lib = Object.fromEntries(foodLibrary().map((f) => [f.id, f]));
+  const meals = foodMeals();
+  meals.forEach((meal, mi) => {
+    const box = el("div", "meal-edit");
+    box.appendChild(el("div", "meal-name", meal.name));
+    meal.items.forEach((item, ii) => {
+      const food = lib[item.foodId];
+      if (!food) return;
+      const row = el("label", "meal-edit-row");
+      row.appendChild(el("span", "", `${food.name} (${food.serving})`));
+      const input = el("input");
+      input.type = "number";
+      input.inputMode = "decimal";
+      input.step = "0.125";
+      input.min = "0";
+      input.value = item.servings;
+      input.addEventListener("change", () => {
+        const v = parseFloat(input.value);
+        if (!Number.isFinite(v) || v < 0) return;
+        const all = foodMeals();
+        all[mi].items[ii].servings = v;
+        saveJSON(FOOD_MEALS_KEY, all);
+        renderToday();
+      });
+      row.appendChild(input);
+      box.appendChild(row);
+    });
+    wrap.appendChild(box);
+  });
+}
+
+document.getElementById("food-settings-btn").addEventListener("click", () => {
+  settingsOpen = !settingsOpen;
+  renderFood();
+});
+
+document.getElementById("fs-recalc").addEventListener("click", () => {
+  const weight = latestWeight();
+  if (!weight) return;
+  const profile = readProfile(foodSettings().profile);
+  document.getElementById("fs-maintenance").value = startingMaintenance(profile, weight);
+});
+
+function readProfile(fallback) {
+  const num = (id, f) => { const v = parseFloat(document.getElementById(id).value); return Number.isFinite(v) ? v : f; };
+  return { ...fallback, age: num("fs-age", fallback.age), heightCm: num("fs-height", fallback.heightCm), activity: num("fs-activity", fallback.activity) };
+}
+
+document.getElementById("food-settings-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const s = foodSettings();
+  const num = (id, f) => { const v = parseFloat(document.getElementById(id).value); return Number.isFinite(v) ? v : f; };
+  const goal = GOAL_OPTIONS[Number(document.getElementById("fs-goal").value)] || GOAL_OPTIONS[3];
+  const next = {
+    ...s,
+    profile: readProfile(s.profile),
+    goal: { mode: goal.mode, rateLbPerWk: goal.rate },
+    goalPromptAnswered: s.goalPromptAnswered || goal.mode !== "maintain",
+    maintenance: num("fs-maintenance", s.maintenance),
+    protein: num("fs-protein", s.protein),
+    limits: { fiber: num("fs-fiber", s.limits.fiber), addedSugar: num("fs-sugar", s.limits.addedSugar), sodium: num("fs-sodium", s.limits.sodium) },
+    bank: { 6: num("fs-bank-sat", s.bank[6] || 0), 0: num("fs-bank-sun", s.bank[0] || 0) },
+  };
+  settingsOpen = false;
+  saveSettings(next, "Edited in settings");
+});
+
+document.getElementById("food-complete").addEventListener("change", (e) => {
+  closeFoodLog(todayLocalDateString(), e.target.checked);
+});
+
+/* ---- Picker sheet (quick add / takeout / chains / my foods) ---- */
+
+const foodSheet = document.getElementById("food-sheet");
+let sheetSlot = "extra";
+
+const SHEET_MODES = [
+  ["recent", "Recent"], ["quick", "Quick add"], ["takeout", "Takeout"], ["chains", "Chains"], ["mine", "My foods"],
+];
+
+function openFoodSheet({ slot = "extra", title = "Log food", mode = "recent" } = {}) {
+  sheetSlot = slot;
+  document.getElementById("food-sheet-title").textContent = title;
+  renderSheet(mode);
+  foodSheet.hidden = false;
+}
+
+function closeFoodSheet() {
+  foodSheet.hidden = true;
+}
+
+function closeMealPanel() {
+  if (typeof mealOpenFor !== "undefined") mealOpenFor = null;
+}
+
+function logFromSheet(fn) {
+  fn();
+  closeFoodSheet();
+  closeMealPanel();
+  refreshFood();
+}
+
+function renderSheet(mode) {
+  const tabs = document.getElementById("food-sheet-tabs");
+  tabs.innerHTML = "";
+  for (const [id, label] of SHEET_MODES) {
+    const chip = el("button", `chip small${id === mode ? " active" : ""}`, label);
+    chip.type = "button";
+    chip.addEventListener("click", () => renderSheet(id));
+    tabs.appendChild(chip);
+  }
+  const body = document.getElementById("food-sheet-body");
+  body.innerHTML = "";
+  if (mode === "recent") renderRecentList(body);
+  else if (mode === "quick") renderQuickAdd(body);
+  else if (mode === "takeout") renderTakeout(body);
+  else if (mode === "chains") renderFoodList(body, foodLibrary().filter((f) => f.group === "chain"));
+  else renderMine(body);
+}
+
+function pickRow(name, meta, onPick) {
+  const row = el("button", "pick-row");
+  row.type = "button";
+  row.appendChild(el("span", "pick-name", name));
+  row.appendChild(el("span", "pick-meta", meta));
+  row.addEventListener("click", onPick);
+  return row;
+}
+
+function renderRecentList(body) {
+  const recents = recentFoods(foodLog(), 12);
+  if (!recents.length) {
+    body.appendChild(el("p", "empty-message", "Nothing logged yet. Try Quick add or Takeout."));
+    return;
+  }
+  for (const e of recents) {
+    const t = entryTotal(e);
+    body.appendChild(pickRow(e.name, `${fmt(t.kcal)} kcal · ${fmt(t.protein)} g P`, () =>
+      logFromSheet(() => logFood({ slot: sheetSlot, name: e.name, servings: e.servings, n: { ...e.n }, confidence: e.confidence, ref: e.ref }))));
+  }
+}
+
+function renderFoodList(body, foods) {
+  for (const food of foods) {
+    body.appendChild(pickRow(food.name, `${food.serving} · ${fmt(food.n.kcal)} kcal · ${fmt(food.n.protein)} g P`, () =>
+      logFromSheet(() => logLibraryFood(food, sheetSlot))));
+  }
+}
+
+function renderMine(body) {
+  body.appendChild(el("div", "pick-section", "Saved meals"));
+  for (const meal of foodMeals()) {
+    const { n } = mealNutrients(meal, foodLibrary(), []);
+    body.appendChild(pickRow(meal.name, `${fmt(n.kcal)} kcal · ${fmt(n.protein)} g P`, () =>
+      logFromSheet(() => logMeal(meal, sheetSlot, []))));
+  }
+  body.appendChild(el("div", "pick-section", "Foods"));
+  const foods = foodLibrary().filter((f) => f.group !== "chain").sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
+  renderFoodList(body, foods);
+}
+
+function renderTakeout(body) {
+  body.appendChild(el("p", "hint", "No official numbers? Pick the closest size — it's saved as an estimate."));
+  for (const preset of TAKEOUT_PRESETS) {
+    const row = el("div", "takeout-row");
+    row.appendChild(el("span", "pick-name", preset.name));
+    const sizes = el("div", "takeout-sizes");
+    for (const size of ["S", "M", "L"]) {
+      const [kcal, desc] = preset.sizes[size];
+      const btn = el("button", "size-btn");
+      btn.type = "button";
+      btn.appendChild(el("span", "size-letter", size));
+      btn.appendChild(el("span", "size-desc", `${desc} · ${kcal}`));
+      btn.addEventListener("click", () => logFromSheet(() => logFood({
+        slot: sheetSlot, name: `${preset.name} (${desc})`, n: takeoutNutrients(preset, size), confidence: "estimate", ref: { takeout: preset.id, size },
+      })));
+      sizes.appendChild(btn);
+    }
+    row.appendChild(sizes);
+    body.appendChild(row);
+  }
+}
+
+const QUICK_FIELDS = [
+  ["name", "Name", "text", true], ["kcal", "Calories", "number", true], ["protein", "Protein (g)", "number", true],
+  ["carbs", "Carbs (g)", "number"], ["fat", "Fat (g)", "number"], ["fiber", "Fiber (g)", "number"],
+  ["addedSugar", "Added sugar (g)", "number"], ["sodium", "Sodium (mg)", "number"],
+];
+
+function renderQuickAdd(body) {
+  const form = el("form", "quick-form");
+  for (const [key, label, type, required] of QUICK_FIELDS) {
+    const row = el("label", `quick-field${required ? "" : " optional"}`);
+    row.appendChild(el("span", "", label));
+    const input = el("input");
+    input.name = key;
+    input.type = type;
+    if (type === "number") { input.inputMode = "decimal"; input.min = "0"; input.step = "any"; }
+    input.required = Boolean(required);
+    row.appendChild(input);
+    form.appendChild(row);
+  }
+  const save = el("label", "quick-save");
+  const box = el("input");
+  box.type = "checkbox";
+  box.name = "keep";
+  save.append(box, el("span", "", "Save to My foods"));
+  form.appendChild(save);
+  const submit = el("button", "primary-btn", "Log it");
+  submit.type = "submit";
+  form.appendChild(submit);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const n = emptyNutrients();
+    for (const [key] of QUICK_FIELDS.slice(1)) n[key] = parseFloat(data.get(key)) || 0;
+    n.sugar = n.addedSugar;
+    const name = String(data.get("name")).trim();
+    if (!name) return;
+    if (data.get("keep")) {
+      const lib = foodLibrary();
+      lib.push({ id: `custom-${Date.now()}`, name, serving: "1 serving", n, confidence: "estimate", source: "custom", favorite: true });
+      saveJSON(FOOD_LIBRARY_KEY, lib);
+    }
+    logFromSheet(() => logFood({ slot: sheetSlot, name, n, confidence: "estimate" }));
+  });
+  body.appendChild(form);
+}
+
+/* ---- Edit / delete a logged entry ---- */
+
+function openEditEntry(entry) {
+  sheetSlot = entry.slot;
+  document.getElementById("food-sheet-title").textContent = entry.name;
+  document.getElementById("food-sheet-tabs").innerHTML = "";
+  const body = document.getElementById("food-sheet-body");
+  body.innerHTML = "";
+  const per = entry.n;
+  body.appendChild(el("p", "hint", `Per serving: ${fmt(per.kcal)} kcal · ${fmt(per.protein)} g protein${entry.confidence !== "exact" ? " · estimate" : ""}`));
+  const form = el("form", "weigh-inline");
+  const input = el("input");
+  input.type = "number";
+  input.inputMode = "decimal";
+  input.step = "0.25";
+  input.min = "0.25";
+  input.value = entry.servings;
+  input.setAttribute("aria-label", "Servings");
+  const save = el("button", "pill-btn dark", "Save servings");
+  save.type = "submit";
+  form.append(input, save);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = parseFloat(input.value);
+    if (!Number.isFinite(v) || v <= 0) return;
+    updateEntry(entry.id, (x) => { x.servings = v; });
+  });
+  const del = el("button", "pill-btn danger", "Delete entry");
+  del.type = "button";
+  del.addEventListener("click", () => updateEntry(entry.id, null));
+  body.append(form, del);
+  foodSheet.hidden = false;
+}
+
+function updateEntry(id, mutate) {
+  let log = foodLog();
+  if (mutate) log.forEach((x) => { if (x.id === id) mutate(x); });
+  else log = log.filter((x) => x.id !== id);
+  saveJSON(FOOD_LOG_KEY, log);
+  closeFoodSheet();
+  refreshFood();
+}
+
+document.getElementById("food-sheet-cancel").addEventListener("click", closeFoodSheet);
+document.getElementById("food-log-btn").addEventListener("click", () => openFoodSheet({ mode: "recent" }));
+document.getElementById("food-takeout-btn").addEventListener("click", () => openFoodSheet({ mode: "takeout", title: "Takeout estimate" }));
+document.getElementById("food-quick-btn").addEventListener("click", () => openFoodSheet({ mode: "quick", title: "Quick add" }));
+
+refreshFood();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") renderFood();
+});

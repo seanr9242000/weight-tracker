@@ -1,23 +1,33 @@
 # Weight & Save
 
 An installable PWA that's growing into a personal accountability
-coach. Four tabs:
+coach. Five tabs:
 
 - **Today** — a daily checklist built from a weekly schedule (wake,
   weigh-in, meals, lifts, league games, wind-down, lights out). Check
   items off, skip or explain misses with a reason, and edit a single
   day's plan without changing the weekly template. Shows completion,
-  streak, last night's sleep, and today's Zyn count.
+  streak, last night's sleep, and today's Zyn count. Meal items log
+  their planned meal in one tap ("As planned") or open the food picker.
+- **Food** — calories and protein against a weekly budget with a
+  weekend bank, health signals (fiber, added sugar, sodium, alcohol),
+  quick add, S/M/L takeout estimates, chain items, one-tap drinks, and
+  a weekly check-in that proposes a new maintenance estimate from
+  logged intake + weight trend (you approve it). The first 14 days are
+  "Discovery": numbers show but nothing is judged.
 - **Habits** — a 6-week Zyn taper (fewer pouches, then 3 mg, then a
   quit date), a pouch counter against the day's allowance, a craving
   log with triggers and replacement tips, and progress stats.
 - **Weight** — weight entries, trend line, progress photos.
 - **Runs** — live timer, GPS distance, route map.
 
-Schedule/taper rules live in `coach-core.js` (no DOM, reusable for a
-future server-side ping job); the Today/Habits UI is `coach.js`. All
-data is stored locally on your device (`localStorage`/IndexedDB) for
-now — nothing is sent to a server.
+Schedule/taper rules live in `coach-core.js` and food math in
+`food-core.js` (no DOM, testable on their own); seed foods and meals
+are in `food-data.js`; the UI is `coach.js` (Today/Habits) and
+`food.js` (Food). App data is stored on your device
+(`localStorage`/IndexedDB). Only push reminders use a server: the
+next 7 days of checklist items sync to Supabase so `send-pings` can
+notify you (see `supabase/`).
 
 ## Installing on iPhone
 
@@ -38,11 +48,22 @@ python -m http.server 8000
 
 Then open `http://localhost:8000` in a browser.
 
+### Tests
+
+```
+python tests/run.py
+```
+
+Runs every `tests/*.test.html` page (schedule, taper, and food math)
+in headless Edge and prints `N/M passed` per page. Needs only Python
+and Microsoft Edge.
+
 ## Notes
 
 - Weight is stored in lbs only for now.
 - Data lives in the browser's local storage for this specific
   installed app — clearing Safari/site data will erase it. There is
   no backup/export yet.
-- Push reminders (repeat until checked off) are next: they need a
-  small backend (Supabase free tier) to send Web Push on schedule.
+- Push reminders repeat every 15 minutes until an item is checked
+  off or skipped. Logging a meal checks its item off, so its pings
+  stop.

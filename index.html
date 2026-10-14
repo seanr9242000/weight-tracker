@@ -33,6 +33,7 @@
         </div>
         <div class="progress"><div class="progress-fill" id="today-progress"></div></div>
         <div class="stat-grid three" id="today-stats"></div>
+        <div class="fuel-row" id="today-fuel"></div>
       </section>
 
       <section class="card">
@@ -60,6 +61,93 @@
         </div>
         <p class="hint" id="reminders-status"></p>
         <button type="button" id="reminders-test-btn" class="link-btn" hidden>Send a test ping</button>
+      </section>
+    </div>
+
+    <div id="food-panel" class="tab-panel" hidden>
+      <section class="card glass-card">
+        <div class="today-head">
+          <div>
+            <div class="today-date">Food today</div>
+            <div class="today-sub" id="food-sub"></div>
+          </div>
+          <div class="today-score" id="food-kcal">0</div>
+        </div>
+        <div class="progress"><div class="progress-fill" id="food-kcal-bar"></div></div>
+        <div id="food-protein" class="fuel-cell"></div>
+        <p class="food-badge" id="food-badge"></p>
+      </section>
+
+      <section class="card">
+        <h2>Log</h2>
+        <div class="chip-row" id="food-quick-chips"></div>
+        <div class="food-actions">
+          <button type="button" id="food-log-btn" class="secondary-btn">Find food</button>
+          <button type="button" id="food-takeout-btn" class="secondary-btn">Takeout</button>
+          <button type="button" id="food-quick-btn" class="secondary-btn">Quick add</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Today's log</h2>
+          <span class="card-note" id="food-est"></span>
+        </div>
+        <ul id="food-log-list" class="food-log"></ul>
+        <p id="food-log-empty" class="empty-message">Nothing logged yet. Planned meals log from the Today tab.</p>
+        <label class="toggle-row">
+          <input type="checkbox" id="food-complete">
+          <span>I logged everything today</span>
+        </label>
+      </section>
+
+      <section class="card" id="food-checkin" hidden>
+        <h2>Weekly check-in</h2>
+        <div id="food-checkin-body"></div>
+      </section>
+
+      <section class="card">
+        <h2>Health signals</h2>
+        <ul id="food-signals" class="signal-list"></ul>
+        <p class="hint food-alcohol" id="food-alcohol"></p>
+      </section>
+
+      <section class="card">
+        <h2>This week</h2>
+        <ul id="food-week" class="food-week"></ul>
+        <p class="hint week-legend">Dot = protein target hit. Tap the box to mark a day fully logged.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Targets</h2>
+          <button type="button" id="food-settings-btn" class="pill-btn">Edit</button>
+        </div>
+        <p class="hint" id="food-targets-summary"></p>
+        <form id="food-settings-form" class="food-settings" hidden>
+          <div class="field-row">
+            <label for="fs-goal">Goal</label>
+            <select id="fs-goal"></select>
+          </div>
+          <div class="field-grid">
+            <div class="field-row"><label for="fs-maintenance">Maintenance kcal</label><input id="fs-maintenance" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-protein">Protein g</label><input id="fs-protein" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-fiber">Fiber min g</label><input id="fs-fiber" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-sugar">Added sugar max g</label><input id="fs-sugar" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-sodium">Sodium max mg</label><input id="fs-sodium" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-bank-sat">Sat bank kcal</label><input id="fs-bank-sat" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-bank-sun">Sun bank kcal</label><input id="fs-bank-sun" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-age">Age</label><input id="fs-age" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-height">Height cm</label><input id="fs-height" type="number" inputmode="decimal" step="0.1"></div>
+            <div class="field-row"><label for="fs-activity">Activity ×</label><input id="fs-activity" type="number" inputmode="decimal" step="0.05"></div>
+          </div>
+          <button type="button" id="fs-recalc" class="link-btn">Recalculate maintenance from profile + latest weight</button>
+          <h3 class="sub-head">Saved meals (servings)</h3>
+          <div id="food-meal-editor"></div>
+          <button type="submit" class="primary-btn">Save targets</button>
+          <h3 class="sub-head">Target history</h3>
+          <ul id="food-history" class="food-history"></ul>
+        </form>
       </section>
     </div>
 
@@ -221,6 +309,14 @@
       </svg>
       <span>Today</span>
     </button>
+    <button type="button" class="nav-btn" data-tab="food-panel" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 3v5a2.5 2.5 0 0 0 5 0V3"></path>
+        <line x1="7.5" y1="3" x2="7.5" y2="21"></line>
+        <path d="M18 21V3c-2.2 1.2-3.5 3.8-3.5 7.5V14H18"></path>
+      </svg>
+      <span>Food</span>
+    </button>
     <button type="button" class="nav-btn" data-tab="habits-panel" role="tab">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1-3.6 2-4.6.3 1.6 1.2 2.6 2 3 0-3 .2-5.6 1-8.4z"></path>
@@ -281,12 +377,22 @@
     <div class="chip-row" id="reason-options"></div>
     <button type="button" id="reason-cancel" class="link-btn">Cancel</button>
   </div>
+
+  <div id="food-sheet" class="sheet glass food-sheet" hidden>
+    <div class="sheet-title" id="food-sheet-title"></div>
+    <div class="chip-row" id="food-sheet-tabs"></div>
+    <div class="food-sheet-body" id="food-sheet-body"></div>
+    <button type="button" id="food-sheet-cancel" class="link-btn">Close</button>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="coach-core.js"></script>
+<script src="food-data.js"></script>
+<script src="food-core.js"></script>
 <script src="app.js"></script>
 <script src="coach.js"></script>
+<script src="food.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script defer src="reminders.js"></script>
 </body>

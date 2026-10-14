@@ -74,6 +74,13 @@ function pouchesByDate() {
 
 let editingDay = false;
 let weighOpenFor = null;
+let mealOpenFor = null; // item id whose food panel (food.js) is open
+
+/* Meal items open a log-this-meal panel instead of a bare checkbox.
+   Meal prep is cooking, not eating, so it stays a plain checkbox. */
+function hasMealPanel(item) {
+  return item.kind === "meal" && item.id !== "meal-prep" && typeof renderMealPanel === "function";
+}
 
 function setCheckin(dateStr, itemId, value) {
   const checkins = loadJSON(CHECKINS_KEY, {});
@@ -130,6 +137,8 @@ function renderTodaySummary(dateStr, items, checkins, overrides) {
     t.appendChild(el("div", "stat-label", tile.label));
     stats.appendChild(t);
   }
+  // food.js loads after this file; the first render happens without it.
+  if (typeof renderFuelRow === "function") renderFuelRow(dateStr);
 }
 
 function renderChecklistItem(dateStr, item, checkin, now) {
@@ -166,8 +175,12 @@ function renderChecklistItem(dateStr, item, checkin, now) {
   box.type = "button";
   box.setAttribute("aria-label", checkin ? `Undo ${item.title}` : `Mark ${item.title} done`);
   box.addEventListener("click", () => {
-    if (checkin) {
+    if (item.id === "close-food-log" && typeof closeFoodLog === "function") {
+      closeFoodLog(dateStr, !checkin);
+    } else if (checkin) {
       setCheckin(dateStr, item.id, null);
+    } else if (hasMealPanel(item)) {
+      mealOpenFor = mealOpenFor === item.id ? null : item.id;
     } else if (item.id === "weigh") {
       weighOpenFor = weighOpenFor === dateStr ? null : dateStr;
     } else {
@@ -212,6 +225,10 @@ function renderChecklistItem(dateStr, item, checkin, now) {
     });
     body.appendChild(form);
     setTimeout(() => input.focus(), 0);
+  }
+
+  if (mealOpenFor === item.id && !checkin && hasMealPanel(item)) {
+    body.appendChild(renderMealPanel(dateStr, item));
   }
 
   li.append(box, body);

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html><body><pre id="out"></pre>
+<script src="test-utils.js"></script>
+<script src="../coach-core.js"></script>
+<script>
+run(() => {
+  // 2026-10-12 is a Monday.
+  const monIds = itemsForDate("2026-10-12", {}).map((i) => i.id);
+  eq("Mon has game", monIds.includes("game"), true);
+  eq("Mon wake 7:40", itemsForDate("2026-10-12", {})[0].time, "07:40");
+  eq("Tue wake 6:40", itemsForDate("2026-10-13", {})[0].time, "06:40");
+  eq("Wed has lift, no game", ["lift", "game"].map((id) => itemsForDate("2026-10-14", {}).some((i) => i.id === id)), [true, false]);
+  eq("Thu has game", itemsForDate("2026-10-15", {}).some((i) => i.id === "game"), true);
+  eq("Fri lift 17:15", itemsForDate("2026-10-16", {}).find((i) => i.id === "lift").time, "17:15");
+  eq("Sat no lights-out, has drink plan", ["lights-out", "drink-plan"].map((id) => itemsForDate("2026-10-17", {}).some((i) => i.id === id)), [false, true]);
+  eq("Sun has meal prep + waist", ["meal-prep", "waist"].map((id) => itemsForDate("2026-10-18", {}).some((i) => i.id === id)), [true, true]);
+  for (let i = 0; i < 7; i++) {
+    const ids = itemsForDate(shiftDate("2026-10-12", i), {}).map((x) => x.id);
+    eq(`day ${i} unique ids`, ids.length, new Set(ids).size);
+    const times = itemsForDate(shiftDate("2026-10-12", i), {}).map((x) => x.time);
+    eq(`day ${i} sorted`, times, [...times].sort());
+  }
+  eq("morning offsets", itemsForDate("2026-10-13", {}).slice(0, 4).map((i) => i.time), ["06:40", "06:45", "06:55", "07:05"]);
+
+  const ov = { "2026-10-12": { removed: ["game"], moved: { lunch: "13:15" }, added: [{ id: "custom-1", time: "06:00", title: "Stretch", kind: "routine" }] } };
+  const mon = itemsForDate("2026-10-12", ov);
+  eq("override removes game", mon.some((i) => i.id === "game"), false);
+  eq("override moves lunch", mon.find((i) => i.id === "lunch").time, "13:15");
+  eq("override adds first", mon[0].id, "custom-1");
+  eq("override is per-date", itemsForDate("2026-10-19", ov).some((i) => i.id === "game"), true);
+  eq("template not mutated", itemsForDate("2026-10-12", {}).find((i) => i.id === "lunch").time, "12:00");
+
+  eq("nextMonday from Sun", nextMonday("2026-10-11"), "2026-10-12");
+  eq("nextMonday from Mon", nextMonday("2026-10-12"), "2026-10-12");
+  eq("nextMonday from Tue", nextMonday("2026-10-13"), "2026-10-19");
+  eq("taper before start", taperStepFor("2026-10-12", "2026-10-11"), null);
+  eq("taper day 1", taperStepFor("2026-10-12", "2026-10-12"), { week: 1, allowance: 6, mg: 6, dayOfTaper: 1 });
+  eq("taper week 3", taperStepFor("2026-10-12", "2026-10-26").mg, 3);
+  eq("taper week 6 zero", taperStepFor("2026-10-12", "2026-11-16").allowance, 0);
+  eq("taper after end stays zero", taperStepFor("2026-10-12", "2027-02-01").allowance, 0);
+  eq("quit date", quitDate("2026-10-12"), "2026-11-16");
+  eq("addMinutes wraps", addMinutes("23:50", 20), "00:10");
+  eq("shiftDate across DST", shiftDate("2026-11-01", 1), "2026-11-02");
+
+  eq("streak before quit", nicotineFreeStreak("2026-10-12", {}, "2026-11-10"), 0);
+  eq("streak 3 days", nicotineFreeStreak("2026-10-12", {}, "2026-11-18"), 3);
+  eq("streak broken by slip", nicotineFreeStreak("2026-10-12", { "2026-11-17": 1 }, "2026-11-18"), 1);
+  eq("avoided 2 days", pouchesAvoided("2026-10-12", { "2026-10-12": 6, "2026-10-13": 5 }, "2026-10-13"), 4);
+
+  const items = itemsForDate("2026-10-13", {});
+  const ck = { "2026-10-13|wake": { status: "done", at: 0 }, "2026-10-13|weigh": { status: "skipped", reason: "Forgot", at: 0 } };
+  eq("completion at 6:50", dayCompletion(items, ck, "2026-10-13", 6 * 60 + 50), { due: 2, done: 1, pct: 50 });
+  eq("completion whole day", dayCompletion(items, ck, "2026-10-13").due, items.length);
+
+  const full = {};
+  for (const d of ["2026-10-12", "2026-10-13"]) for (const i of itemsForDate(d, {})) full[`${d}|${i.id}`] = { status: "done", at: 0 };
+  eq("completion streak 2", completionStreak(full, {}, "2026-10-14", 0), 2);
+  eq("streak empty", completionStreak({}, {}, "2026-10-14", 0), 0);
+
+  const t0 = new Date(2026, 9, 12, 22, 45).getTime();
+  const sl = { "2026-10-12|lights-out": { status: "done", at: t0 }, "2026-10-13|wake": { status: "done", at: t0 + 7.9 * 3600000 } };
+  eq("sleep hours", Math.round(sleepHours(sl, "2026-10-13") * 10) / 10, 7.9);
+  eq("sleep missing", sleepHours({}, "2026-10-13"), null);
+
+  // Close food log: every day has it at 21:30, before quiet hours.
+  for (let i = 0; i < 7; i++) {
+    const d = shiftDate("2026-10-12", i);
+    const item = itemsForDate(d, {}).find((x) => x.id === "close-food-log");
+    eq(`day ${i} has close-food-log 21:30`, item ? [item.time, item.kind] : null, ["21:30", "food"]);
+  }
+});
+</script></body></html>

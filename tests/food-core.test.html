@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html><body><pre id="out"></pre>
+<script src="test-utils.js"></script>
+<script src="../coach-core.js"></script>
+<script src="../food-data.js"></script>
+<script src="../food-core.js"></script>
+<script>
+const lib = FOOD_SEED_LIBRARY;
+const meal = (id) => FOOD_SEED_MEALS.find((m) => m.id === id);
+const entry = (date, kcal, extra = {}) => ({
+  id: `${date}-${kcal}-${Math.random()}`, date, at: 0, slot: "extra", name: "x", servings: 1,
+  n: { ...emptyNutrients(), kcal, ...(extra.n || {}) }, confidence: extra.confidence || "exact",
+});
+const settings = (over = {}) => ({
+  ...defaultSettings("2026-10-12", 205), maintenance: 3000, ...over,
+});
+
+run(() => {
+  // ---- nutrient math ----
+  eq("empty has every key", Object.keys(emptyNutrients()), NUTRIENT_KEYS);
+  eq("scale rounds to 0.1", scaleNutrients({ ...emptyNutrients(), kcal: 120, protein: 24 }, 1.375).protein, 33);
+  eq("sum", sumNutrients([{ ...emptyNutrients(), kcal: 1.25 }, { ...emptyNutrients(), kcal: 2.5 }]).kcal, 3.8);
+
+  const shake = mealNutrients(meal("meal-shake"), lib, []);
+  near("shake kcal ~330", shake.n.kcal, 330, 5);
+  near("shake protein ~45", shake.n.protein, 45, 1);
+  eq("shake is exact", shake.confidence, "exact");
+  const lunch = mealNutrients(meal("meal-prep-lunch"), lib, []);
+  near("meal prep kcal ~366", lunch.n.kcal, 366, 5);
+  near("meal prep protein ~56", lunch.n.protein, 56, 1);
+  const lunchBbq = mealNutrients(meal("meal-prep-lunch"), lib, ["bbq-low"]);
+  eq("BBQ add-on adds sodium", lunchBbq.n.sodium - lunch.n.sodium, 300);
+  near("egg dinner ~770 kcal", mealNutrients(meal("meal-egg-dinner"), lib, []).n.kcal, 770, 15);
+  const chainMeal = { items: [{ foodId: "chipotle-bowl", servings: 1 }, { foodId: "banana", servings: 1 }] };
+  eq("any estimate item makes a meal an estimate", mealNutrients(chainMeal, lib, []).confidence, "estimate");
+  eq("missing food ids are skipped", mealNutrients({ items: [{ foodId: "nope", servings: 1 }] }, lib, []).n.kcal, 0);
+
+  const pizza = TAKEOUT_PRESETS.find((p) => p.id === "pizza");
+  eq("takeout M is the base", takeoutNutrients(pizza, "M").kcal, 290);
+  eq("takeout L kcal", takeoutNutrients(pizza, "L").kcal, 450);
+  near("takeout L scales protein", takeoutNutrients(pizza, "L").protein, 12 * 450 / 290, 0.1);
+
+  // ---- day totals (entry.n is per serving) ----
+  const log = [entry("2026-10-12", 300), { ...entry("2026-10-12", 100), servings: 3 }, entry("2026-10-13", 999)];
+  eq("dayTotals multiplies servings", dayTotals(log, "2026-10-12").kcal, 600);
+  eq("dayTotals empty day", dayTotals(log, "2026-10-14").kcal, 0);
+
+  // ---- weeks + targets ----
+  eq("week of a Wednesday is Mon-Sun", weekDates("2026-10-14"), ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"]);
+  eq("week of a Sunday ends that day", weekDates("2026-10-18")[6], "2026-10-18");
+  eq("maintain target", targetCalories(settings()), 3000);
+  eq("cut 1 lb/wk", targetCalories(settings({ goal: { mode: "cut", rateLbPerWk: -1 } })), 2500);
+  eq("bulk 0.5 lb/wk", targetCalories(settings({ goal: { mode: "bulk", rateLbPerWk: 0.5 } })), 3250);
+
+  const mifflin = mifflinStJeor({ age: 26, sex: "male", heightCm: 194.3 }, 205 / 2.20462);
+  near("Mifflin-St Jeor BMR", mifflin, 2019, 2);
+  eq("female constant", Math.round(mifflin - mifflinStJeor({ age: 26, sex: "female", heightCm: 194.3 }, 205 / 2.20462)), 166);
+  eq("starting maintenance rounds to 50", startingMaintenance({ age: 26, sex: "male", heightCm: 194.3, activity: 1.5 }, 205), 3050);
+
+  // ---- daily guide with the weekend bank (start Mon 2026-10-12) ----
+  eq("Monday guide spreads the bank", dailyGuide(settings(), [], "2026-10-12").guide, 2710);
+  eq("Monday week budget", dailyGuide(settings(), [], "2026-10-12").budget, 21000);
+  const weekdays = ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16"];
+  const ate2700 = weekdays.map((d) => entry(d, 2700));
+  eq("Saturday gets its bank", dailyGuide(settings(), ate2700, "2026-10-17").guide, 4250);
+  eq("Sunday after a 4,500 Saturday", dailyGuide(settings(), [...ate2700, entry("2026-10-17", 4500)], "2026-10-18").guide, 3000);
+  eq("unlogged past days count as planned", dailyGuide(settings(), [], "2026-10-14").guide, 2710);
+  const blowout = weekdays.map((d) => entry(d, 4000));
+  const over = dailyGuide(settings(), blowout, "2026-10-17");
+  eq("guide never below the floor", over.guide, 1800);
+  eq("over-budget flagged", over.over, true);
+  eq("weekLeft counts today's intake", dailyGuide(settings(), [entry("2026-10-12", 1000)], "2026-10-12").weekLeft, 20000);
+  eq("week starting midweek only budgets active days", dailyGuide(settings({ startDate: "2026-10-14" }), [], "2026-10-14").budget, 15000);
+  eq("midweek start Wednesday guide", dailyGuide(settings({ startDate: "2026-10-14" }), [], "2026-10-14").guide, 2600);
+
+  // ---- discovery + signals ----
+  eq("discovery day 1", inDiscovery(settings(), "2026-10-12"), true);
+  eq("discovery day 14", inDiscovery(settings(), "2026-10-25"), true);
+  eq("discovery over on day 15", inDiscovery(settings(), "2026-10-26"), false);
+  const s = settings();
+  eq("signal neutral in discovery", signalStatus("addedSugar", 80, s, true), "neutral");
+  eq("sugar under limit good", signalStatus("addedSugar", 30, s, false), "good");
+  eq("sugar 1.4x warn", signalStatus("addedSugar", 50, s, false), "warn");
+  eq("sugar 2x bad", signalStatus("addedSugar", 72, s, false), "bad");
+  eq("sodium at limit good", signalStatus("sodium", 2300, s, false), "good");
+  eq("fiber met good", signalStatus("fiber", 40, s, false), "good");
+  eq("fiber 26 warn", signalStatus("fiber", 26, s, false), "warn");
+  eq("fiber 10 bad", signalStatus("fiber", 10, s, false), "bad");
+  eq("protein uses its target", signalStatus("protein", 150, s, false), "warn");
+
+  // ---- planned meal lookup ----
+  eq("breakfast any day", plannedMealFor(FOOD_SEED_MEALS, "breakfast", "2026-10-18").id, "meal-shake");
+  eq("weekday lunch is meal prep", plannedMealFor(FOOD_SEED_MEALS, "lunch", "2026-10-14").id, "meal-prep-lunch");
+  eq("weekend lunch has no plan", plannedMealFor(FOOD_SEED_MEALS, "lunch", "2026-10-17"), null);
+  eq("treat meal has no plan", plannedMealFor(FOOD_SEED_MEALS, "treat-meal", "2026-10-17"), null);
+
+  // ---- estimate share, recents, alcohol ----
+  const mixed = [entry("2026-10-12", 600), entry("2026-10-12", 400, { confidence: "estimate" })];
+  eq("estimated share %", estimatedShare(mixed, "2026-10-12"), 40);
+  eq("estimated share empty day", estimatedShare(mixed, "2026-10-13"), 0);
+  const recents = recentFoods([
+    { ...entry("2026-10-12", 1), name: "A", at: 1 }, { ...entry("2026-10-12", 1), name: "B", at: 2 },
+    { ...entry("2026-10-13", 1), name: "A", at: 3 },
+  ], 10).map((e) => e.name);
+  eq("recents newest first, distinct", recents, ["A", "B"]);
+  const claw = lib.find((f) => f.id === "white-claw");
+  const drinks = [{ ...entry("2026-10-17", 0), n: claw.n, servings: 3 }, { ...entry("2026-10-10", 0), n: claw.n, servings: 2 }];
+  eq("week alcohol only counts this week", weekAlcohol(drinks, "2026-10-18"), { kcal: 294, drinks: 3 });
+
+  // ---- weight slope + adaptive maintenance ----
+  const weights = [];
+  for (let i = 0; i < 21; i += 2) weights.push({ date: shiftDate("2026-10-01", i), weight: 205 + i * (0.5 / 7) });
+  near("slope 0.5 lb/wk", weightSlope(weights, "2026-10-21", 21).slope * 7, 0.5, 0.01);
+  eq("slope counts weigh-in days", weightSlope(weights, "2026-10-21", 21).count, 11);
+  eq("slope needs two points", weightSlope([{ date: "2026-10-21", weight: 200 }], "2026-10-21", 21), null);
+  const sameDay = [{ date: "2026-10-20", weight: 200 }, { date: "2026-10-20", weight: 202 }, { date: "2026-10-21", weight: 201 }];
+  near("same-day weigh-ins average", weightSlope(sameDay, "2026-10-21", 21).slope, 0, 0.001);
+
+  const days = {};
+  const intake = [];
+  for (let i = 0; i < 21; i++) {
+    const d = shiftDate("2026-10-01", i);
+    days[d] = { complete: true };
+    intake.push(entry(d, 3200));
+  }
+  const p = proposeMaintenance(settings(), intake, days, weights, "2026-10-21");
+  eq("proposal ready", p.ready, true);
+  near("observed = intake - surplus", p.observed, 3200 - 250, 5);
+  eq("proposal is halfway, rounded to 50", p.proposed, 3000);
+  eq("small change not worth showing", p.worth, false);
+  const high = proposeMaintenance(settings({ maintenance: 2000 }), intake, days, weights, "2026-10-21");
+  eq("proposal clamped to +250", high.proposed, 2250);
+  eq("big change worth showing", high.worth, true);
+  const fewDays = {};
+  for (let i = 0; i < 9; i++) fewDays[shiftDate("2026-10-13", i)] = { complete: true };
+  const notReady = proposeMaintenance(settings(), intake, fewDays, weights, "2026-10-21");
+  eq("needs 10 complete days", [notReady.ready, notReady.completeDays], [false, 9]);
+  eq("incomplete days are ignored", proposeMaintenance(settings(), intake, {}, weights, "2026-10-21").completeDays, 0);
+  eq("needs 8 weigh-ins", proposeMaintenance(settings(), intake, days, weights.slice(0, 7), "2026-10-21").ready, false);
+});
+</script></body></html>

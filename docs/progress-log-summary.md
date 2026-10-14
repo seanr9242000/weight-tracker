@@ -93,3 +93,25 @@ start date" fix had been silently overridden by `.link-btn`'s
 Confirmed on Sean's iPhone the same day: turning reminders on and
 sending a test ping delivered a real notification to the installed
 app.
+
+## 2026-10-13 — Food tab (Phase 2a)
+Planned Phase 2 through a detailed Q&A (goal, logging effort, which
+numbers matter, where Sean actually eats, exact shake/meal-prep
+recipes, weekend drinking) and split it in two: 2a ships now, barcode
+scanning and food search come in 2b. The Q&A surfaced the key fact
+the tab is built to test: planned meals only add up to about 1,900
+kcal on a lift day against roughly 3,050 maintenance, so either
+off-plan eating fills a 1,000+ kcal gap or Sean under-eats on
+weekdays. Meal items on Today now log their planned meal in one tap
+(which also stops their pings), and a new 9:30 PM "Close food log"
+item marks the day as fully logged. The new **Food** tab tracks
+calories against a weekly budget that banks extra for Saturday and
+Sunday, scores protein, fiber, added sugar, sodium and alcohol, and
+offers quick add, S/M/L takeout estimates, chain items and one-tap
+drinks. The first 14 days are "Discovery" (measure, don't judge).
+After that, a weekly check-in estimates real maintenance from
+fully-logged days plus the weight trend and proposes a capped change
+for Sean to accept or keep. The math is in a DOM-free `food-core.js`.
+The repo now has a `tests/` folder (`python tests/run.py`, 124 checks,
+including the old schedule tests rescued from a scratchpad). The
+approved design spec is in `docs/superpowers/specs/`.

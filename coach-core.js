@@ -34,7 +34,12 @@ function morning(wake) {
   ];
 }
 
+/* Closing the food log marks the day complete, which is what lets it
+   count toward the adaptive calorie estimate (see food-core.js). */
+const CLOSE_FOOD_LOG = { id: "close-food-log", time: "21:30", title: "Close food log", kind: "food", note: "Anything not logged yet? Add it, then close the day." };
+
 const EVENING = [
+  CLOSE_FOOD_LOG,
   { id: "wind-down", time: "22:15", title: "Wind down — screens away", kind: "sleep" },
   { id: "brush-pm", time: "22:25", title: "Brush teeth → gum, not a pouch", kind: "habit", trigger: "brushing" },
   { id: "lights-out", time: "22:45", title: "Lights out", kind: "sleep" },
@@ -96,6 +101,7 @@ const WEEK_TEMPLATE = [
     { id: "lunch", time: "13:00", title: "Lunch", kind: "meal" },
     { id: "treat-meal", time: "18:00", title: "Planned treat meal — enjoy it, log it", kind: "meal" },
     { id: "drink-plan", time: "18:00", title: "Tonight's plan: gum in pocket, water between drinks", kind: "habit", trigger: "alcohol" },
+    CLOSE_FOOD_LOG,
   ],
 ];
 
