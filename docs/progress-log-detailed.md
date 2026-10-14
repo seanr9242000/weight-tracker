@@ -81,7 +81,7 @@ Session total: ~20 min, 5 commits.
 | 00:17 (10-12) | Add push reminders: Supabase ping queue, send-pings function, Reminders card | 25 min |
 | 00:23 (10-12) | Log on-device push test passing (Phase 1 complete) | 6 min |
 
-Session total: ~67 min between commits (planning interview + Phase 1 build preceded the first), 6 commits. Ran past midnight into 2026-10-12.
+Session total: ~77 min between commits (planning interview + Phase 1 build preceded the first), 7 commits. Ran past midnight into 2026-10-12.
 
 ---
 
@@ -94,5 +94,6 @@ Session total: ~67 min between commits (planning interview + Phase 1 build prece
 | 22:43 | Add snack reminders, tap-a-reminder-to-log, and food search | 19 min |
 | 23:04 | Add online food search (USDA via food-search function) | 21 min |
 | 23:15 | Add snack ideas with portions, matched to game/lift/rest days | 11 min |
+| 23:25 | Add after-game/lift check-in and Fuel vs feel | 10 min |
 
-Session total: ~61 min between commits (brainstorm interview + spec + build + tests preceded the first), 5 commits.
+Session total: ~71 min between commits (brainstorm interview + spec + build + tests preceded the first), 6 commits.

@@ -12,6 +12,7 @@ const FOOD_SETTINGS_KEY = "food-settings";
 const FOOD_HISTORY_KEY = "food-target-history";
 const FOOD_CHECKIN_KEY = "food-checkin-seen";
 const FOOD_IDEAS_KEY = "food-ideas";
+const FEEL_LOG_KEY = "coach-feel-log";
 const CLOSE_FOOD_LOG_ID = "close-food-log";
 const GOAL_PROMPT_AFTER_DAYS = 49; // ~7 weeks: the Zyn taper should be done
 
@@ -76,6 +77,7 @@ const foodMeals = () => loadJSON(FOOD_MEALS_KEY, []);
 const foodLog = () => loadJSON(FOOD_LOG_KEY, []);
 const foodDays = () => loadJSON(FOOD_DAYS_KEY, {});
 const foodIdeas = () => loadJSON(FOOD_IDEAS_KEY, []);
+const feelLog = () => loadJSON(FEEL_LOG_KEY, []);
 
 mergeSeed(FOOD_LIBRARY_KEY, FOOD_SEED_LIBRARY);
 mergeSeed(FOOD_MEALS_KEY, FOOD_SEED_MEALS);
@@ -191,6 +193,84 @@ function renderSnackIdeas(panel, dateStr, item) {
   panel.appendChild(box);
 }
 
+/* ---- Today: "how did it go?" after a game or lift (coach.js) ---- */
+
+const feelDrafts = {}; // item id -> answers picked so far
+
+function feelQuestions(kind) {
+  const scale = [1, 2, 3, 4, 5].map((v) => [v, String(v)]);
+  return [
+    { key: "energy", label: "Energy", options: scale },
+    { key: "stomach", label: "Stomach", options: [["full", "Too full"], ["right", "Just right"], ["hungry", "Hungry"]] },
+    { key: "legs", label: "Legs / body", options: [["fresh", "Fresh"], ["normal", "Normal"], ["heavy", "Heavy"]] },
+    { key: "performance", label: kind === "game" ? "Shooting" : "Weights moved", options: scale },
+  ];
+}
+
+function feelRated(dateStr, itemId) {
+  return feelLog().some((r) => r.date === dateStr && r.itemId === itemId);
+}
+
+/* Each answer is saved with what was eaten in the 4 hours before the
+   game/lift, so the Food tab can line fuel up against how it went. */
+function renderFeelPanel(dateStr, item) {
+  const draft = feelDrafts[item.id] || (feelDrafts[item.id] = {});
+  const panel = el("div", "meal-panel feel-panel");
+  panel.appendChild(el("div", "meal-name", "How did it go?"));
+  for (const q of feelQuestions(item.id)) {
+    panel.appendChild(el("div", "feel-label", q.label));
+    const row = el("div", "chip-row");
+    for (const [value, label] of q.options) {
+      const chip = el("button", `chip small${draft[q.key] === value ? " active" : ""}`, label);
+      chip.type = "button";
+      chip.addEventListener("click", () => {
+        draft[q.key] = draft[q.key] === value ? undefined : value;
+        renderToday();
+      });
+      row.appendChild(chip);
+    }
+    panel.appendChild(row);
+  }
+  const note = el("input", "feel-note");
+  note.type = "text";
+  note.placeholder = "Note (optional)";
+  note.value = draft.note || "";
+  note.addEventListener("input", () => { draft.note = note.value; });
+  panel.appendChild(note);
+
+  const items = itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {}));
+  const ate = [...new Set(foodsBefore(foodLog(), items, dateStr, item.time).map((e) => e.name))];
+  panel.appendChild(el("div", "meal-detail", ate.length
+    ? `Ate in the 4 hours before: ${ate.join(", ")}`
+    : "Nothing logged in the 4 hours before. Log it first so this links up."));
+
+  const actions = el("div", "meal-actions");
+  const skip = el("button", "pill-btn", "Skip");
+  skip.type = "button";
+  skip.addEventListener("click", () => {
+    feelOpenFor = null;
+    renderToday();
+  });
+  const save = el("button", "pill-btn dark", "Save");
+  save.type = "button";
+  save.disabled = !["energy", "stomach", "legs", "performance"].some((k) => draft[k] !== undefined);
+  save.addEventListener("click", () => {
+    const log = feelLog();
+    log.push({
+      id: newId(), date: dateStr, itemId: item.id, kind: item.id, at: Date.now(),
+      energy: draft.energy, stomach: draft.stomach, legs: draft.legs, performance: draft.performance,
+      note: (draft.note || "").trim() || undefined, ate,
+    });
+    saveJSON(FEEL_LOG_KEY, log);
+    delete feelDrafts[item.id];
+    feelOpenFor = null;
+    refreshFood();
+  });
+  actions.append(skip, save);
+  panel.appendChild(actions);
+  return panel;
+}
+
 function renderFuelRow(dateStr) {
   const row = document.getElementById("today-fuel");
   if (!row) return;
@@ -270,6 +350,7 @@ function renderFood() {
   renderQuickChips(log);
   renderFoodLog(today, log, days);
   renderSignals(today, totals, s, discovery, log, days);
+  renderFuelVsFeel();
   renderWeek(today, s, log, days, discovery);
   renderCheckin(today, s, log, days);
   renderTargets(s);
@@ -349,6 +430,31 @@ function renderSignals(today, totals, s, discovery, log, days) {
   document.getElementById("food-alcohol").textContent = alcohol.drinks
     ? `This week: ${alcohol.drinks} drink${alcohol.drinks === 1 ? "" : "s"} · ${fmt(alcohol.kcal)} kcal from alcohol`
     : "No drinks logged this week.";
+}
+
+const FUEL_FEEL_MIN_RATINGS = 3;
+const STOMACH_LABELS = { right: "just right", full: "too full", hungry: "hungry" };
+
+function renderFuelVsFeel() {
+  const records = feelLog();
+  const card = document.getElementById("food-feel");
+  card.hidden = records.length < FUEL_FEEL_MIN_RATINGS;
+  if (card.hidden) return;
+  const list = document.getElementById("food-feel-list");
+  list.innerHTML = "";
+  for (const row of fuelVsFeel(records).slice(0, 8)) {
+    const parts = [`${row.count}×`];
+    if (row.energy !== null) parts.push(`energy ${row.energy}`);
+    const answered = row.stomach.right + row.stomach.full + row.stomach.hungry;
+    if (answered) {
+      const [top, n] = Object.entries(row.stomach).sort((a, b) => b[1] - a[1])[0];
+      parts.push(`${STOMACH_LABELS[top]} ${n}/${answered}`);
+    }
+    const li = el("li", "feel-row");
+    li.appendChild(el("span", "pick-name", row.name));
+    li.appendChild(el("span", "pick-meta", parts.join(" · ")));
+    list.appendChild(li);
+  }
 }
 
 function renderWeek(today, s, log, days, discovery) {

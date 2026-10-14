@@ -145,7 +145,10 @@ banana · 377 kcal · 12 g P"), chosen by the kind of day the schedule
 says it is (game, lift, rest) with a one-line fueling tip. The 15 new
 foods behind them come from USDA entries looked up with Sean's key.
 Portion text is generated from each idea's servings, so editing an
-idea under Targets keeps it accurate. Next up, at Sean's request: a
-quick "how I feel" check-in after games and lifts (energy, stomach,
-legs, shooting/lifting), stored with what he ate beforehand, so snack
-choices can be adjusted from real data.
+idea under Targets keeps it accurate. Then, at Sean's request, a
+quick "how did it go?" check-in that opens when a game or lift is
+checked off (energy, stomach, legs, shooting / weights moved, note).
+Each one is saved with what he ate in the 4 hours before, and a "Fuel
+vs feel" card on the Food tab lines foods up against how the sessions
+went once there are 3+ check-ins: the data for adjusting snacks (and
+later for the AI coach).

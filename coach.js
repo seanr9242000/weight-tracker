@@ -75,11 +75,17 @@ function pouchesByDate() {
 let editingDay = false;
 let weighOpenFor = null;
 let mealOpenFor = null; // item id whose food panel (food.js) is open
+let feelOpenFor = null; // game/lift item id whose "how did it go?" card is open
 
 /* Meal items open a log-this-meal panel instead of a bare checkbox.
    Meal prep is cooking, not eating, so it stays a plain checkbox. */
 function hasMealPanel(item) {
   return item.kind === "meal" && item.id !== "meal-prep" && typeof renderMealPanel === "function";
+}
+
+/* Games and lifts get a quick "how did it go?" check-in once done. */
+function hasFeelPanel(item) {
+  return (item.id === "game" || item.id === "lift") && typeof renderFeelPanel === "function";
 }
 
 function setCheckin(dateStr, itemId, value) {
@@ -180,12 +186,14 @@ function renderChecklistItem(dateStr, item, checkin, now) {
       closeFoodLog(dateStr, !checkin);
     } else if (checkin) {
       setCheckin(dateStr, item.id, null);
+      if (feelOpenFor === item.id) feelOpenFor = null;
     } else if (hasMealPanel(item)) {
       mealOpenFor = mealOpenFor === item.id ? null : item.id;
     } else if (item.id === "weigh") {
       weighOpenFor = weighOpenFor === dateStr ? null : dateStr;
     } else {
       setCheckin(dateStr, item.id, { status: "done", at: Date.now() });
+      if (hasFeelPanel(item)) feelOpenFor = item.id;
     }
     renderToday();
   });
@@ -228,6 +236,19 @@ function renderChecklistItem(dateStr, item, checkin, now) {
     setTimeout(() => input.focus(), 0);
   }
 
+  const done = checkin && checkin.status === "done";
+  const rateLater = done && hasFeelPanel(item) && feelOpenFor !== item.id &&
+    dateStr === todayLocalDateString() && !feelRated(dateStr, item.id);
+  if (rateLater) {
+    const rate = el("button", "link-btn rate-btn", "Rate it");
+    rate.type = "button";
+    rate.addEventListener("click", () => {
+      feelOpenFor = item.id;
+      renderToday();
+    });
+    body.appendChild(rate);
+  }
+
   li.append(box, body);
 
   if (!checkin) {
@@ -241,6 +262,10 @@ function renderChecklistItem(dateStr, item, checkin, now) {
   if (mealOpenFor === item.id && !checkin && hasMealPanel(item)) {
     li.classList.add("has-panel");
     li.appendChild(renderMealPanel(dateStr, item));
+  }
+  if (feelOpenFor === item.id && done && hasFeelPanel(item)) {
+    li.classList.add("has-panel");
+    li.appendChild(renderFeelPanel(dateStr, item));
   }
   return li;
 }
@@ -534,7 +559,10 @@ renderHabits();
 /* Re-render each minute so items flip to due/missed on time, and when
    the app comes back to the foreground (iOS freezes timers while it's
    backgrounded, and the date may have rolled over). */
-setInterval(renderToday, 60000);
+setInterval(() => {
+  // Rebuilding the list mid-typing would drop focus (weigh-in, notes).
+  if (!document.activeElement || !document.activeElement.closest("#checklist")) renderToday();
+}, 60000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     renderToday();

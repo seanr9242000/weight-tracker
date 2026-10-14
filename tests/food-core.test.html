@@ -173,6 +173,37 @@ run(() => {
   eq("portion text without portion info", portionText([{ foodId: "chipotle-bowl", servings: 2 }], lib), "2 × Chipotle chicken bowl");
   eq("fractions", [fmtQty(0.25), fmtQty(1.5), fmtQty(2), fmtQty(0.3)], ["¼", "1½", "2", "0.3"]);
 
+  // ---- fuel vs feel ----
+  // Tue 2026-10-13: lunch 12:00, snack-pm 15:00, pregame-snack 17:30, game 19:00.
+  const tue = itemsForDate("2026-10-13", {});
+  const at = (hhmm) => new Date(`2026-10-13T${hhmm}`).getTime();
+  const fl = [
+    { ...entry("2026-10-13", 300), name: "Lunch thing", slot: "lunch", at: at("12:05") },
+    { ...entry("2026-10-13", 300), name: "PB-banana toast", slot: "snack-pm", at: at("15:10") },
+    { ...entry("2026-10-13", 240), name: "Pretzels + raisins", slot: "pregame-snack", at: at("19:20") },
+    { ...entry("2026-10-13", 100), name: "Gatorade", slot: "extra", at: at("18:40") },
+    { ...entry("2026-10-13", 100), name: "Late extra", slot: "extra", at: at("19:30") },
+    { ...entry("2026-10-12", 100), name: "Yesterday", slot: "snack-pm", at: at("15:00") - 86400000 },
+  ];
+  eq("foods in the 4 h before the game", foodsBefore(fl, tue, "2026-10-13", "19:00").map((e) => e.name),
+    ["PB-banana toast", "Pretzels + raisins", "Gatorade"]);
+  eq("a moved game moves the window", foodsBefore(fl, tue.map((i) => i.id === "game" ? { ...i, time: "16:30" } : i), "2026-10-13", "16:30").map((e) => e.name),
+    ["PB-banana toast"]);
+  eq("nothing before", foodsBefore([], tue, "2026-10-13", "19:00"), []);
+
+  const feel = [
+    { date: "2026-10-06", itemId: "game", energy: 4, stomach: "right", ate: ["Pretzels + raisins", "PB-banana toast"] },
+    { date: "2026-10-08", itemId: "game", energy: 5, stomach: "right", ate: ["Pretzels + raisins"] },
+    { date: "2026-10-09", itemId: "lift", energy: 2, stomach: "full", ate: ["PB-banana toast", "PB-banana toast"] },
+    { date: "2026-10-10", itemId: "lift", stomach: "hungry", ate: [] },
+  ];
+  eq("fuel vs feel summary", fuelVsFeel(feel), [
+    { name: "PB-banana toast", count: 2, energy: 3, stomach: { right: 1, full: 1, hungry: 0 } },
+    { name: "Pretzels + raisins", count: 2, energy: 4.5, stomach: { right: 2, full: 0, hungry: 0 } },
+  ]);
+  eq("energy skipped when not rated", fuelVsFeel([{ ate: ["X"], stomach: "right" }])[0].energy, null);
+  eq("empty log", fuelVsFeel([]), []);
+
   // ---- estimate share, recents, alcohol ----
   const mixed = [entry("2026-10-12", 600), entry("2026-10-12", 400, { confidence: "estimate" })];
   eq("estimated share %", estimatedShare(mixed, "2026-10-12"), 40);

@@ -13,7 +13,10 @@ coach. Five tabs:
   planned meal in one tap ("As planned") or open food search; tapping a
   meal's reminder opens straight to that item. Snack items also list
   ideas with exact portions, picked for the kind of day (game, lift,
-  rest).
+  rest). Checking off a game or lift opens a quick "how did it go?"
+  check-in (energy, stomach, legs, shooting / weights), saved with what
+  you ate in the 4 hours before; the Food tab's "Fuel vs feel" card
+  lines the two up once there are 3+ check-ins.
 - **Food** — search (past entries first, then saved meals, foods,
   chains, takeout, plus "Search online" against the USDA food
   database; picked results are saved to My foods), calories and protein against a weekly budget with a
@@ -71,7 +74,7 @@ Click-through UI tests (real app at iPhone width, with a screenshot of
 where each script ends):
 
 ```
-python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js --interact tests/ui/online-search.js --interact tests/ui/snack-ideas.js
+python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js --interact tests/ui/online-search.js --interact tests/ui/snack-ideas.js --interact tests/ui/feel-checkin.js
 ```
 
 ## Notes

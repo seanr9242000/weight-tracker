@@ -231,6 +231,55 @@ function portionText(items, library) {
   }).join(" · ");
 }
 
+/* ---- Fuel vs feel (after-game / after-lift check-ins) ---- */
+
+const FEEL_WINDOW_HOURS = 4;
+
+/* Food logged for the hours before an item (a game at 19:00 -> 15:00
+   to 19:00), oldest first. Food logged into a checklist slot counts by
+   that slot's scheduled time, so a pre-game snack logged late still
+   counts; "extra" entries count by when they were logged. */
+function foodsBefore(log, items, dateStr, time, hours = FEEL_WINDOW_HOURS) {
+  const end = timeOfDay(time);
+  const start = end - hours * 60;
+  const slotMinutes = Object.fromEntries(items.map((i) => [i.id, timeOfDay(i.time)]));
+  return log
+    .filter((e) => e.date === dateStr)
+    .map((e) => {
+      const d = new Date(e.at);
+      const when = e.slot in slotMinutes ? slotMinutes[e.slot] : d.getHours() * 60 + d.getMinutes();
+      return { e, when };
+    })
+    .filter(({ when }) => when >= start && when < end)
+    .sort((a, b) => a.when - b.when)
+    .map(({ e }) => e);
+}
+
+function timeOfDay(time) {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+/* Per food eaten before a rated game/lift: how often, average energy
+   (null if never rated), and how the stomach felt. Most-eaten first. */
+function fuelVsFeel(feelLog) {
+  const byName = {};
+  for (const rec of feelLog) {
+    for (const name of new Set(rec.ate || [])) {
+      const row = byName[name] || (byName[name] = { name, count: 0, energySum: 0, energyN: 0, stomach: { right: 0, full: 0, hungry: 0 } });
+      row.count++;
+      if (typeof rec.energy === "number") {
+        row.energySum += rec.energy;
+        row.energyN++;
+      }
+      if (rec.stomach in row.stomach) row.stomach[rec.stomach]++;
+    }
+  }
+  return Object.values(byName)
+    .map(({ name, count, energySum, energyN, stomach }) => ({ name, count, energy: energyN ? round1(energySum / energyN) : null, stomach }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
 /* Local search for the food picker. Every query word must appear in
    the name (or brand), case-insensitive. Results come in the order
    Sean is most likely to want them: things he's logged before (newest
@@ -353,6 +402,6 @@ if (typeof module !== "undefined") {
     NUTRIENT_KEYS, emptyNutrients, scaleNutrients, sumNutrients, mealNutrients, takeoutNutrients,
     entryTotal, dayTotals, weekDates, targetCalories, mifflinStJeor, startingMaintenance,
     defaultSettings, dailyGuide, inDiscovery, signalStatus, plannedMealFor, estimatedShare,
-    recentFoods, searchFoods, usdaToFood, dayType, snackIdeasFor, snackTip, fmtQty, portionText, weekAlcohol, weightSlope, proposeMaintenance,
+    recentFoods, searchFoods, usdaToFood, dayType, snackIdeasFor, snackTip, fmtQty, portionText, foodsBefore, fuelVsFeel, weekAlcohol, weightSlope, proposeMaintenance,
   };
 }
