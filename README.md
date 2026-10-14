@@ -13,7 +13,8 @@ coach. Five tabs:
   planned meal in one tap ("As planned") or open food search; tapping a
   meal's reminder opens straight to that item.
 - **Food** — search (past entries first, then saved meals, foods,
-  chains, takeout), calories and protein against a weekly budget with a
+  chains, takeout, plus "Search online" against the USDA food
+  database; picked results are saved to My foods), calories and protein against a weekly budget with a
   weekend bank, health signals (fiber, added sugar, sodium, alcohol),
   quick add, S/M/L takeout estimates, chain items, one-tap drinks, and
   a weekly check-in that proposes a new maintenance estimate from
@@ -29,9 +30,11 @@ Schedule/taper rules live in `coach-core.js` and food math in
 `food-core.js` (no DOM, testable on their own); seed foods and meals
 are in `food-data.js`; the UI is `coach.js` (Today/Habits) and
 `food.js` (Food). App data is stored on your device
-(`localStorage`/IndexedDB). Only push reminders use a server: the
-next 7 days of checklist items sync to Supabase so `send-pings` can
-notify you (see `supabase/`).
+(`localStorage`/IndexedDB). Two things use a server (Supabase, see
+`supabase/`): the next 7 days of checklist items sync so `send-pings`
+can notify you, and "Search online" goes through the `food-search`
+function, which holds the USDA FoodData Central API key as a secret
+(`supabase secrets set USDA_API_KEY=...`).
 
 ## Installing on iPhone
 
@@ -66,7 +69,7 @@ Click-through UI tests (real app at iPhone width, with a screenshot of
 where each script ends):
 
 ```
-python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js
+python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js --interact tests/ui/online-search.js
 ```
 
 ## Notes

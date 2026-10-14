@@ -4,3 +4,8 @@ project_id = "weight-tracker"
 
 [functions.send-pings]
 verify_jwt = false
+
+# Food search proxy (USDA key is the USDA_API_KEY secret). Called by
+# the app with its anonymous session, so the JWT is checked.
+[functions.food-search]
+verify_jwt = true

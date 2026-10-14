@@ -128,3 +128,13 @@ before ahead of saved meals, foods, chains, and takeout. Online search
 secret) is next, waiting on Sean's free api.data.gov key. Open Food
 Facts was checked and ruled out for now: its search API doesn't allow
 browser requests (no CORS) and many entries lack serving sizes.
+
+Online search followed the same night: Sean got a free api.data.gov
+key, which lives only as a Supabase secret behind a new `food-search`
+Edge Function (the repo is public). "Search online" in the food picker
+queries USDA FoodData Central: generic foods and branded products are
+searched separately, because mixed together brand searches drowned in
+generic results. Picked results log with label per-serving numbers and
+are saved to My foods. The gateway's `verify_jwt` turned out to let the
+public publishable key through, so the function checks for a real
+session itself.

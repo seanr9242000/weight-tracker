@@ -598,10 +598,87 @@ function renderSearch(body) {
   input.autocomplete = "off";
   input.enterKeyHint = "search";
   const results = el("div", "search-results");
-  input.addEventListener("input", () => renderSearchResults(results, input.value));
-  body.append(input, results);
-  renderSearchResults(results, "");
+  const online = el("div", "search-results online-results");
+  const refresh = () => {
+    renderSearchResults(results, input.value);
+    renderOnlineButton(online, input.value);
+  };
+  input.addEventListener("input", refresh);
+  input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || input.value.trim().length < 2) return;
+    e.preventDefault();
+    input.blur();
+    runOnlineSearch(online, input.value.trim());
+  });
+  body.append(input, results, online);
+  refresh();
   setTimeout(() => input.focus(), 0);
+}
+
+/* ---- Online search (USDA FoodData Central via the food-search Edge
+   Function; see supabase/functions/food-search) ---- */
+
+const ONLINE_MIN_CHARS = 2;
+let onlineSearchSeq = 0; // bumps on every keystroke so stale results are dropped
+
+function renderOnlineButton(wrap, query) {
+  onlineSearchSeq++;
+  wrap.innerHTML = "";
+  const q = query.trim();
+  if (q.length < ONLINE_MIN_CHARS) return;
+  const btn = el("button", "secondary-btn online-btn", `Search online for “${q}”`);
+  btn.type = "button";
+  btn.addEventListener("click", () => runOnlineSearch(wrap, q));
+  wrap.appendChild(btn);
+}
+
+/* Uses the reminders Supabase client (reminders.js, loaded deferred)
+   and its anonymous session; the function rejects calls without one. */
+async function searchOnline(query) {
+  if (typeof remindersDb === "undefined" || !remindersDb) throw new Error("Supabase client not loaded");
+  await ensureSession();
+  const { data, error } = await remindersDb.functions.invoke("food-search", { body: { q: query } });
+  if (error) throw error;
+  const seen = new Set();
+  return (data.foods || []).map(usdaToFood).filter((f) => {
+    const key = `${f.name}|${f.serving}|${f.n.kcal}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function runOnlineSearch(wrap, query) {
+  const seq = ++onlineSearchSeq;
+  wrap.innerHTML = "";
+  wrap.appendChild(el("div", "pick-section", "USDA food database"));
+  const status = el("p", "hint", "Searching…");
+  wrap.appendChild(status);
+  let foods;
+  try {
+    foods = await searchOnline(query);
+  } catch {
+    if (seq === onlineSearchSeq) status.textContent = "Couldn't reach the food database. Check your signal, or use Quick add.";
+    return;
+  }
+  if (seq !== onlineSearchSeq) return;
+  status.textContent = foods.length
+    ? "Picking one also saves it to My foods."
+    : `Nothing online for “${query}”. Try fewer or different words, or Quick add.`;
+  for (const food of foods) {
+    wrap.appendChild(pickRow(food.name, `${food.serving} · ${fmt(food.n.kcal)} kcal · ${fmt(food.n.protein)} g P`, () =>
+      logFromSheet(() => {
+        saveToLibrary(food);
+        logLibraryFood(food, sheetSlot);
+      })));
+  }
+}
+
+function saveToLibrary(food) {
+  const lib = foodLibrary();
+  if (lib.some((f) => f.id === food.id)) return;
+  lib.push({ ...food, favorite: true });
+  saveJSON(FOOD_LIBRARY_KEY, lib);
 }
 
 function renderSearchResults(wrap, query) {

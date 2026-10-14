@@ -215,6 +215,43 @@ function searchFoods(query, { log, library, meals, presets }, limit = 30) {
   ].slice(0, limit);
 }
 
+/* A USDA FoodData Central result (as slimmed by the food-search Edge
+   Function: nutrients per 100 g) -> a library food. Branded foods use
+   their label serving; generic foods (Foundation, SR Legacy, FNDDS)
+   have no serving size, so one serving = 100 g. USDA rarely reports
+   added sugar for branded foods; when it's missing, total sugar counts
+   as added (most sugar in packaged food is), and as 0 for whole foods.
+   Measured/label data, so "exact" rather than an estimate. */
+const USDA_UNITS = { g: "g", grm: "g", ml: "ml", mlt: "ml" };
+
+function tidyName(text) {
+  if (!text || text !== text.toUpperCase()) return text;
+  return text.toLowerCase().replace(/(^|\s)(\S)/g, (m, sp, ch) => sp + ch.toUpperCase());
+}
+
+function usdaToFood(hit) {
+  const unit = USDA_UNITS[String(hit.servingSizeUnit || "").toLowerCase()];
+  const labelServing = hit.dataType === "Branded" && unit && hit.servingSize > 0;
+  const factor = labelServing ? hit.servingSize / 100 : 1;
+  const per100 = hit.per100 || {};
+  const n = scaleNutrients(per100, factor);
+  if (per100.addedSugar === undefined) n.addedSugar = hit.dataType === "Branded" ? n.sugar : 0;
+  const name = tidyName(hit.name);
+  const brand = tidyName(hit.brand) || undefined;
+  // Branded entries often name only the product ("Protein Bar, Cookies
+  // & Cream"), which is useless in the log without the brand.
+  const brandWord = brand ? brand.split(/\s+/)[0].toLowerCase() : "";
+  return {
+    id: `usda-${hit.fdcId}`,
+    name: brand && !name.toLowerCase().includes(brandWord) ? `${name} (${brand})` : name,
+    brand,
+    serving: labelServing ? hit.household || `${hit.servingSize} ${unit}` : "100 g",
+    n,
+    confidence: "exact",
+    source: "usda",
+  };
+}
+
 /* Least-squares weight trend (lb/day) over the `days` ending endDate.
    Same-day weigh-ins are averaged first. Null with fewer than 2 days. */
 function weightSlope(entries, endDate, days) {
@@ -272,6 +309,6 @@ if (typeof module !== "undefined") {
     NUTRIENT_KEYS, emptyNutrients, scaleNutrients, sumNutrients, mealNutrients, takeoutNutrients,
     entryTotal, dayTotals, weekDates, targetCalories, mifflinStJeor, startingMaintenance,
     defaultSettings, dailyGuide, inDiscovery, signalStatus, plannedMealFor, estimatedShare,
-    recentFoods, searchFoods, weekAlcohol, weightSlope, proposeMaintenance,
+    recentFoods, searchFoods, usdaToFood, weekAlcohol, weightSlope, proposeMaintenance,
   };
 }

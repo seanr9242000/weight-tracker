@@ -123,6 +123,30 @@ run(() => {
     { id: "b", name: "Bar B", serving: "1", n: emptyNutrients(), confidence: "estimate", favorite: true }];
   eq("favorites first among foods", names(searchFoods("bar", { log: [], library: favs, meals: [], presets: [] })), ["food:Bar B", "food:Bar A"]);
 
+  // ---- USDA online results (shape returned by the food-search function) ----
+  const oikosHit = { fdcId: 2650001, dataType: "Branded", name: "Oikos Pro Plain Yogurt", brand: "Oikos Dannon Company",
+    servingSize: 170, servingSizeUnit: "GRM", household: "3/4 cup (170g)",
+    per100: { kcal: 94, protein: 14.7, carbs: 3.53, fat: 2.06, fiber: 0, sugar: 2.35, addedSugar: 0, sodium: 35 } };
+  const oikosFood = usdaToFood(oikosHit);
+  eq("usda id", oikosFood.id, "usda-2650001");
+  eq("branded scales to the label serving", [oikosFood.n.kcal, oikosFood.n.protein, oikosFood.n.sodium], [159.8, 25, 59.5]);
+  eq("branded serving text", oikosFood.serving, "3/4 cup (170g)");
+  eq("usda foods are exact + tagged", [oikosFood.confidence, oikosFood.source], ["exact", "usda"]);
+  eq("missing nutrients are 0", oikosFood.n.alcohol, 0);
+  const shouty = usdaToFood({ ...oikosHit, name: "DANN OIKOS PRO MIXBERRY 4X5.3OZ", brand: "OIKOS DANONE US LLC", household: null });
+  eq("ALL-CAPS names tidied", shouty.name, "Dann Oikos Pro Mixberry 4x5.3oz");
+  eq("brand added when the name lacks it", usdaToFood({ ...oikosHit, name: "PROTEIN BAR, COOKIES & CREAM", brand: "QUEST BAR" }).name,
+    "Protein Bar, Cookies & Cream (Quest Bar)");
+  eq("brand not repeated when the name has it", oikosFood.name, "Oikos Pro Plain Yogurt");
+  eq("serving falls back to grams", shouty.serving, "170 g");
+  eq("branded with no added-sugar figure counts total sugar", usdaToFood({ ...oikosHit, per100: { kcal: 400, sugar: 50 } }).n.addedSugar, 85);
+  const rice = usdaToFood({ fdcId: 1, dataType: "Survey (FNDDS)", name: "Rice, white, cooked, no added fat", brand: null,
+    per100: { kcal: 129, protein: 2.67, carbs: 28, sugar: 0.05 } });
+  eq("generic foods are per 100 g", [rice.serving, rice.n.kcal], ["100 g", 129]);
+  eq("generic with no added-sugar figure counts 0", rice.n.addedSugar, 0);
+  eq("ml servings", usdaToFood({ ...oikosHit, servingSizeUnit: "MLT", servingSize: 355, household: null }).serving, "355 ml");
+  eq("unknown units fall back to per 100 g", usdaToFood({ ...oikosHit, servingSizeUnit: "ONZ" }).serving, "100 g");
+
   // ---- estimate share, recents, alcohol ----
   const mixed = [entry("2026-10-12", 600), entry("2026-10-12", 400, { confidence: "estimate" })];
   eq("estimated share %", estimatedShare(mixed, "2026-10-12"), 40);

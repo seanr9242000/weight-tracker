@@ -1469,6 +1469,13 @@ canvas {
   gap: 6px;
 }
 
+/* The body scrolls; its children must keep their natural height or a
+   long results list squashes the search box. */
+.food-sheet-body > *,
+.search-results > * {
+  flex-shrink: 0;
+}
+
 .food-sheet-body .pill-btn.danger {
   align-self: flex-start;
   margin-top: 8px;
@@ -1600,4 +1607,18 @@ canvas {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.online-results {
+  margin-top: 10px;
+}
+
+.online-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.online-results .hint {
+  margin: 0 0 4px;
 }
