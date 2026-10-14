@@ -1,4 +1,4 @@
-const CACHE_NAME = "weight-tracker-v22";
+const CACHE_NAME = "weight-tracker-v23";
 const ASSETS = [
   "./",
   "./index.html",
@@ -70,13 +70,21 @@ self.addEventListener("push", (event) => {
   );
 });
 
+/* A single-item reminder's tag is its checklist item id, so the tap
+   opens that item (a meal opens straight into its log panel). Batched
+   reminders ("3 things due") just open the app. */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = new URL(event.notification.data?.url || "./", self.registration.scope).href;
+  const tag = event.notification.tag;
+  const itemId = tag && tag !== "batch" ? tag : null;
+  const path = itemId ? `./?item=${encodeURIComponent(itemId)}` : event.notification.data?.url || "./";
+  const url = new URL(path, self.registration.scope).href;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       const open = windows.find((w) => "focus" in w);
-      return open ? open.focus() : self.clients.openWindow(url);
+      if (!open) return self.clients.openWindow(url);
+      if (itemId) open.postMessage({ type: "open-item", id: itemId });
+      return open.focus();
     })
   );
 });

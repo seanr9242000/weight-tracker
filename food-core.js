@@ -187,6 +187,34 @@ function weekAlcohol(log, dateStr) {
   return { kcal: Math.round(grams * 7), drinks: round1(drinks) };
 }
 
+/* Local search for the food picker. Every query word must appear in
+   the name (or brand), case-insensitive. Results come in the order
+   Sean is most likely to want them: things he's logged before (newest
+   first), saved meals, foods (favorites first), then takeout presets.
+   A food already shown as a past entry isn't repeated. An empty query
+   lists recent entries. Each result: { type, name, item }. */
+function searchFoods(query, { log, library, meals, presets }, limit = 30) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = (text) => words.every((w) => text.toLowerCase().includes(w));
+  const recents = recentFoods(log, words.length ? 200 : 12)
+    .filter((e) => !words.length || matches(e.name))
+    .map((item) => ({ type: "recent", name: item.name, item }));
+  if (!words.length) return recents;
+
+  const seen = new Set(recents.map((r) => r.name.toLowerCase()));
+  const fresh = (r) => !seen.has(r.name.toLowerCase());
+  const foods = [...library]
+    .sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0))
+    .filter((f) => matches(`${f.name} ${f.brand || ""}`))
+    .map((item) => ({ type: "food", name: item.name, item }));
+  return [
+    ...recents,
+    ...meals.filter((m) => matches(m.name)).map((item) => ({ type: "meal", name: item.name, item })).filter(fresh),
+    ...foods.filter(fresh),
+    ...presets.filter((p) => matches(p.name)).map((item) => ({ type: "takeout", name: item.name, item })),
+  ].slice(0, limit);
+}
+
 /* Least-squares weight trend (lb/day) over the `days` ending endDate.
    Same-day weigh-ins are averaged first. Null with fewer than 2 days. */
 function weightSlope(entries, endDate, days) {
@@ -244,6 +272,6 @@ if (typeof module !== "undefined") {
     NUTRIENT_KEYS, emptyNutrients, scaleNutrients, sumNutrients, mealNutrients, takeoutNutrients,
     entryTotal, dayTotals, weekDates, targetCalories, mifflinStJeor, startingMaintenance,
     defaultSettings, dailyGuide, inDiscovery, signalStatus, plannedMealFor, estimatedShare,
-    recentFoods, weekAlcohol, weightSlope, proposeMaintenance,
+    recentFoods, searchFoods, weekAlcohol, weightSlope, proposeMaintenance,
   };
 }

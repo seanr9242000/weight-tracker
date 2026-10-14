@@ -66,6 +66,7 @@ const FOOD_SEED_MEALS = [
   },
   { id: "meal-recovery", name: "Shake + banana", detail: "Recovery snack", items: [...SHAKE, { foodId: "banana", servings: 1 }], slots: ["post-lift"], days: ALL_DAYS },
   { id: "meal-pregame", name: "Banana + Oikos Pro", detail: "1–2 hours before tip", items: [{ foodId: "banana", servings: 1 }, { foodId: "oikos-pro", servings: 1 }], slots: ["pregame-snack"], days: ALL_DAYS },
+  { id: "meal-oikos", name: "Oikos Pro", detail: "Quick protein between meals", items: [{ foodId: "oikos-pro", servings: 1 }], slots: ["snack-am", "snack-eve"], days: ALL_DAYS },
   { id: "meal-postgame", name: "Oikos Pro + banana", detail: "Protein first, not whatever's around", items: [{ foodId: "oikos-pro", servings: 1 }, { foodId: "banana", servings: 1 }], slots: ["postgame"], days: ALL_DAYS },
 ];
 

@@ -115,3 +115,16 @@ for Sean to accept or keep. The math is in a DOM-free `food-core.js`.
 The repo now has a `tests/` folder (`python tests/run.py`, 124 checks,
 including the old schedule tests rescued from a scratchpad). The
 approved design spec is in `docs/superpowers/specs/`.
+
+Same session: extended the `phone-preview` skill with `--interact`
+click-through scripts (committed in `tests/ui/`), then acted on Sean's
+ask that every time he's supposed to eat he gets a reminder he can log
+from. Added weekday mid-morning and afternoon snacks, a lift-day
+evening snack, and a Sunday afternoon snack. Tapping a meal or snack
+reminder now opens the app straight into that item's log panel. The
+food picker opens on a search box that ranks foods Sean has logged
+before ahead of saved meals, foods, chains, and takeout. Online search
+(USDA FoodData Central, via a Supabase function so the API key stays
+secret) is next, waiting on Sean's free api.data.gov key. Open Food
+Facts was checked and ruled out for now: its search API doesn't allow
+browser requests (no CORS) and many entries lack serving sizes.

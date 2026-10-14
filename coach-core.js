@@ -38,6 +38,13 @@ function morning(wake) {
    count toward the adaptive calorie estimate (see food-core.js). */
 const CLOSE_FOOD_LOG = { id: "close-food-log", time: "21:30", title: "Close food log", kind: "food", note: "Anything not logged yet? Add it, then close the day." };
 
+/* Between-meal snacks, so every time Sean is meant to eat there's an
+   item (and a ping). Game days already have pre/post-game snacks in
+   the evening; lift days get an evening snack after dinner instead. */
+const SNACK_AM = { id: "snack-am", time: "10:00", title: "Mid-morning snack", kind: "meal" };
+const SNACK_PM = { id: "snack-pm", time: "15:00", title: "Afternoon snack", kind: "meal", note: "Protein + something to fuel tonight." };
+const SNACK_EVE = { id: "snack-eve", time: "21:00", title: "Evening snack", kind: "meal" };
+
 const EVENING = [
   CLOSE_FOOD_LOG,
   { id: "wind-down", time: "22:15", title: "Wind down — screens away", kind: "sleep" },
@@ -62,6 +69,7 @@ function liftDay(liftTime, dinnerTime) {
     { id: "post-lift", time: addMinutes(liftTime, 50), title: "Recovery snack (not chocolate milk)", kind: "meal", note: "Protein shake + banana." },
     { id: "dinner", time: dinnerTime, title: "Dinner — eggs, shake, yogurt", kind: "meal" },
     { id: "post-dinner", time: addMinutes(dinnerTime, 20), title: "After dinner: water + short walk", kind: "habit", trigger: "meal" },
+    SNACK_EVE,
   ];
 }
 
@@ -76,20 +84,21 @@ const WEEK_TEMPLATE = [
     { id: "waist", time: "09:05", title: "Weekly waist measurement", kind: "weigh" },
     { id: "lunch", time: "12:30", title: "Lunch", kind: "meal" },
     { id: "meal-prep", time: "14:00", title: "Meal prep: chicken, strawberries, veg × 4", kind: "meal" },
+    { ...SNACK_PM, time: "15:30" },
     { id: "dinner", time: "18:30", title: "Dinner", kind: "meal" },
     { id: "plan-week", time: "20:00", title: "Plan the week: game times + lift days", kind: "routine" },
     ...EVENING,
   ],
   // Monday: remote, league game
-  [...morning("07:40"), ...GAME_DAY, ...EVENING],
+  [...morning("07:40"), ...GAME_DAY, SNACK_AM, SNACK_PM, ...EVENING],
   // Tuesday: office, league game
-  [...morning("06:40"), ...GAME_DAY, ...EVENING],
+  [...morning("06:40"), ...GAME_DAY, SNACK_AM, SNACK_PM, ...EVENING],
   // Wednesday: office, lift
-  [...morning("06:40"), ...liftDay("17:45", "19:15"), ...EVENING],
+  [...morning("06:40"), ...liftDay("17:45", "19:15"), SNACK_AM, SNACK_PM, ...EVENING],
   // Thursday: office, league game
-  [...morning("06:40"), ...GAME_DAY, ...EVENING],
+  [...morning("06:40"), ...GAME_DAY, SNACK_AM, SNACK_PM, ...EVENING],
   // Friday: remote, lift
-  [...morning("07:40"), ...liftDay("17:15", "18:45"), ...EVENING],
+  [...morning("07:40"), ...liftDay("17:15", "18:45"), SNACK_AM, SNACK_PM, ...EVENING],
   // Saturday: lift, treat meal, drinking pre-plan. No lights-out target.
   [
     { id: "wake", time: "09:00", title: "Up", kind: "sleep" },

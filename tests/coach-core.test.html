@@ -62,6 +62,16 @@ run(() => {
   eq("sleep hours", Math.round(sleepHours(sl, "2026-10-13") * 10) / 10, 7.9);
   eq("sleep missing", sleepHours({}, "2026-10-13"), null);
 
+  // Snack reminders: weekdays mid-morning + afternoon, lift-day evening, Sunday afternoon.
+  const snacks = (d) => itemsForDate(d, {}).filter((x) => x.id.startsWith("snack-")).map((x) => `${x.id}@${x.time}:${x.kind}`);
+  eq("Mon snacks", snacks("2026-10-12"), ["snack-am@10:00:meal", "snack-pm@15:00:meal"]);
+  eq("Tue snacks", snacks("2026-10-13"), ["snack-am@10:00:meal", "snack-pm@15:00:meal"]);
+  eq("Wed snacks + evening", snacks("2026-10-14"), ["snack-am@10:00:meal", "snack-pm@15:00:meal", "snack-eve@21:00:meal"]);
+  eq("Thu snacks", snacks("2026-10-15"), ["snack-am@10:00:meal", "snack-pm@15:00:meal"]);
+  eq("Fri snacks + evening", snacks("2026-10-16"), ["snack-am@10:00:meal", "snack-pm@15:00:meal", "snack-eve@21:00:meal"]);
+  eq("Sat no snacks", snacks("2026-10-17"), []);
+  eq("Sun afternoon snack", snacks("2026-10-18"), ["snack-pm@15:30:meal"]);
+
   // Close food log: every day has it at 21:30, before quiet hours.
   for (let i = 0; i < 7; i++) {
     const d = shiftDate("2026-10-12", i);

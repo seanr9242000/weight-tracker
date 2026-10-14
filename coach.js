@@ -143,6 +143,7 @@ function renderTodaySummary(dateStr, items, checkins, overrides) {
 
 function renderChecklistItem(dateStr, item, checkin, now) {
   const li = el("li", "check-item");
+  li.dataset.itemId = item.id;
   const isDue = timeToMinutes(item.time) <= now;
   const scheduledAt = new Date(`${dateStr}T${item.time}`).getTime();
   const isMissed = !checkin && timeToMinutes(item.time) + MISSED_AFTER_MINUTES <= now && scheduledAt >= coachStartedAt;
@@ -290,6 +291,32 @@ document.getElementById("add-item-form").addEventListener("submit", (e) => {
   titleInput.value = "";
   renderToday();
 });
+
+/* Tapping a reminder opens its checklist item: the service worker
+   launches the app with ?item=<id>, or messages an already-open app.
+   Meal items open straight into their log panel. */
+function openChecklistItem(id) {
+  activateTab("today-panel");
+  const item = itemsForDate(todayLocalDateString(), loadJSON(OVERRIDES_KEY, {})).find((i) => i.id === id);
+  if (item && hasMealPanel(item)) mealOpenFor = id;
+  renderToday();
+  const li = document.querySelector(`#checklist li[data-item-id="${CSS.escape(id)}"]`);
+  if (li) li.scrollIntoView({ block: "center" });
+}
+
+// "load" fires after food.js has run, so meal panels can render.
+window.addEventListener("load", () => {
+  const id = new URLSearchParams(location.search).get("item");
+  if (!id) return;
+  history.replaceState(null, "", location.pathname);
+  openChecklistItem(id);
+});
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "open-item") openChecklistItem(e.data.id);
+  });
+}
 
 /* ---- Skip / miss reason sheet ---- */
 

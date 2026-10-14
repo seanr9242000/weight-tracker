@@ -31,7 +31,7 @@ A script is the body of an async function, run after the app loads. It starts on
 
 | Helper | Does |
 |---|---|
-| `await reload(seed, tabId?)` | Wipe storage, apply a seed, reload the app. Use at the top to set state. |
+| `await reload(seed, tabId?, query?)` | Wipe storage, apply a seed, reload the app (`query` like `"item=lunch"` is added to its URL). Use at the top to set state. |
 | `$(sel, root?)` / `$$(sel, root?)` | Query the app document (`$$` returns an array) |
 | `click(selOrEl, root?)` | Click; throws if nothing matches |
 | `clickText(text, root?)` / `byText(text, root?)` | Click / find the element whose whole text is `text` |

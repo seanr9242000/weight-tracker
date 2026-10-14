@@ -15,6 +15,7 @@ const settings = (over = {}) => ({
   ...defaultSettings("2026-10-12", 205), maintenance: 3000, ...over,
 });
 
+const check_ = (name, cond) => eq(name, cond, true);
 run(() => {
   // ---- nutrient math ----
   eq("empty has every key", Object.keys(emptyNutrients()), NUTRIENT_KEYS);
@@ -93,6 +94,34 @@ run(() => {
   eq("weekday lunch is meal prep", plannedMealFor(FOOD_SEED_MEALS, "lunch", "2026-10-14").id, "meal-prep-lunch");
   eq("weekend lunch has no plan", plannedMealFor(FOOD_SEED_MEALS, "lunch", "2026-10-17"), null);
   eq("treat meal has no plan", plannedMealFor(FOOD_SEED_MEALS, "treat-meal", "2026-10-17"), null);
+
+  eq("mid-morning snack is Oikos", plannedMealFor(FOOD_SEED_MEALS, "snack-am", "2026-10-14").id, "meal-oikos");
+  eq("evening snack is Oikos", plannedMealFor(FOOD_SEED_MEALS, "snack-eve", "2026-10-16").id, "meal-oikos");
+  eq("afternoon snack has no plan", plannedMealFor(FOOD_SEED_MEALS, "snack-pm", "2026-10-14"), null);
+
+  // ---- local search ----
+  const sources = (log) => ({ log, library: lib, meals: FOOD_SEED_MEALS, presets: TAKEOUT_PRESETS });
+  const past = [
+    { ...entry("2026-10-12", 150), name: "Oikos Pro", at: 5 },
+    { ...entry("2026-10-12", 250), name: "Quest bar", at: 9 },
+    { ...entry("2026-10-11", 250), name: "Quest bar", at: 1 },
+  ];
+  const names = (rs) => rs.map((r) => `${r.type}:${r.name}`);
+  eq("empty query = recents newest first", names(searchFoods("", sources(past))), ["recent:Quest bar", "recent:Oikos Pro"]);
+  const oik = searchFoods("oik", sources(past));
+  eq("past entries rank first", names(oik)[0], "recent:Oikos Pro");
+  eq("library duplicate of a past entry is skipped", names(oik).filter((n) => n === "food:Oikos Pro").length, 0);
+  check_("meals match too", names(oik).includes("meal:Banana + Oikos Pro"));
+  const chick = names(searchFoods("chick", sources([])));
+  check_("chains match", chick.includes("food:Chick-fil-A Chicken Sandwich"));
+  check_("plain foods match", chick.includes("food:Chicken breast"));
+  check_("takeout presets match", chick.includes("takeout:Chicken sandwich"));
+  eq("every word must match, any case", names(searchFoods("CLAW white", sources([]))), ["food:White Claw"]);
+  eq("no match", searchFoods("zzzz", sources(past)), []);
+  eq("results carry their source", searchFoods("pizza", sources([]))[0].item.id, "pizza");
+  const favs = [{ id: "a", name: "Bar A", serving: "1", n: emptyNutrients(), confidence: "estimate" },
+    { id: "b", name: "Bar B", serving: "1", n: emptyNutrients(), confidence: "estimate", favorite: true }];
+  eq("favorites first among foods", names(searchFoods("bar", { log: [], library: favs, meals: [], presets: [] })), ["food:Bar B", "food:Bar A"]);
 
   // ---- estimate share, recents, alcohol ----
   const mixed = [entry("2026-10-12", 600), entry("2026-10-12", 400, { confidence: "estimate" })];

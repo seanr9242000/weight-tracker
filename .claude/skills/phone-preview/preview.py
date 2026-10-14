@@ -112,10 +112,11 @@ const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0
 const day = (offset) => { const d = new Date(); d.setDate(d.getDate() + (offset || 0)); return ymd(d); };
 const today = day(0);
 // Wipe storage, apply a new seed, reload the app, and wait for it.
-const reload = (newSeed, tabId) => new Promise((resolve) => {
+// `query` (e.g. "item=lunch") is appended to the app URL.
+const reload = (newSeed, tabId, query) => new Promise((resolve) => {
   applySeed(newSeed || {}, tabId || p.get("tab"));
   f.onload = () => setTimeout(resolve, 400);
-  f.src = "/__preview/app?" + Math.random();
+  f.src = "/__preview/app?r=" + Math.random() + (query ? "&" + query : "");
 });
 """
 

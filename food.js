@@ -146,7 +146,7 @@ function renderMealPanel(dateStr, item) {
   }
   const other = el("button", "pill-btn", meal ? "Something else" : "Log food");
   other.type = "button";
-  other.addEventListener("click", () => openFoodSheet({ slot: item.id, title: item.title, mode: item.id === "treat-meal" ? "takeout" : "recent" }));
+  other.addEventListener("click", () => openFoodSheet({ slot: item.id, title: item.title, mode: item.id === "treat-meal" ? "takeout" : "search" }));
   actions.appendChild(other);
   panel.appendChild(actions);
   return panel;
@@ -536,10 +536,10 @@ const foodSheet = document.getElementById("food-sheet");
 let sheetSlot = "extra";
 
 const SHEET_MODES = [
-  ["recent", "Recent"], ["quick", "Quick add"], ["takeout", "Takeout"], ["chains", "Chains"], ["mine", "My foods"],
+  ["search", "Search"], ["quick", "Quick add"], ["takeout", "Takeout"], ["chains", "Chains"], ["mine", "My foods"],
 ];
 
-function openFoodSheet({ slot = "extra", title = "Log food", mode = "recent" } = {}) {
+function openFoodSheet({ slot = "extra", title = "Log food", mode = "search" } = {}) {
   sheetSlot = slot;
   document.getElementById("food-sheet-title").textContent = title;
   renderSheet(mode);
@@ -572,7 +572,7 @@ function renderSheet(mode) {
   }
   const body = document.getElementById("food-sheet-body");
   body.innerHTML = "";
-  if (mode === "recent") renderRecentList(body);
+  if (mode === "search") renderSearch(body);
   else if (mode === "quick") renderQuickAdd(body);
   else if (mode === "takeout") renderTakeout(body);
   else if (mode === "chains") renderFoodList(body, foodLibrary().filter((f) => f.group === "chain"));
@@ -588,16 +588,49 @@ function pickRow(name, meta, onPick) {
   return row;
 }
 
-function renderRecentList(body) {
-  const recents = recentFoods(foodLog(), 12);
-  if (!recents.length) {
-    body.appendChild(el("p", "empty-message", "Nothing logged yet. Try Quick add or Takeout."));
+/* Search box over past entries, saved meals, foods, chains, and
+   takeout (food-core searchFoods). Only the results list re-renders on
+   each keystroke, so the input keeps focus and the keyboard stays up. */
+function renderSearch(body) {
+  const input = el("input", "food-search");
+  input.type = "search";
+  input.placeholder = "Search foods, meals, past entries";
+  input.autocomplete = "off";
+  input.enterKeyHint = "search";
+  const results = el("div", "search-results");
+  input.addEventListener("input", () => renderSearchResults(results, input.value));
+  body.append(input, results);
+  renderSearchResults(results, "");
+  setTimeout(() => input.focus(), 0);
+}
+
+function renderSearchResults(wrap, query) {
+  wrap.innerHTML = "";
+  const found = searchFoods(query, { log: foodLog(), library: foodLibrary(), meals: foodMeals(), presets: TAKEOUT_PRESETS });
+  if (!found.length) {
+    wrap.appendChild(el("p", "empty-message", query.trim()
+      ? `No match for "${query.trim()}". Try Quick add or Takeout.`
+      : "Nothing logged yet. Search above, or try Takeout."));
     return;
   }
-  for (const e of recents) {
-    const t = entryTotal(e);
-    body.appendChild(pickRow(e.name, `${fmt(t.kcal)} kcal · ${fmt(t.protein)} g P`, () =>
-      logFromSheet(() => logFood({ slot: sheetSlot, name: e.name, servings: e.servings, n: { ...e.n }, confidence: e.confidence, ref: e.ref }))));
+  if (!query.trim()) wrap.appendChild(el("div", "pick-section", "Recent"));
+  for (const r of found) {
+    if (r.type === "recent") {
+      const e = r.item;
+      const t = entryTotal(e);
+      wrap.appendChild(pickRow(e.name, `Logged before · ${fmt(t.kcal)} kcal · ${fmt(t.protein)} g P`, () =>
+        logFromSheet(() => logFood({ slot: sheetSlot, name: e.name, servings: e.servings, n: { ...e.n }, confidence: e.confidence, ref: e.ref }))));
+    } else if (r.type === "meal") {
+      const { n } = mealNutrients(r.item, foodLibrary(), []);
+      wrap.appendChild(pickRow(r.name, `Saved meal · ${fmt(n.kcal)} kcal · ${fmt(n.protein)} g P`, () =>
+        logFromSheet(() => logMeal(r.item, sheetSlot, []))));
+    } else if (r.type === "food") {
+      const f = r.item;
+      wrap.appendChild(pickRow(f.name, `${f.serving} · ${fmt(f.n.kcal)} kcal · ${fmt(f.n.protein)} g P`, () =>
+        logFromSheet(() => logLibraryFood(f, sheetSlot))));
+    } else {
+      wrap.appendChild(takeoutRow(r.item));
+    }
   }
 }
 
@@ -622,24 +655,26 @@ function renderMine(body) {
 
 function renderTakeout(body) {
   body.appendChild(el("p", "hint", "No official numbers? Pick the closest size — it's saved as an estimate."));
-  for (const preset of TAKEOUT_PRESETS) {
-    const row = el("div", "takeout-row");
-    row.appendChild(el("span", "pick-name", preset.name));
-    const sizes = el("div", "takeout-sizes");
-    for (const size of ["S", "M", "L"]) {
-      const [kcal, desc] = preset.sizes[size];
-      const btn = el("button", "size-btn");
-      btn.type = "button";
-      btn.appendChild(el("span", "size-letter", size));
-      btn.appendChild(el("span", "size-desc", `${desc} · ${kcal}`));
-      btn.addEventListener("click", () => logFromSheet(() => logFood({
-        slot: sheetSlot, name: `${preset.name} (${desc})`, n: takeoutNutrients(preset, size), confidence: "estimate", ref: { takeout: preset.id, size },
-      })));
-      sizes.appendChild(btn);
-    }
-    row.appendChild(sizes);
-    body.appendChild(row);
+  for (const preset of TAKEOUT_PRESETS) body.appendChild(takeoutRow(preset));
+}
+
+function takeoutRow(preset) {
+  const row = el("div", "takeout-row");
+  row.appendChild(el("span", "pick-name", preset.name));
+  const sizes = el("div", "takeout-sizes");
+  for (const size of ["S", "M", "L"]) {
+    const [kcal, desc] = preset.sizes[size];
+    const btn = el("button", "size-btn");
+    btn.type = "button";
+    btn.appendChild(el("span", "size-letter", size));
+    btn.appendChild(el("span", "size-desc", `${desc} · ${kcal}`));
+    btn.addEventListener("click", () => logFromSheet(() => logFood({
+      slot: sheetSlot, name: `${preset.name} (${desc})`, n: takeoutNutrients(preset, size), confidence: "estimate", ref: { takeout: preset.id, size },
+    })));
+    sizes.appendChild(btn);
   }
+  row.appendChild(sizes);
+  return row;
 }
 
 const QUICK_FIELDS = [
@@ -732,7 +767,7 @@ function updateEntry(id, mutate) {
 }
 
 document.getElementById("food-sheet-cancel").addEventListener("click", closeFoodSheet);
-document.getElementById("food-log-btn").addEventListener("click", () => openFoodSheet({ mode: "recent" }));
+document.getElementById("food-log-btn").addEventListener("click", () => openFoodSheet({ mode: "search" }));
 document.getElementById("food-takeout-btn").addEventListener("click", () => openFoodSheet({ mode: "takeout", title: "Takeout estimate" }));
 document.getElementById("food-quick-btn").addEventListener("click", () => openFoodSheet({ mode: "quick", title: "Quick add" }));
 

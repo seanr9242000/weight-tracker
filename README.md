@@ -7,9 +7,13 @@ coach. Five tabs:
   weigh-in, meals, lifts, league games, wind-down, lights out). Check
   items off, skip or explain misses with a reason, and edit a single
   day's plan without changing the weekly template. Shows completion,
-  streak, last night's sleep, and today's Zyn count. Meal items log
-  their planned meal in one tap ("As planned") or open the food picker.
-- **Food** — calories and protein against a weekly budget with a
+  streak, last night's sleep, and today's Zyn count. Every meal and
+  snack is an item (weekday mid-morning and afternoon snacks, a lift-day
+  evening snack), so each one gets a reminder. Meal items log their
+  planned meal in one tap ("As planned") or open food search; tapping a
+  meal's reminder opens straight to that item.
+- **Food** — search (past entries first, then saved meals, foods,
+  chains, takeout), calories and protein against a weekly budget with a
   weekend bank, health signals (fiber, added sugar, sodium, alcohol),
   quick add, S/M/L takeout estimates, chain items, one-tap drinks, and
   a weekly check-in that proposes a new maintenance estimate from
@@ -62,7 +66,7 @@ Click-through UI tests (real app at iPhone width, with a screenshot of
 where each script ends):
 
 ```
-python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js
+python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js
 ```
 
 ## Notes
