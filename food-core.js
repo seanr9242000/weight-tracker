@@ -187,6 +187,50 @@ function weekAlcohol(log, dateStr) {
   return { kcal: Math.round(grams * 7), drinks: round1(drinks) };
 }
 
+/* ---- Snack ideas ---- */
+
+/* What kind of day the schedule says it is, for snack advice. */
+function dayType(items) {
+  if (items.some((i) => i.id === "game")) return "game";
+  if (items.some((i) => i.id === "lift")) return "lift";
+  return "rest";
+}
+
+/* The ideas for one snack slot on one kind of day, in the plan's order,
+   taken from `ideas` (Sean's stored copy, so edited servings apply). */
+function snackIdeasFor(ideas, plan, slot, type) {
+  const entry = plan[slot] && plan[slot][type];
+  if (!entry) return [];
+  const byId = Object.fromEntries(ideas.map((i) => [i.id, i]));
+  return entry.ideas.map((id) => byId[id]).filter(Boolean);
+}
+
+function snackTip(plan, slot, type) {
+  return (plan[slot] && plan[slot][type] && plan[slot][type].tip) || null;
+}
+
+const FRACTIONS = { 0.125: "⅛", 0.25: "¼", 0.375: "⅜", 0.5: "½", 0.625: "⅝", 0.75: "¾", 0.875: "⅞" };
+
+function fmtQty(x) {
+  const whole = Math.floor(x);
+  const frac = FRACTIONS[Math.round((x - whole) * 1000) / 1000];
+  if (frac) return `${whole || ""}${frac}`;
+  return Number.isInteger(x) ? String(x) : String(round1(x));
+}
+
+/* "2 sticks string cheese · 1 apple" from a meal's items. Foods without
+   portion info fall back to "2 × Chipotle chicken bowl". */
+function portionText(items, library) {
+  const byId = Object.fromEntries(library.map((f) => [f.id, f]));
+  return items.filter((it) => byId[it.foodId]).map((it) => {
+    const food = byId[it.foodId];
+    const p = food.portion;
+    if (!p) return `${fmtQty(it.servings)} × ${food.name}`;
+    const qty = p.qty * it.servings;
+    return [fmtQty(qty), qty <= 1 ? p.unit : p.units, p.of].filter(Boolean).join(" ");
+  }).join(" · ");
+}
+
 /* Local search for the food picker. Every query word must appear in
    the name (or brand), case-insensitive. Results come in the order
    Sean is most likely to want them: things he's logged before (newest
@@ -309,6 +353,6 @@ if (typeof module !== "undefined") {
     NUTRIENT_KEYS, emptyNutrients, scaleNutrients, sumNutrients, mealNutrients, takeoutNutrients,
     entryTotal, dayTotals, weekDates, targetCalories, mifflinStJeor, startingMaintenance,
     defaultSettings, dailyGuide, inDiscovery, signalStatus, plannedMealFor, estimatedShare,
-    recentFoods, searchFoods, usdaToFood, weekAlcohol, weightSlope, proposeMaintenance,
+    recentFoods, searchFoods, usdaToFood, dayType, snackIdeasFor, snackTip, fmtQty, portionText, weekAlcohol, weightSlope, proposeMaintenance,
   };
 }

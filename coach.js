@@ -228,10 +228,6 @@ function renderChecklistItem(dateStr, item, checkin, now) {
     setTimeout(() => input.focus(), 0);
   }
 
-  if (mealOpenFor === item.id && !checkin && hasMealPanel(item)) {
-    body.appendChild(renderMealPanel(dateStr, item));
-  }
-
   li.append(box, body);
 
   if (!checkin) {
@@ -239,6 +235,12 @@ function renderChecklistItem(dateStr, item, checkin, now) {
     skip.type = "button";
     skip.addEventListener("click", () => openReasonSheet(dateStr, item, isMissed));
     li.appendChild(skip);
+  }
+
+  // The food panel wraps onto its own full-width row under the item.
+  if (mealOpenFor === item.id && !checkin && hasMealPanel(item)) {
+    li.classList.add("has-panel");
+    li.appendChild(renderMealPanel(dateStr, item));
   }
   return li;
 }

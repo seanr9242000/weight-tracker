@@ -147,6 +147,32 @@ run(() => {
   eq("ml servings", usdaToFood({ ...oikosHit, servingSizeUnit: "MLT", servingSize: 355, household: null }).serving, "355 ml");
   eq("unknown units fall back to per 100 g", usdaToFood({ ...oikosHit, servingSizeUnit: "ONZ" }).serving, "100 g");
 
+  // ---- snack ideas ----
+  eq("game day", dayType(itemsForDate("2026-10-13", {})), "game");
+  eq("lift day", dayType(itemsForDate("2026-10-14", {})), "lift");
+  eq("Saturday lifts", dayType(itemsForDate("2026-10-17", {})), "lift");
+  eq("Sunday rests", dayType(itemsForDate("2026-10-18", {})), "rest");
+  const ideaNames = (slot, type) => snackIdeasFor(SNACK_IDEAS, SNACK_PLAN, slot, type).map((i) => i.name);
+  eq("game-day afternoon ideas", ideaNames("snack-pm", "game"), ["PB-banana toast", "Pretzels + string cheese", "Oikos Pro + oats + strawberries"]);
+  eq("lift-day afternoon ideas", ideaNames("snack-pm", "lift"), ["Oikos Pro + oats + strawberries", "Tuna + rice cakes + apple", "PB-banana toast"]);
+  eq("Sunday afternoon ideas", ideaNames("snack-pm", "rest").length, 3);
+  eq("pre-game ideas skip the planned meal", ideaNames("pregame-snack", "game"), ["Rice cakes + honey + banana", "Pretzels + raisins"]);
+  eq("no ideas for slots without any", ideaNames("lunch", "game"), []);
+  check_("every plan entry has a tip and real ideas", Object.values(SNACK_PLAN).every((byType) => Object.values(byType).every((e) =>
+    e.tip && e.ideas.length && e.ideas.every((id) => SNACK_IDEAS.some((i) => i.id === id)))));
+  eq("tip lookup", typeof snackTip(SNACK_PLAN, "pregame-snack", "game"), "string");
+  eq("no tip without a plan", snackTip(SNACK_PLAN, "lunch", "game"), null);
+  eq("edited ideas are used, in plan order", snackIdeasFor([{ ...SNACK_IDEAS.find((i) => i.id === "idea-pretzels-raisins"), name: "Edited" }], SNACK_PLAN, "pregame-snack", "game").map((i) => i.name), ["Edited"]);
+  check_("every idea's foods exist", SNACK_IDEAS.every((i) => i.items.every((it) => lib.some((f) => f.id === it.foodId))));
+  const idea = (name) => SNACK_IDEAS.find((i) => i.name === name);
+  near("apple + PB kcal", mealNutrients(idea("Apple + peanut butter"), lib, []).n.kcal, 291, 3);
+  near("Oikos + oats + strawberries protein", mealNutrients(idea("Oikos Pro + oats + strawberries"), lib, []).n.protein, 29.4, 0.5);
+  eq("portion text", portionText(idea("String cheese + apple").items, lib), "2 sticks string cheese · 1 apple");
+  eq("portion text, halves", portionText([{ foodId: "peanut-butter", servings: 0.5 }, { foodId: "strawberries", servings: 1 }], lib), "1 tbsp peanut butter · ½ pint strawberries");
+  eq("portion text, shake fractions", portionText(FOOD_SEED_MEALS[0].items, lib), "1⅜ scoops whey · 12 oz 1% milk");
+  eq("portion text without portion info", portionText([{ foodId: "chipotle-bowl", servings: 2 }], lib), "2 × Chipotle chicken bowl");
+  eq("fractions", [fmtQty(0.25), fmtQty(1.5), fmtQty(2), fmtQty(0.3)], ["¼", "1½", "2", "0.3"]);
+
   // ---- estimate share, recents, alcohol ----
   const mixed = [entry("2026-10-12", 600), entry("2026-10-12", 400, { confidence: "estimate" })];
   eq("estimated share %", estimatedShare(mixed, "2026-10-12"), 40);

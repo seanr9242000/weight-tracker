@@ -14,17 +14,42 @@ function nut(kcal, protein, carbs, fat, fiber, sugar, addedSugar, sodium, alcoho
   return { kcal, protein, carbs, fat, fiber, sugar, addedSugar, sodium, alcohol };
 }
 
+/* How one serving reads in a portion line: qty of unit (units when
+   there's more than one) of `of`. 1.5 servings of { 8, "oz", "oz",
+   "1% milk" } reads "12 oz 1% milk" (food-core portionText). */
+function por(qty, unit, units, of = "") {
+  return { qty, unit, units, of };
+}
+
 const FOOD_SEED_LIBRARY = [
   // Planned-meal building blocks
-  { id: "on-whey", name: "ON Gold Standard Whey", serving: "1 scoop (31 g)", n: nut(120, 24, 3, 1.5, 1, 1, 1, 130), confidence: "exact" },
-  { id: "milk-1pct", name: "1% milk (Kroger)", serving: "1 cup (8 oz)", n: nut(110, 8, 12, 2.5, 0, 12, 0, 130), confidence: "exact" },
-  { id: "egg", name: "Large egg", serving: "1 egg", n: nut(72, 6.3, 0.4, 4.8, 0, 0.2, 0, 71), confidence: "exact" },
-  { id: "oikos-pro", name: "Oikos Pro yogurt", serving: "1 cup", n: nut(150, 23, 7, 2.5, 0, 4, 0, 90), confidence: "exact", verify: true },
-  { id: "chicken-raw", name: "Chicken breast", serving: "4 oz raw", n: nut(120, 26, 0, 1.5, 0, 0, 0, 70), confidence: "exact" },
-  { id: "strawberries", name: "Strawberries", serving: "½ pint (~160 g)", n: nut(51, 1.1, 12.3, 0.5, 3.2, 7.8, 0, 2), confidence: "exact" },
-  { id: "veg-mix", name: "Peas, carrots & corn", serving: "4 oz frozen", n: nut(75, 3, 15, 0.5, 4, 4, 0, 50), confidence: "exact" },
-  { id: "bbq-low", name: "Low-sugar BBQ sauce", serving: "2 tbsp", n: nut(15, 0, 3, 0, 0, 1, 0, 300), confidence: "exact", verify: true },
-  { id: "banana", name: "Banana", serving: "1 medium", n: nut(105, 1.3, 27, 0.4, 3.1, 14.4, 0, 1), confidence: "exact" },
+  { id: "on-whey", name: "ON Gold Standard Whey", serving: "1 scoop (31 g)", n: nut(120, 24, 3, 1.5, 1, 1, 1, 130), confidence: "exact", portion: por(1, "scoop", "scoops", "whey") },
+  { id: "milk-1pct", name: "1% milk (Kroger)", serving: "1 cup (8 oz)", n: nut(110, 8, 12, 2.5, 0, 12, 0, 130), confidence: "exact", portion: por(8, "oz", "oz", "1% milk") },
+  { id: "egg", name: "Large egg", serving: "1 egg", n: nut(72, 6.3, 0.4, 4.8, 0, 0.2, 0, 71), confidence: "exact", portion: por(1, "egg", "eggs") },
+  { id: "oikos-pro", name: "Oikos Pro yogurt", serving: "1 cup", n: nut(150, 23, 7, 2.5, 0, 4, 0, 90), confidence: "exact", verify: true, portion: por(1, "cup", "cups", "Oikos Pro") },
+  { id: "chicken-raw", name: "Chicken breast", serving: "4 oz raw", n: nut(120, 26, 0, 1.5, 0, 0, 0, 70), confidence: "exact", portion: por(4, "oz", "oz", "chicken (raw weight)") },
+  { id: "strawberries", name: "Strawberries", serving: "½ pint (~160 g)", n: nut(51, 1.1, 12.3, 0.5, 3.2, 7.8, 0, 2), confidence: "exact", portion: por(0.5, "pint", "pints", "strawberries") },
+  { id: "veg-mix", name: "Peas, carrots & corn", serving: "4 oz frozen", n: nut(75, 3, 15, 0.5, 4, 4, 0, 50), confidence: "exact", portion: por(4, "oz", "oz", "peas, carrots & corn") },
+  { id: "bbq-low", name: "Low-sugar BBQ sauce", serving: "2 tbsp", n: nut(15, 0, 3, 0, 0, 1, 0, 300), confidence: "exact", verify: true, portion: por(2, "tbsp", "tbsp", "BBQ sauce") },
+  { id: "banana", name: "Banana", serving: "1 medium", n: nut(105, 1.3, 27, 0.4, 3.1, 14.4, 0, 1), confidence: "exact", portion: por(1, "banana", "bananas") },
+
+  // Snack-idea foods (easy grocery buys). Per serving, from USDA
+  // FoodData Central SR Legacy / Foundation entries (fdcId noted).
+  { id: "string-cheese", name: "String cheese", serving: "1 stick (28 g)", n: nut(82.6, 6.7, 1.6, 5.5, 0, 0.5, 0, 186), confidence: "exact", portion: por(1, "stick", "sticks", "string cheese") }, // 171244
+  { id: "apple", name: "Apple", serving: "1 medium (182 g)", n: nut(99.9, 0.2, 26.9, 0.3, 3.8, 21.5, 0, 0.5), confidence: "exact", portion: por(1, "apple", "apples") }, // 1750341
+  { id: "peanut-butter", name: "Peanut butter", serving: "2 tbsp (32 g)", n: nut(191.4, 7.1, 7.1, 16.4, 1.6, 3.4, 2, 136), confidence: "exact", portion: por(2, "tbsp", "tbsp", "peanut butter") }, // 174266
+  { id: "almonds", name: "Almonds", serving: "1 oz (~23 nuts)", n: nut(163.5, 6, 5.6, 14.3, 3, 1.2, 0, 0), confidence: "exact", portion: por(1, "oz", "oz", "almonds (~23)") }, // 2346393
+  { id: "beef-jerky", name: "Beef jerky", serving: "1 oz (28 g)", n: nut(114.8, 9.3, 3.1, 7.2, 0.5, 2.5, 2.5, 498), confidence: "exact", verify: true, portion: por(1, "oz", "oz", "beef jerky") }, // 167536
+  { id: "rice-cake", name: "Rice cake", serving: "1 cake (9 g)", n: nut(34.8, 0.7, 7.3, 0.3, 0.4, 0.1, 0, 2.3), confidence: "exact", portion: por(1, "rice cake", "rice cakes") }, // 170250
+  { id: "honey", name: "Honey", serving: "1 tbsp (21 g)", n: nut(63.8, 0.1, 17.3, 0, 0, 17.2, 17.2, 0.8), confidence: "exact", portion: por(1, "tbsp", "tbsp", "honey") }, // 169640
+  { id: "pretzels", name: "Pretzels", serving: "1 oz (28 g)", n: nut(107.5, 2.8, 22.5, 0.8, 1, 0.6, 0.6, 347), confidence: "exact", portion: por(1, "oz", "oz", "pretzels") }, // 167555
+  { id: "cottage-cheese", name: "Cottage cheese, 2%", serving: "½ cup (113 g)", n: nut(91.5, 11.8, 5.4, 2.6, 0, 4.5, 0, 348), confidence: "exact", portion: por(0.5, "cup", "cups", "2% cottage cheese") }, // 172182
+  { id: "baby-carrots", name: "Baby carrots", serving: "10 carrots (100 g)", n: nut(35, 0.6, 8.2, 0.1, 2.9, 4.8, 0, 78), confidence: "exact", portion: por(10, "baby carrot", "baby carrots") }, // 168568
+  { id: "hummus", name: "Hummus", serving: "2 tbsp (30 g)", n: nut(71.1, 2.3, 4.5, 5.3, 1.7, 0.2, 0, 128), confidence: "exact", portion: por(2, "tbsp", "tbsp", "hummus") }, // 174289
+  { id: "oats", name: "Rolled oats", serving: "½ cup dry (40 g)", n: nut(151.6, 5.3, 27.1, 2.6, 4, 0.4, 0, 2.4), confidence: "exact", portion: por(0.5, "cup", "cups", "rolled oats (dry)") }, // 173904
+  { id: "raisins", name: "Raisins", serving: "1 small box (43 g)", n: nut(129.4, 1.4, 34.4, 0.1, 1.4, 28.3, 0, 10.3), confidence: "exact", portion: por(1, "small box", "small boxes", "raisins") }, // 168164
+  { id: "tuna-pouch", name: "Tuna pouch", serving: "1 pouch (2.6 oz)", n: nut(66.6, 14.1, 0.1, 0.7, 0, 0, 0, 162), confidence: "exact", portion: por(1, "pouch", "pouches", "tuna") }, // 334194
+  { id: "ww-bread", name: "Whole-wheat bread", serving: "1 slice (32 g)", n: nut(80.6, 4, 13.7, 1.1, 1.9, 1.4, 1, 146), confidence: "exact", portion: por(1, "slice", "slices", "whole-wheat bread") }, // 172688
 
   // Drinks (one-tap buttons on the Food tab)
   { id: "white-claw", name: "White Claw", serving: "12 oz can", n: nut(100, 0, 2, 0, 0, 2, 2, 20, 14), confidence: "exact", drink: true },
@@ -70,6 +95,56 @@ const FOOD_SEED_MEALS = [
   { id: "meal-postgame", name: "Oikos Pro + banana", detail: "Protein first, not whatever's around", items: [{ foodId: "oikos-pro", servings: 1 }, { foodId: "banana", servings: 1 }], slots: ["postgame"], days: ALL_DAYS },
 ];
 
+/* Snack ideas: one-tap alternatives shown in a snack item's panel on
+   Today, alongside (never repeating) the planned meal. Stored in
+   localStorage like saved meals so their servings can be edited. */
+const SNACK_IDEAS = [
+  { id: "idea-apple-pb", name: "Apple + peanut butter", items: [{ foodId: "apple", servings: 1 }, { foodId: "peanut-butter", servings: 1 }] },
+  { id: "idea-cheese-apple", name: "String cheese + apple", items: [{ foodId: "string-cheese", servings: 2 }, { foodId: "apple", servings: 1 }] },
+  { id: "idea-oikos-berries", name: "Oikos Pro + strawberries", items: [{ foodId: "oikos-pro", servings: 1 }, { foodId: "strawberries", servings: 1 }] },
+  { id: "idea-oikos-almonds", name: "Oikos Pro + almonds", items: [{ foodId: "oikos-pro", servings: 1 }, { foodId: "almonds", servings: 1 }] },
+  { id: "idea-jerky-apple", name: "Beef jerky + apple", items: [{ foodId: "beef-jerky", servings: 1 }, { foodId: "apple", servings: 1 }] },
+  { id: "idea-cheese-almonds", name: "String cheese + almonds", items: [{ foodId: "string-cheese", servings: 2 }, { foodId: "almonds", servings: 1 }] },
+  { id: "idea-pb-toast", name: "PB-banana toast", items: [{ foodId: "ww-bread", servings: 1 }, { foodId: "peanut-butter", servings: 1 }, { foodId: "banana", servings: 1 }] },
+  { id: "idea-pretzels-cheese", name: "Pretzels + string cheese", items: [{ foodId: "pretzels", servings: 1.5 }, { foodId: "string-cheese", servings: 2 }] },
+  { id: "idea-oikos-oats", name: "Oikos Pro + oats + strawberries", items: [{ foodId: "oikos-pro", servings: 1 }, { foodId: "oats", servings: 1 }, { foodId: "strawberries", servings: 1 }] },
+  { id: "idea-tuna-apple", name: "Tuna + rice cakes + apple", items: [{ foodId: "tuna-pouch", servings: 1 }, { foodId: "rice-cake", servings: 2 }, { foodId: "apple", servings: 1 }] },
+  { id: "idea-carrots-hummus", name: "Carrots + hummus + string cheese", items: [{ foodId: "baby-carrots", servings: 1 }, { foodId: "hummus", servings: 2 }, { foodId: "string-cheese", servings: 1 }] },
+  { id: "idea-cakes-honey", name: "Rice cakes + honey + banana", items: [{ foodId: "rice-cake", servings: 2 }, { foodId: "honey", servings: 1 }, { foodId: "banana", servings: 1 }] },
+  { id: "idea-pretzels-raisins", name: "Pretzels + raisins", items: [{ foodId: "pretzels", servings: 1 }, { foodId: "raisins", servings: 1 }] },
+  { id: "idea-shake-banana", name: "Shake + banana", items: [...SHAKE, { foodId: "banana", servings: 1 }] },
+  { id: "idea-cottage-berries", name: "Cottage cheese + strawberries", items: [{ foodId: "cottage-cheese", servings: 2 }, { foodId: "strawberries", servings: 1 }] },
+  { id: "idea-jerky-banana", name: "Jerky + banana", items: [{ foodId: "beef-jerky", servings: 2 }, { foodId: "banana", servings: 1 }] },
+  { id: "idea-tuna-banana", name: "Tuna + rice cakes + banana", items: [{ foodId: "tuna-pouch", servings: 1 }, { foodId: "rice-cake", servings: 2 }, { foodId: "banana", servings: 1 }] },
+  { id: "idea-cheese-2", name: "String cheese ×2", items: [{ foodId: "string-cheese", servings: 2 }] },
+];
+
+/* Which ideas (in order) and what tip show for each snack slot on each
+   kind of day (food-core dayType: game / lift / rest). */
+const SNACK_PLAN = {
+  "snack-am": {
+    game: { tip: "Steady energy for the day: protein + fiber.", ideas: ["idea-apple-pb", "idea-cheese-apple", "idea-oikos-berries"] },
+    lift: { tip: "Protein-forward — today's lift needs it.", ideas: ["idea-oikos-almonds", "idea-jerky-apple", "idea-cheese-almonds"] },
+  },
+  "snack-pm": {
+    game: { tip: "Carbs now fuel tonight's game; keep it 3–4 hours before tip.", ideas: ["idea-pb-toast", "idea-pretzels-cheese", "idea-oikos-oats"] },
+    lift: { tip: "Pre-lift fuel, ~2½ hours out: carbs + protein.", ideas: ["idea-oikos-oats", "idea-tuna-apple", "idea-pb-toast"] },
+    rest: { tip: "Rest day: fiber + protein, nothing heavy.", ideas: ["idea-carrots-hummus", "idea-apple-pb", "idea-oikos-berries"] },
+  },
+  "pregame-snack": {
+    game: { tip: "Fast carbs, low fat and fiber, so it sits light on the court.", ideas: ["idea-cakes-honey", "idea-pretzels-raisins"] },
+  },
+  postgame: {
+    game: { tip: "Protein + carbs to recover; lights-out is soon, so keep it moderate.", ideas: ["idea-shake-banana", "idea-cottage-berries"] },
+  },
+  "post-lift": {
+    lift: { tip: "30–45 minutes after: ~20–40 g protein plus carbs.", ideas: ["idea-jerky-banana", "idea-tuna-banana"] },
+  },
+  "snack-eve": {
+    lift: { tip: "Light and protein-heavy before sleep.", ideas: ["idea-cottage-berries", "idea-cheese-2"] },
+  },
+};
+
 /* Takeout with no official numbers: a typical "M" order, scaled by
    calories for S and L (all nutrients scale together). */
 const TAKEOUT_PRESETS = [
@@ -85,5 +160,5 @@ const TAKEOUT_PRESETS = [
 ];
 
 if (typeof module !== "undefined") {
-  module.exports = { FOOD_SEED_LIBRARY, FOOD_SEED_MEALS, TAKEOUT_PRESETS };
+  module.exports = { FOOD_SEED_LIBRARY, FOOD_SEED_MEALS, SNACK_IDEAS, SNACK_PLAN, TAKEOUT_PRESETS };
 }

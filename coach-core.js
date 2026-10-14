@@ -42,7 +42,7 @@ const CLOSE_FOOD_LOG = { id: "close-food-log", time: "21:30", title: "Close food
    item (and a ping). Game days already have pre/post-game snacks in
    the evening; lift days get an evening snack after dinner instead. */
 const SNACK_AM = { id: "snack-am", time: "10:00", title: "Mid-morning snack", kind: "meal" };
-const SNACK_PM = { id: "snack-pm", time: "15:00", title: "Afternoon snack", kind: "meal", note: "Protein + something to fuel tonight." };
+const SNACK_PM = { id: "snack-pm", time: "15:00", title: "Afternoon snack", kind: "meal" };
 const SNACK_EVE = { id: "snack-eve", time: "21:00", title: "Evening snack", kind: "meal" };
 
 const EVENING = [

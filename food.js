@@ -11,6 +11,7 @@ const FOOD_DAYS_KEY = "food-days";
 const FOOD_SETTINGS_KEY = "food-settings";
 const FOOD_HISTORY_KEY = "food-target-history";
 const FOOD_CHECKIN_KEY = "food-checkin-seen";
+const FOOD_IDEAS_KEY = "food-ideas";
 const CLOSE_FOOD_LOG_ID = "close-food-log";
 const GOAL_PROMPT_AFTER_DAYS = 49; // ~7 weeks: the Zyn taper should be done
 
@@ -28,18 +29,31 @@ const fmt = (x) => Math.round(x).toLocaleString();
 /* ---- Storage + seeding ---- */
 
 /* Seed items are merged by id on every load, so new seed foods/meals
-   show up after an update without touching anything Sean edited. */
+   show up after an update without touching anything Sean edited.
+   Fields added to a seed item later (e.g. `portion`) are filled in on
+   stored copies too; stored values always win. */
 function mergeSeed(key, seed) {
+  const copy = (x) => ({ ...JSON.parse(JSON.stringify(x)), source: "seed" });
   const stored = loadJSON(key, null);
   if (!stored) {
-    const copy = seed.map((x) => ({ ...JSON.parse(JSON.stringify(x)), source: "seed" }));
-    saveJSON(key, copy);
-    return copy;
+    const fresh = seed.map(copy);
+    saveJSON(key, fresh);
+    return fresh;
   }
+  const seedById = Object.fromEntries(seed.map((x) => [x.id, x]));
+  let changed = false;
+  const merged = stored.map((x) => {
+    const s = seedById[x.id];
+    if (!s || x.source !== "seed") return x;
+    const missing = Object.keys(s).filter((k) => !(k in x));
+    if (!missing.length) return x;
+    changed = true;
+    return { ...copy(s), ...x };
+  });
   const ids = new Set(stored.map((x) => x.id));
-  const added = seed.filter((x) => !ids.has(x.id)).map((x) => ({ ...JSON.parse(JSON.stringify(x)), source: "seed" }));
-  if (added.length) saveJSON(key, [...stored, ...added]);
-  return [...stored, ...added];
+  const added = seed.filter((x) => !ids.has(x.id)).map(copy);
+  if (added.length || changed) saveJSON(key, [...merged, ...added]);
+  return [...merged, ...added];
 }
 
 function latestWeight() {
@@ -61,9 +75,11 @@ const foodLibrary = () => loadJSON(FOOD_LIBRARY_KEY, []);
 const foodMeals = () => loadJSON(FOOD_MEALS_KEY, []);
 const foodLog = () => loadJSON(FOOD_LOG_KEY, []);
 const foodDays = () => loadJSON(FOOD_DAYS_KEY, {});
+const foodIdeas = () => loadJSON(FOOD_IDEAS_KEY, []);
 
 mergeSeed(FOOD_LIBRARY_KEY, FOOD_SEED_LIBRARY);
 mergeSeed(FOOD_MEALS_KEY, FOOD_SEED_MEALS);
+mergeSeed(FOOD_IDEAS_KEY, SNACK_IDEAS);
 foodSettings();
 
 /* Every log entry goes through here. Logging into a checklist slot
@@ -149,7 +165,30 @@ function renderMealPanel(dateStr, item) {
   other.addEventListener("click", () => openFoodSheet({ slot: item.id, title: item.title, mode: item.id === "treat-meal" ? "takeout" : "search" }));
   actions.appendChild(other);
   panel.appendChild(actions);
+  renderSnackIdeas(panel, dateStr, item);
   return panel;
+}
+
+/* Snack ideas with exact portions, picked for the kind of day it is
+   (food-data SNACK_PLAN). One tap logs the idea into this slot. */
+function renderSnackIdeas(panel, dateStr, item) {
+  const type = dayType(itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {})));
+  const tip = snackTip(SNACK_PLAN, item.id, type);
+  const ideas = snackIdeasFor(foodIdeas(), SNACK_PLAN, item.id, type);
+  if (!tip && !ideas.length) return;
+  const box = el("div", "snack-ideas");
+  box.appendChild(el("div", "pick-section", "Ideas"));
+  if (tip) box.appendChild(el("div", "snack-tip", tip));
+  const lib = foodLibrary();
+  for (const idea of ideas) {
+    const { n } = mealNutrients(idea, lib, []);
+    box.appendChild(pickRow(idea.name, `${portionText(idea.items, lib)} · ${fmt(n.kcal)} kcal · ${fmt(n.protein)} g P`, () => {
+      logMeal(idea, item.id, []);
+      closeMealPanel();
+      renderToday();
+    }));
+  }
+  panel.appendChild(box);
 }
 
 function renderFuelRow(dateStr) {
@@ -448,7 +487,8 @@ function renderTargets(s) {
   };
   for (const [id, value] of Object.entries(fields)) document.getElementById(id).value = value;
 
-  renderMealEditor();
+  renderMealEditor("food-meal-editor", FOOD_MEALS_KEY);
+  renderMealEditor("food-idea-editor", FOOD_IDEAS_KEY);
   const history = document.getElementById("food-history");
   history.innerHTML = "";
   for (const h of loadJSON(FOOD_HISTORY_KEY, []).slice(-8).reverse()) {
@@ -456,11 +496,12 @@ function renderTargets(s) {
   }
 }
 
-function renderMealEditor() {
-  const wrap = document.getElementById("food-meal-editor");
+/* Servings editor for saved meals or snack ideas (same shape). */
+function renderMealEditor(wrapId, key) {
+  const wrap = document.getElementById(wrapId);
   wrap.innerHTML = "";
   const lib = Object.fromEntries(foodLibrary().map((f) => [f.id, f]));
-  const meals = foodMeals();
+  const meals = loadJSON(key, []);
   meals.forEach((meal, mi) => {
     const box = el("div", "meal-edit");
     box.appendChild(el("div", "meal-name", meal.name));
@@ -478,9 +519,9 @@ function renderMealEditor() {
       input.addEventListener("change", () => {
         const v = parseFloat(input.value);
         if (!Number.isFinite(v) || v < 0) return;
-        const all = foodMeals();
+        const all = loadJSON(key, []);
         all[mi].items[ii].servings = v;
-        saveJSON(FOOD_MEALS_KEY, all);
+        saveJSON(key, all);
         renderToday();
       });
       row.appendChild(input);

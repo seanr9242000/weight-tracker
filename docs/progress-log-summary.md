@@ -138,3 +138,14 @@ generic results. Picked results log with label per-serving numbers and
 are saved to My foods. The gateway's `verify_jwt` turned out to let the
 public publishable key through, so the function checks for a real
 session itself.
+
+Then snack ideas: every snack item's panel lists 2–3 alternatives with
+exact portions ("1 slice whole-wheat bread · 2 tbsp peanut butter · 1
+banana · 377 kcal · 12 g P"), chosen by the kind of day the schedule
+says it is (game, lift, rest) with a one-line fueling tip. The 15 new
+foods behind them come from USDA entries looked up with Sean's key.
+Portion text is generated from each idea's servings, so editing an
+idea under Targets keeps it accurate. Next up, at Sean's request: a
+quick "how I feel" check-in after games and lifts (energy, stomach,
+legs, shooting/lifting), stored with what he ate beforehand, so snack
+choices can be adjusted from real data.
