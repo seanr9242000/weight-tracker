@@ -8,7 +8,10 @@ const kind = [1, 2, 4].includes(dow) ? "game" : [3, 5, 6].includes(dow) ? "lift"
 const oldLib = FOOD_LIB_WITHOUT_PORTIONS();
 await reload({ "coach-started-at": "0", "food-library": oldLib });
 check("portion info merged into old installs", ls("food-library").find((f) => f.id === "banana").portion?.unit === "banana");
-check("user edits survive the merge", ls("food-library").find((f) => f.id === "oikos-pro").n.kcal === 160);
+check("stored values survive the merge", ls("food-library").find((f) => f.id === "banana").n.kcal === 111);
+const oikos = ls("food-library").find((f) => f.id === "oikos-pro");
+eq("corrected seed (rev) replaces the old Oikos label", [oikos.n.kcal, oikos.n.protein, oikos.serving, oikos.processing, oikos.rev], [160, 23, "¾ cup (170 g)", "ultra", 1]);
+check("rev update keeps Sean's favorite", oikos.favorite === true);
 check("snack ideas seeded", ls("food-ideas").length >= 18);
 
 const slot = "Afternoon snack"; // weekdays 3 PM, Sundays 3:30 PM
@@ -49,7 +52,7 @@ check("portion text follows servings", app().portionText(ls("food-ideas")[0].ite
 function FOOD_LIB_WITHOUT_PORTIONS() {
   const n = (kcal, protein) => ({ kcal, protein, carbs: 0, fat: 0, fiber: 0, sugar: 0, addedSugar: 0, sodium: 0, alcohol: 0 });
   return [
-    { id: "banana", name: "Banana", serving: "1 medium", n: n(105, 1.3), confidence: "exact", source: "seed" },
-    { id: "oikos-pro", name: "Oikos Pro yogurt", serving: "1 cup", n: n(160, 25), confidence: "exact", source: "seed" },
+    { id: "banana", name: "Banana", serving: "1 medium", n: n(111, 1.3), confidence: "exact", source: "seed" },
+    { id: "oikos-pro", name: "Oikos Pro yogurt", serving: "1 cup", n: n(150, 23), confidence: "exact", source: "seed", processing: "processed", favorite: true },
   ];
 }

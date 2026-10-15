@@ -396,6 +396,34 @@ function renderTaperPlan(start, today) {
   }
 }
 
+/* When each of today's pouches happened and how long the stretch
+   before it was - the number to grow. */
+function renderPouchTimes() {
+  const logs = loadJSON(HABIT_LOG_KEY, []);
+  const last = lastPouchAt(logs);
+  document.getElementById("pouch-last").textContent = last === null
+    ? "No pouches logged yet."
+    : `Last pouch ${formatGap(Math.max(0, Math.floor((Date.now() - last) / 60000)))} ago`;
+  const list = document.getElementById("pouch-times");
+  list.innerHTML = "";
+  for (const p of pouchTimeline(logs, todayLocalDateString())) {
+    const time = new Date(p.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    const row = el("li");
+    row.appendChild(el("span", "pouch-time", time));
+    row.appendChild(el("span", "pouch-gap", p.gapMin === null ? "first one logged" : `${formatGap(p.gapMin)} after the last`));
+    const remove = el("button", "pouch-remove", "✕");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove the ${time} pouch`);
+    remove.addEventListener("click", () => {
+      saveJSON(HABIT_LOG_KEY, loadJSON(HABIT_LOG_KEY, []).filter((l) => l.id !== p.id));
+      renderHabits();
+      renderToday();
+    });
+    row.appendChild(remove);
+    list.appendChild(row);
+  }
+}
+
 function renderHabits() {
   const today = todayLocalDateString();
   const start = localStorage.getItem(TAPER_START_KEY);
@@ -408,6 +436,7 @@ function renderHabits() {
   document.getElementById("taper-restart-btn").hidden = !start;
   document.getElementById("doctor-note").hidden = localStorage.getItem(DOCTOR_NOTE_KEY) === "1";
   renderTaperPlan(start, today);
+  renderPouchTimes();
 
   if (!start) return;
 
@@ -562,6 +591,7 @@ renderHabits();
 setInterval(() => {
   // Rebuilding the list mid-typing would drop focus (weigh-in, notes).
   if (!document.activeElement || !document.activeElement.closest("#checklist")) renderToday();
+  renderPouchTimes();
 }, 60000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {

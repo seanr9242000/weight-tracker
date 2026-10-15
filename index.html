@@ -154,6 +154,9 @@
             <div class="field-row"><label for="fs-age">Age</label><input id="fs-age" type="number" inputmode="numeric"></div>
             <div class="field-row"><label for="fs-height">Height cm</label><input id="fs-height" type="number" inputmode="decimal" step="0.1"></div>
             <div class="field-row"><label for="fs-activity">Activity ×</label><input id="fs-activity" type="number" inputmode="decimal" step="0.05"></div>
+            <div class="field-row"><label for="fs-water-base">Water oz/day</label><input id="fs-water-base" type="number" inputmode="numeric" placeholder="½ bodyweight"></div>
+            <div class="field-row"><label for="fs-water-lift">+ oz lift days</label><input id="fs-water-lift" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-water-game">+ oz game days</label><input id="fs-water-game" type="number" inputmode="numeric"></div>
           </div>
           <button type="button" id="fs-recalc" class="link-btn">Recalculate maintenance from profile + latest weight</button>
           <h3 class="sub-head">Saved meals (servings)</h3>
@@ -189,6 +192,12 @@
         <div class="pouch-sub" id="pouch-sub"></div>
         <button type="button" id="log-pouch-btn" class="primary-btn">Log a pouch</button>
         <button type="button" id="undo-pouch-btn" class="link-btn">Undo last pouch</button>
+      </section>
+
+      <section class="card">
+        <h2>Today's pouches</h2>
+        <p class="pouch-last" id="pouch-last"></p>
+        <ul class="pouch-times" id="pouch-times"></ul>
       </section>
 
       <section class="card">

@@ -165,3 +165,19 @@ powder, with a one-tap option to count it as ultra. Snack ideas were
 swapped to whole-food versions (dates + banana, almonds + raisins,
 eggs + apple, milk + banana, natural PB on simple bread), and a test
 keeps ultra-processed foods out of them.
+
+Later the same night, a batch of quick fixes. Water tracking landed on
+the Today tab: one-tap +8 / +20 / +40 oz buttons (sized for Sean's
+40 oz tumbler) against a goal of half his bodyweight in ounces, plus 20
+oz on lift days and 32 on game days, all editable under Targets. The
+Habits tab got a "Today's pouches" card: when each pouch happened, the
+gap since the one before it (the first of the day counts from last
+night's), a live "last pouch X ago" line, and a remove button per
+entry. Oikos Pro was corrected to the vanilla label Sean actually buys
+(¾ cup, 160 kcal, 23 g protein), and because vanilla contains stevia
+and flavors it now counts as ultra-processed. Sean chose to keep it in
+his plans anyway. A new seed `rev` field lets a corrected label reach
+installed copies, since stored values normally win. The food search
+sheet now sits above the iPhone keyboard instead of behind it; that
+fix couldn't be tested headless and needs an on-phone check. Also
+deleted four leftover anonymous test users in Supabase Auth.

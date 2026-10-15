@@ -216,6 +216,32 @@ function pouchesAvoided(startStr, pouchesByDate, todayStr) {
   return total;
 }
 
+/* One day's pouches in time order, each with the minutes since the
+   pouch before it (any day, so the first one of the morning shows the
+   overnight stretch; null for the first pouch ever logged). */
+function pouchTimeline(logs, dateStr) {
+  const pouches = logs.filter((l) => l.type === "pouch").sort((a, b) => a.at - b.at);
+  const day = [];
+  pouches.forEach((p, i) => {
+    if (p.date !== dateStr) return;
+    day.push({ id: p.id, at: p.at, gapMin: i ? Math.round((p.at - pouches[i - 1].at) / 60000) : null });
+  });
+  return day;
+}
+
+function lastPouchAt(logs) {
+  const times = logs.filter((l) => l.type === "pouch").map((l) => l.at);
+  return times.length ? Math.max(...times) : null;
+}
+
+/* 45 -> "45m", 100 -> "1h 40m", 1500 -> "1d 1h". */
+function formatGap(minutes) {
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
+  return minutes % 60 ? `${h}h ${minutes % 60}m` : `${h}h`;
+}
+
 /* ---- Check-in stats ---- */
 
 /* An item is "due" once its time has passed. A day's score is the share
@@ -268,6 +294,6 @@ if (typeof module !== "undefined") {
   module.exports = {
     WEEK_TEMPLATE, TAPER_WEEKS, TRIGGER_TIPS, MISS_REASONS,
     addMinutes, shiftDate, daysBetween, itemsForDate, nextMonday, taperStepFor,
-    quitDate, nicotineFreeStreak, pouchesAvoided, dayCompletion, completionStreak, sleepHours,
+    quitDate, nicotineFreeStreak, pouchesAvoided, pouchTimeline, lastPouchAt, formatGap, dayCompletion, completionStreak, sleepHours,
   };
 }

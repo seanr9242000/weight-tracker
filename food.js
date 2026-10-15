@@ -14,6 +14,7 @@ const FOOD_CHECKIN_KEY = "food-checkin-seen";
 const FOOD_IDEAS_KEY = "food-ideas";
 const FEEL_LOG_KEY = "coach-feel-log";
 const SHAKE_NOTE_KEY = "food-shake-note-dismissed";
+const WATER_LOG_KEY = "water-log";
 const PROCESSING_LABELS = { whole: "Whole", processed: "Processed", ultra: "Ultra" };
 const CLOSE_FOOD_LOG_ID = "close-food-log";
 const GOAL_PROMPT_AFTER_DAYS = 49; // ~7 weeks: the Zyn taper should be done
@@ -34,7 +35,9 @@ const fmt = (x) => Math.round(x).toLocaleString();
 /* Seed items are merged by id on every load, so new seed foods/meals
    show up after an update without touching anything Sean edited.
    Fields added to a seed item later (e.g. `portion`) are filled in on
-   stored copies too; stored values always win. */
+   stored copies too; stored values win, unless the seed item's `rev`
+   is newer (a corrected label), which overwrites the seed's fields and
+   keeps the rest (e.g. favorite). */
 function mergeSeed(key, seed) {
   const copy = (x) => ({ ...JSON.parse(JSON.stringify(x)), source: "seed" });
   const stored = loadJSON(key, null);
@@ -48,6 +51,10 @@ function mergeSeed(key, seed) {
   const merged = stored.map((x) => {
     const s = seedById[x.id];
     if (!s || x.source !== "seed") return x;
+    if ((s.rev || 0) > (x.rev || 0)) {
+      changed = true;
+      return { ...x, ...copy(s) };
+    }
     const missing = Object.keys(s).filter((k) => !(k in x));
     if (!missing.length) return x;
     changed = true;
@@ -80,6 +87,7 @@ const foodLog = () => loadJSON(FOOD_LOG_KEY, []);
 const foodDays = () => loadJSON(FOOD_DAYS_KEY, {});
 const foodIdeas = () => loadJSON(FOOD_IDEAS_KEY, []);
 const feelLog = () => loadJSON(FEEL_LOG_KEY, []);
+const waterLog = () => loadJSON(WATER_LOG_KEY, []);
 
 mergeSeed(FOOD_LIBRARY_KEY, FOOD_SEED_LIBRARY);
 mergeSeed(FOOD_MEALS_KEY, FOOD_SEED_MEALS);
@@ -303,6 +311,55 @@ function renderFuelRow(dateStr) {
     cell.appendChild(bar(value / goal, "neutral"));
     row.appendChild(cell);
   }
+  row.appendChild(waterCell(dateStr));
+}
+
+/* ---- Water (Today fuel row) ---- */
+
+function waterGoalFor(dateStr) {
+  const type = dayType(itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {})));
+  return waterGoal(foodSettings(), latestWeight(), type);
+}
+
+function waterCell(dateStr) {
+  const drank = waterTotal(waterLog(), dateStr);
+  const goal = waterGoalFor(dateStr);
+  const cell = el("div", "fuel-cell water-cell");
+  const head = el("div", "fuel-head");
+  head.appendChild(el("span", "fuel-label", "Water"));
+  head.appendChild(el("span", "fuel-value", `${fmt(drank)} / ${fmt(goal)} oz`));
+  cell.append(head, bar(drank / goal, drank >= goal ? "good" : "neutral"));
+  const buttons = el("div", "water-buttons");
+  for (const oz of WATER_BUTTONS) {
+    const btn = el("button", "chip small", `+${oz} oz`);
+    btn.type = "button";
+    btn.addEventListener("click", () => addWater(dateStr, oz));
+    buttons.appendChild(btn);
+  }
+  if (drank > 0) {
+    const undo = el("button", "link-btn water-undo", "Undo");
+    undo.type = "button";
+    undo.addEventListener("click", () => undoWater(dateStr));
+    buttons.appendChild(undo);
+  }
+  cell.appendChild(buttons);
+  return cell;
+}
+
+function addWater(dateStr, oz) {
+  const log = waterLog();
+  log.push({ id: newId(), at: Date.now(), date: dateStr, oz });
+  saveJSON(WATER_LOG_KEY, log);
+  renderToday();
+}
+
+function undoWater(dateStr) {
+  const log = waterLog();
+  const i = log.map((e) => e.date).lastIndexOf(dateStr);
+  if (i < 0) return;
+  log.splice(i, 1);
+  saveJSON(WATER_LOG_KEY, log);
+  renderToday();
 }
 
 function bar(fraction, status) {
@@ -621,7 +678,7 @@ let settingsOpen = false;
 function renderTargets(s) {
   const goal = GOAL_OPTIONS.find((o) => o.rate === s.goal.rateLbPerWk) || GOAL_OPTIONS[3];
   document.getElementById("food-targets-summary").textContent =
-    `${goal.label} · ${fmt(targetCalories(s))} kcal/day (maintenance ${fmt(s.maintenance)}) · ${s.protein} g protein`;
+    `${goal.label} · ${fmt(targetCalories(s))} kcal/day (maintenance ${fmt(s.maintenance)}) · ${s.protein} g protein · water ${fmt(waterGoalFor(todayLocalDateString()))} oz today`;
   document.getElementById("food-settings-btn").textContent = settingsOpen ? "Close" : "Edit";
   const form = document.getElementById("food-settings-form");
   form.hidden = !settingsOpen;
@@ -636,7 +693,8 @@ function renderTargets(s) {
     "fs-maintenance": s.maintenance, "fs-protein": s.protein, "fs-fiber": s.limits.fiber,
     "fs-sugar": s.limits.addedSugar, "fs-sodium": s.limits.sodium, "fs-bank-sat": s.bank[6] || 0,
     "fs-bank-sun": s.bank[0] || 0, "fs-upf": s.limits.upfPct ?? UPF_LIMIT_PCT, "fs-age": s.profile.age, "fs-height": s.profile.heightCm,
-    "fs-activity": s.profile.activity,
+    "fs-activity": s.profile.activity, "fs-water-base": waterSettings(s).base ?? "",
+    "fs-water-lift": waterSettings(s).lift, "fs-water-game": waterSettings(s).game,
   };
   for (const [id, value] of Object.entries(fields)) document.getElementById(id).value = value;
 
@@ -718,6 +776,8 @@ document.getElementById("food-settings-form").addEventListener("submit", (e) => 
       sodium: num("fs-sodium", s.limits.sodium), upfPct: num("fs-upf", s.limits.upfPct ?? UPF_LIMIT_PCT),
     },
     bank: { 6: num("fs-bank-sat", s.bank[6] || 0), 0: num("fs-bank-sun", s.bank[0] || 0) },
+    // Blank base = half bodyweight (waterGoal).
+    water: { base: num("fs-water-base", null), lift: num("fs-water-lift", waterSettings(s).lift), game: num("fs-water-game", waterSettings(s).game) },
   };
   settingsOpen = false;
   saveSettings(next, "Edited in settings");
@@ -741,10 +801,30 @@ function openFoodSheet({ slot = "extra", title = "Log food", mode = "search" } =
   document.getElementById("food-sheet-title").textContent = title;
   renderSheet(mode);
   foodSheet.hidden = false;
+  fitSheetToKeyboard();
 }
 
 function closeFoodSheet() {
   foodSheet.hidden = true;
+  foodSheet.classList.remove("keyboard-up");
+}
+
+/* iOS doesn't shrink the layout viewport for the keyboard, so a sheet
+   pinned to the bottom slides under it and jumps around as the results
+   change height. While the keyboard is up, the sheet fills the visible
+   area above it at a fixed height instead, and its body scrolls. */
+function fitSheetToKeyboard() {
+  const vv = window.visualViewport;
+  if (!vv || foodSheet.hidden) return;
+  const keyboardUp = document.documentElement.clientHeight - vv.height > 120;
+  foodSheet.classList.toggle("keyboard-up", keyboardUp);
+  foodSheet.style.setProperty("--vv-top", `${vv.offsetTop}px`);
+  foodSheet.style.setProperty("--vv-height", `${vv.height}px`);
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", fitSheetToKeyboard);
+  window.visualViewport.addEventListener("scroll", fitSheetToKeyboard);
 }
 
 function closeMealPanel() {

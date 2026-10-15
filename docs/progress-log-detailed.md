@@ -100,10 +100,12 @@ Session total: ~71 min between commits (brainstorm interview + spec + build + te
 
 ---
 
-## Session: 2026-10-14 — Ultra-processed tracking
+## Session: 2026-10-14 — Ultra-processed tracking, water, pouch times
 
 | Time  | Change                                                  | Elapsed |
 |-------|------------------------------------------------------------|---------|
 | 22:41 | Track ultra-processed food; whole-food snack swaps | — |
+| 23:02 | Split 10-14 work into its own progress-log session | 21 min |
+| 23:04 | Add water goals, pouch timestamps, Oikos vanilla label; fit food sheet above keyboard | 2 min |
 
-Session total: 1 commit (design Q&A + build + tests preceded it).
+Session total: ~23 min between commits, 3 commits (a /clear and a short Q&A on water/pouch/Oikos preceded the third).

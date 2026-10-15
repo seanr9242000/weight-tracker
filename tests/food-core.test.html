@@ -157,8 +157,13 @@ run(() => {
   eq("lift-day afternoon ideas", ideaNames("snack-pm", "lift"), ["Oikos Pro + oats + strawberries", "Tuna + rice cakes + apple", "PB-banana toast"]);
   eq("lift-day mid-morning swaps jerky for eggs", ideaNames("snack-am", "lift"), ["Oikos Pro + almonds", "Hard-boiled eggs + apple", "String cheese + almonds"]);
   eq("recovery swaps jerky for milk", ideaNames("post-lift", "lift"), ["Milk + banana", "Tuna + rice cakes + banana"]);
-  check_("no ultra-processed food in any planned idea", Object.values(SNACK_PLAN).every((byType) => Object.values(byType).every((e) =>
-    e.ideas.every((id) => SNACK_IDEAS.find((i) => i.id === id).items.every((it) => lib.find((f) => f.id === it.foodId).processing !== "ultra")))));
+  // Sean keeps his Oikos Pro vanilla (ultra: stevia + flavors) in the
+  // ideas on purpose; anything else ultra is a mistake.
+  const ULTRA_OK = ["oikos-pro"];
+  check_("no other ultra-processed food in any planned idea", Object.values(SNACK_PLAN).every((byType) => Object.values(byType).every((e) =>
+    e.ideas.every((id) => SNACK_IDEAS.find((i) => i.id === id).items.every((it) =>
+      ULTRA_OK.includes(it.foodId) || lib.find((f) => f.id === it.foodId).processing !== "ultra")))));
+  eq("Oikos Pro is the vanilla label", [lib.find((f) => f.id === "oikos-pro").n.kcal, lib.find((f) => f.id === "oikos-pro").n.protein, lib.find((f) => f.id === "oikos-pro").serving], [160, 23, "¾ cup (170 g)"]);
   eq("Sunday afternoon ideas", ideaNames("snack-pm", "rest").length, 3);
   eq("pre-game ideas skip the planned meal", ideaNames("pregame-snack", "game"), ["Dates + banana", "Rice cakes + honey + banana"]);
   eq("no ideas for slots without any", ideaNames("lunch", "game"), []);
@@ -207,6 +212,14 @@ run(() => {
   ]);
   eq("energy skipped when not rated", fuelVsFeel([{ ate: ["X"], stomach: "right" }])[0].energy, null);
   eq("empty log", fuelVsFeel([]), []);
+
+  // ---- water ----
+  eq("water: half bodyweight, rounded to 4 oz, on a rest day", waterGoal(settings(), 205, "rest"), 104);
+  eq("water: lift and game days add extra", [waterGoal(settings(), 205, "lift"), waterGoal(settings(), 205, "game")], [124, 136]);
+  eq("water: no weight yet falls back to 100", waterGoal(settings(), null, "rest"), 100);
+  eq("water: a set base wins over bodyweight", waterGoal(settings({ water: { base: 120 } }), 205, "lift"), 140);
+  eq("water: per-day extras are editable", waterGoal(settings({ water: { base: 100, lift: 10, game: 40 } }), 205, "game"), 140);
+  eq("water: day total", waterTotal([{ date: "2026-10-14", oz: 40 }, { date: "2026-10-14", oz: 8 }, { date: "2026-10-13", oz: 20 }], "2026-10-14"), 48);
 
   // ---- processing (NOVA-style: whole / processed / ultra) ----
   check_("every seed food is tagged", lib.every((f) => ["whole", "processed", "ultra"].includes(f.processing)));

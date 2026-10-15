@@ -47,6 +47,22 @@ run(() => {
   eq("streak broken by slip", nicotineFreeStreak("2026-10-12", { "2026-11-17": 1 }, "2026-11-18"), 1);
   eq("avoided 2 days", pouchesAvoided("2026-10-12", { "2026-10-12": 6, "2026-10-13": 5 }, "2026-10-13"), 4);
 
+  // ---- pouch timestamps ----
+  const at = (date, hm) => new Date(`${date}T${hm}`).getTime();
+  const pouchLogs = [
+    { id: "c", type: "pouch", date: "2026-10-14", at: at("2026-10-14", "11:30") },
+    { id: "x", type: "craving", date: "2026-10-14", at: at("2026-10-14", "10:00") },
+    { id: "a", type: "pouch", date: "2026-10-13", at: at("2026-10-13", "22:00") },
+    { id: "b", type: "pouch", date: "2026-10-14", at: at("2026-10-14", "09:50") },
+  ];
+  eq("timeline: today's pouches in order with gaps (first spans overnight)",
+    pouchTimeline(pouchLogs, "2026-10-14").map((p) => [p.id, p.gapMin]), [["b", 710], ["c", 100]]);
+  eq("timeline: first pouch ever has no gap", pouchTimeline(pouchLogs, "2026-10-13")[0].gapMin, null);
+  eq("timeline: empty day", pouchTimeline(pouchLogs, "2026-10-15"), []);
+  eq("last pouch", lastPouchAt(pouchLogs), at("2026-10-14", "11:30"));
+  eq("no pouches yet", lastPouchAt([]), null);
+  eq("gap formats", [0, 45, 60, 100, 1500].map(formatGap), ["0m", "45m", "1h", "1h 40m", "1d 1h"]);
+
   const items = itemsForDate("2026-10-13", {});
   const ck = { "2026-10-13|wake": { status: "done", at: 0 }, "2026-10-13|weigh": { status: "skipped", reason: "Forgot", at: 0 } };
   eq("completion at 6:50", dayCompletion(items, ck, "2026-10-13", 6 * 60 + 50), { due: 2, done: 1, pct: 50 });

@@ -979,6 +979,48 @@ canvas {
   margin-bottom: 18px;
 }
 
+.pouch-last {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.pouch-times {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pouch-times li {
+  display: grid;
+  grid-template-columns: 72px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 14px;
+}
+
+.pouch-time {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pouch-gap {
+  color: var(--text-dim);
+}
+
+.pouch-remove {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -1149,6 +1191,21 @@ canvas {
 
 .fuel-row:empty {
   display: none;
+}
+
+.water-cell {
+  grid-column: 1 / -1;
+}
+
+.water-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.water-buttons .water-undo {
+  margin: 0 0 0 auto;
 }
 
 .fuel-head {
@@ -1457,6 +1514,13 @@ canvas {
   max-height: calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
+}
+
+.food-sheet.keyboard-up {
+  top: calc(var(--vv-top, 0px) + 8px);
+  bottom: auto;
+  height: calc(var(--vv-height, 100dvh) - 16px);
+  max-height: none;
 }
 
 .food-sheet-body {

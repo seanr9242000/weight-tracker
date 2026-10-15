@@ -9,6 +9,8 @@
    Planned-meal foods come from USDA / package labels and count as
    "exact". Chain items are published values but portions vary, so they
    count as "estimate". `verify: true` = check against the real label.
+   `rev` = a corrected seed: bump it and installs whose stored copy has
+   a lower rev take the new seed fields (see food.js mergeSeed).
 
    `processing` (NOVA-style) drives the ultra-processed signal:
      whole     - unprocessed / minimally processed (fruit, eggs, oats, milk)
@@ -34,7 +36,8 @@ const FOOD_SEED_LIBRARY = [
   { id: "on-whey", name: "ON Gold Standard Whey", serving: "1 scoop (31 g)", n: nut(120, 24, 3, 1.5, 1, 1, 1, 130), confidence: "exact", portion: por(1, "scoop", "scoops", "whey"), processing: "processed" },
   { id: "milk-1pct", name: "1% milk (Kroger)", serving: "1 cup (8 oz)", n: nut(110, 8, 12, 2.5, 0, 12, 0, 130), confidence: "exact", portion: por(8, "oz", "oz", "1% milk"), processing: "whole" },
   { id: "egg", name: "Large egg", serving: "1 egg", n: nut(72, 6.3, 0.4, 4.8, 0, 0.2, 0, 71), confidence: "exact", portion: por(1, "egg", "eggs"), processing: "whole" },
-  { id: "oikos-pro", name: "Oikos Pro yogurt", serving: "1 cup", n: nut(150, 23, 7, 2.5, 0, 4, 0, 90), confidence: "exact", verify: true, portion: por(1, "cup", "cups", "Oikos Pro"), processing: "processed" },
+  // Vanilla, USDA label 2755682. Ultra: stevia + natural flavors + starch.
+  { id: "oikos-pro", rev: 1, name: "Oikos Pro vanilla yogurt", serving: "¾ cup (170 g)", n: nut(160, 23, 9, 3, 0, 4, 0, 55), confidence: "exact", portion: por(0.75, "cup", "cups", "Oikos Pro vanilla"), processing: "ultra" },
   { id: "chicken-raw", name: "Chicken breast", serving: "4 oz raw", n: nut(120, 26, 0, 1.5, 0, 0, 0, 70), confidence: "exact", portion: por(4, "oz", "oz", "chicken (raw weight)"), processing: "whole" },
   { id: "strawberries", name: "Strawberries", serving: "½ pint (~160 g)", n: nut(51, 1.1, 12.3, 0.5, 3.2, 7.8, 0, 2), confidence: "exact", portion: por(0.5, "pint", "pints", "strawberries"), processing: "whole" },
   { id: "veg-mix", name: "Peas, carrots & corn", serving: "4 oz frozen", n: nut(75, 3, 15, 0.5, 4, 4, 0, 50), confidence: "exact", portion: por(4, "oz", "oz", "peas, carrots & corn"), processing: "whole" },

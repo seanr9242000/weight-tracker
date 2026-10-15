@@ -205,6 +205,27 @@ function weekAlcohol(log, dateStr) {
   return { kcal: Math.round(grams * 7), drinks: round1(drinks) };
 }
 
+/* ---- Water ---- */
+
+/* Daily goal in fl oz: a base of about half bodyweight (lb) unless one
+   is set under Targets, plus extra on lift and game days for sweat. */
+const WATER_DEFAULTS = { base: null, lift: 20, game: 32 };
+const WATER_BUTTONS = [8, 20, 40]; // a cup, half the tumbler, the tumbler
+
+function waterSettings(settings) {
+  return { ...WATER_DEFAULTS, ...(settings.water || {}) };
+}
+
+function waterGoal(settings, weightLb, type) {
+  const w = waterSettings(settings);
+  const base = w.base || (weightLb ? roundTo(weightLb / 2, 4) : 100);
+  return base + (type === "game" ? w.game : type === "lift" ? w.lift : 0);
+}
+
+function waterTotal(log, dateStr) {
+  return log.filter((e) => e.date === dateStr).reduce((sum, e) => sum + e.oz, 0);
+}
+
 /* ---- Snack ideas ---- */
 
 /* What kind of day the schedule says it is, for snack advice. */
@@ -454,6 +475,6 @@ if (typeof module !== "undefined") {
     NUTRIENT_KEYS, emptyNutrients, scaleNutrients, sumNutrients, foodNutrients, mealNutrients, takeoutNutrients, upfShare, classifyProcessing,
     entryTotal, dayTotals, weekDates, targetCalories, mifflinStJeor, startingMaintenance,
     defaultSettings, dailyGuide, inDiscovery, signalStatus, plannedMealFor, estimatedShare,
-    recentFoods, searchFoods, usdaToFood, dayType, snackIdeasFor, snackTip, fmtQty, portionText, foodsBefore, fuelVsFeel, weekAlcohol, weightSlope, proposeMaintenance,
+    recentFoods, searchFoods, usdaToFood, WATER_DEFAULTS, WATER_BUTTONS, waterSettings, waterGoal, waterTotal, dayType, snackIdeasFor, snackTip, fmtQty, portionText, foodsBefore, fuelVsFeel, weekAlcohol, weightSlope, proposeMaintenance,
   };
 }
