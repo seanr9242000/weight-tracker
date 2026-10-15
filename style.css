@@ -1712,3 +1712,23 @@ canvas {
   flex-direction: column;
   gap: 2px;
 }
+
+.shake-note {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.shake-note .button-pair .secondary-btn {
+  font-size: 13px;
+  padding: 10px;
+}
+
+.shake-note .button-pair .primary-btn {
+  padding: 10px;
+  font-size: 13px;
+}
+
+.food-sheet-body .processing-chips {
+  margin-bottom: 4px;
+}

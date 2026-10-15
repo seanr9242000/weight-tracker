@@ -44,6 +44,7 @@ type UsdaFood = {
   servingSize?: number;
   servingSizeUnit?: string;
   householdServingFullText?: string;
+  ingredients?: string;
   foodNutrients: { nutrientId: number; value?: number; unitName?: string }[];
 };
 
@@ -70,6 +71,8 @@ function slim(food: UsdaFood) {
     servingSize: food.servingSize ?? null,
     servingSizeUnit: food.servingSizeUnit ?? null,
     household: food.householdServingFullText || null,
+    // Branded only; the app tags processing from it (classifyProcessing).
+    ingredients: food.ingredients || null,
     per100,
   };
 }

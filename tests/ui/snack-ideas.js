@@ -15,7 +15,7 @@ const slot = "Afternoon snack"; // weekdays 3 PM, Sundays 3:30 PM
 if (item(slot)) {
   click(".check-box", item(slot));
   const names = $$(".snack-ideas .pick-name", item(slot)).map((e) => e.textContent);
-  const want = { game: ["PB-banana toast", "Pretzels + string cheese", "Oikos Pro + oats + strawberries"],
+  const want = { game: ["PB-banana toast", "Almonds + raisins", "Oikos Pro + oats + strawberries"],
     lift: ["Oikos Pro + oats + strawberries", "Tuna + rice cakes + apple", "PB-banana toast"],
     rest: ["Carrots + hummus + string cheese", "Apple + peanut butter", "Oikos Pro + strawberries"] }[kind];
   eq(`afternoon ideas for a ${kind} day`, names, want);
@@ -41,8 +41,8 @@ $(".idea-editor").open = true;
 const firstIdea = $(".idea-editor .meal-edit");
 eq("first idea in editor", $(".meal-name", firstIdea).textContent, "Apple + peanut butter");
 fill($$("input", firstIdea)[1], "0.5");
-eq("servings saved", ls("food-ideas").find((i) => i.id === "idea-apple-pb").items[1].servings, 0.5);
-check("portion text follows servings", app().portionText(ls("food-ideas")[0].items, ls("food-library")).includes("1 tbsp peanut butter"));
+eq("servings saved", ls("food-ideas").find((i) => i.id === "idea-apple-npb").items[1].servings, 0.5);
+check("portion text follows servings", app().portionText(ls("food-ideas")[0].items, ls("food-library")).includes("1 tbsp natural peanut butter"));
 
 // Stored seed foods as an install from before `portion` existed saved
 // them (top-level consts like FOOD_SEED_LIBRARY aren't on window).

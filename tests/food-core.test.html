@@ -153,16 +153,20 @@ run(() => {
   eq("Saturday lifts", dayType(itemsForDate("2026-10-17", {})), "lift");
   eq("Sunday rests", dayType(itemsForDate("2026-10-18", {})), "rest");
   const ideaNames = (slot, type) => snackIdeasFor(SNACK_IDEAS, SNACK_PLAN, slot, type).map((i) => i.name);
-  eq("game-day afternoon ideas", ideaNames("snack-pm", "game"), ["PB-banana toast", "Pretzels + string cheese", "Oikos Pro + oats + strawberries"]);
+  eq("game-day afternoon ideas", ideaNames("snack-pm", "game"), ["PB-banana toast", "Almonds + raisins", "Oikos Pro + oats + strawberries"]);
   eq("lift-day afternoon ideas", ideaNames("snack-pm", "lift"), ["Oikos Pro + oats + strawberries", "Tuna + rice cakes + apple", "PB-banana toast"]);
+  eq("lift-day mid-morning swaps jerky for eggs", ideaNames("snack-am", "lift"), ["Oikos Pro + almonds", "Hard-boiled eggs + apple", "String cheese + almonds"]);
+  eq("recovery swaps jerky for milk", ideaNames("post-lift", "lift"), ["Milk + banana", "Tuna + rice cakes + banana"]);
+  check_("no ultra-processed food in any planned idea", Object.values(SNACK_PLAN).every((byType) => Object.values(byType).every((e) =>
+    e.ideas.every((id) => SNACK_IDEAS.find((i) => i.id === id).items.every((it) => lib.find((f) => f.id === it.foodId).processing !== "ultra")))));
   eq("Sunday afternoon ideas", ideaNames("snack-pm", "rest").length, 3);
-  eq("pre-game ideas skip the planned meal", ideaNames("pregame-snack", "game"), ["Rice cakes + honey + banana", "Pretzels + raisins"]);
+  eq("pre-game ideas skip the planned meal", ideaNames("pregame-snack", "game"), ["Dates + banana", "Rice cakes + honey + banana"]);
   eq("no ideas for slots without any", ideaNames("lunch", "game"), []);
   check_("every plan entry has a tip and real ideas", Object.values(SNACK_PLAN).every((byType) => Object.values(byType).every((e) =>
     e.tip && e.ideas.length && e.ideas.every((id) => SNACK_IDEAS.some((i) => i.id === id)))));
   eq("tip lookup", typeof snackTip(SNACK_PLAN, "pregame-snack", "game"), "string");
   eq("no tip without a plan", snackTip(SNACK_PLAN, "lunch", "game"), null);
-  eq("edited ideas are used, in plan order", snackIdeasFor([{ ...SNACK_IDEAS.find((i) => i.id === "idea-pretzels-raisins"), name: "Edited" }], SNACK_PLAN, "pregame-snack", "game").map((i) => i.name), ["Edited"]);
+  eq("edited ideas are used, in plan order", snackIdeasFor([{ ...SNACK_IDEAS.find((i) => i.id === "idea-dates-banana"), name: "Edited" }], SNACK_PLAN, "pregame-snack", "game").map((i) => i.name), ["Edited"]);
   check_("every idea's foods exist", SNACK_IDEAS.every((i) => i.items.every((it) => lib.some((f) => f.id === it.foodId))));
   const idea = (name) => SNACK_IDEAS.find((i) => i.name === name);
   near("apple + PB kcal", mealNutrients(idea("Apple + peanut butter"), lib, []).n.kcal, 291, 3);
@@ -203,6 +207,39 @@ run(() => {
   ]);
   eq("energy skipped when not rated", fuelVsFeel([{ ate: ["X"], stomach: "right" }])[0].energy, null);
   eq("empty log", fuelVsFeel([]), []);
+
+  // ---- processing (NOVA-style: whole / processed / ultra) ----
+  check_("every seed food is tagged", lib.every((f) => ["whole", "processed", "ultra"].includes(f.processing)));
+  eq("upf nutrient key exists", NUTRIENT_KEYS.includes("upf"), true);
+  const ultraFood = (kcal) => ({ id: "u", name: "U", serving: "1", n: { ...emptyNutrients(), kcal }, confidence: "exact", processing: "ultra" });
+  const wholeFood = (kcal) => ({ id: "w", name: "W", serving: "1", n: { ...emptyNutrients(), kcal }, confidence: "exact", processing: "whole" });
+  eq("single ultra food: all kcal are upf", foodNutrients(ultraFood(200)).upf, 200);
+  eq("single whole food: no upf", foodNutrients(wholeFood(200)).upf, 0);
+  eq("meal upf counts only ultra items", mealNutrients({ items: [{ foodId: "u", servings: 2 }, { foodId: "w", servings: 1 }] }, [ultraFood(100), wholeFood(300)], []).n.upf, 200);
+  eq("shake counts as processed, not ultra", mealNutrients(FOOD_SEED_MEALS[0], lib, []).n.upf, 0);
+  eq("takeout is ultra", takeoutNutrients(TAKEOUT_PRESETS[0], "M").upf, 290);
+  const upfLog = [{ ...entry("2026-10-12", 600) }, { ...entry("2026-10-12", 400, { n: { upf: 400 } }) }, { ...entry("2026-10-13", 500) }];
+  eq("upf share of the day's kcal", upfShare(upfLog, "2026-10-12"), 40);
+  eq("upf share empty day", upfShare(upfLog, "2026-10-14"), 0);
+  eq("old entries without upf count 0", upfShare([{ ...entry("2026-10-12", 500), n: { kcal: 500 } }], "2026-10-12"), 0);
+  eq("upf signal good at 20%", signalStatus("upfPct", 20, settings(), false), "good");
+  eq("upf signal warn at 28%", signalStatus("upfPct", 28, settings(), false), "warn");
+  eq("upf signal bad at 45%", signalStatus("upfPct", 45, settings(), false), "bad");
+  eq("upf limit falls back to 20 on old settings", signalStatus("upfPct", 25, { ...settings(), limits: { addedSugar: 36, fiber: 38, sodium: 2300 } }, false), "warn");
+
+  // classifying online results
+  eq("generic produce is whole", classifyProcessing({ dataType: "Foundation", name: "Apples, gala, with skin, raw" }), "whole");
+  eq("generic snack food is ultra", classifyProcessing({ dataType: "SR Legacy", name: "Snacks, pretzels, hard, plain, salted" }), "ultra");
+  eq("generic fast food is ultra", classifyProcessing({ dataType: "SR Legacy", name: "McDONALD'S, BIG MAC" }), "ultra");
+  eq("generic cheese is processed", classifyProcessing({ dataType: "SR Legacy", name: "Cheese, mozzarella, low moisture, part-skim" }), "processed");
+  eq("branded, one ingredient", classifyProcessing({ dataType: "Branded", name: "Almonds", ingredients: "ALMONDS." }), "whole");
+  eq("branded, simple recipe", classifyProcessing({ dataType: "Branded", name: "Peanut butter", ingredients: "PEANUTS, SALT." }), "processed");
+  eq("branded with UPF markers", classifyProcessing({ dataType: "Branded", name: "Bar",
+    ingredients: "PROTEIN BLEND (MILK PROTEIN ISOLATE, WHEY PROTEIN ISOLATE), SOLUBLE CORN FIBER, ALMONDS, NATURAL FLAVORS, SUCRALOSE." }), "ultra");
+  eq("branded long ingredient list is ultra", classifyProcessing({ dataType: "Branded", name: "X", ingredients: "A, B, C, D, E, F, G, H, I, J, K" }), "ultra");
+  eq("branded, no ingredients listed", classifyProcessing({ dataType: "Branded", name: "X" }), "processed");
+  eq("usdaToFood carries the tag", usdaToFood({ ...oikosHit, ingredients: "CULTURED PASTEURIZED NONFAT MILK, CREAM, LIVE CULTURES" }).processing, "processed");
+  eq("usdaToFood upf for ultra items", usdaToFood({ ...oikosHit, ingredients: "MILK, SUCRALOSE" }).n.upf, usdaToFood({ ...oikosHit }).n.kcal);
 
   // ---- estimate share, recents, alcohol ----
   const mixed = [entry("2026-10-12", 600), entry("2026-10-12", 400, { confidence: "estimate" })];

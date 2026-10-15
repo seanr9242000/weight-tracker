@@ -13,6 +13,8 @@ const FOOD_HISTORY_KEY = "food-target-history";
 const FOOD_CHECKIN_KEY = "food-checkin-seen";
 const FOOD_IDEAS_KEY = "food-ideas";
 const FEEL_LOG_KEY = "coach-feel-log";
+const SHAKE_NOTE_KEY = "food-shake-note-dismissed";
+const PROCESSING_LABELS = { whole: "Whole", processed: "Processed", ultra: "Ultra" };
 const CLOSE_FOOD_LOG_ID = "close-food-log";
 const GOAL_PROMPT_AFTER_DAYS = 49; // ~7 weeks: the Zyn taper should be done
 
@@ -121,7 +123,20 @@ function logMeal(meal, slot, addonIds) {
 }
 
 function logLibraryFood(food, slot) {
-  logFood({ slot, name: food.name, n: { ...food.n }, confidence: food.confidence, ref: { food: food.id } });
+  logFood({ slot, name: food.name, n: foodNutrients(food), confidence: food.confidence, ref: { food: food.id } });
+}
+
+/* Whole / Processed / Ultra chip row; `onPick(tag)` gets the new tag. */
+function processingChips(current, onPick) {
+  const row = el("div", "chip-row processing-chips");
+  for (const [tag, label] of Object.entries(PROCESSING_LABELS)) {
+    const chip = el("button", `chip small${tag === current ? " active" : ""}`, label);
+    chip.type = "button";
+    chip.dataset.tag = tag;
+    chip.addEventListener("click", () => onPick(tag));
+    row.appendChild(chip);
+  }
+  return row;
 }
 
 /* ---- Today: meal panel + fuel row (called from coach.js) ---- */
@@ -410,6 +425,8 @@ const SIGNALS = [
   { key: "fiber", label: "Fiber", unit: "g", goal: (s) => s.limits.fiber, kind: "min" },
   { key: "addedSugar", label: "Added sugar", unit: "g", goal: (s) => s.limits.addedSugar, kind: "max" },
   { key: "sodium", label: "Sodium", unit: "mg", goal: (s) => s.limits.sodium, kind: "max" },
+  { key: "upfPct", label: "Ultra-processed", unit: "% of kcal", goal: (s) => s.limits.upfPct ?? UPF_LIMIT_PCT, kind: "max",
+    value: (log, today) => upfShare(log, today) },
 ];
 
 function renderSignals(today, totals, s, discovery, log, days) {
@@ -417,19 +434,49 @@ function renderSignals(today, totals, s, discovery, log, days) {
   list.innerHTML = "";
   for (const sig of SIGNALS) {
     const goal = sig.goal(s);
-    const value = totals[sig.key];
+    const value = sig.value ? sig.value(log, today) : totals[sig.key];
     const status = dayStatus(sig.key, value, s, discovery, today, days);
     const li = el("li", `signal ${status}`);
     const head = el("div", "fuel-head");
     head.appendChild(el("span", "fuel-label", sig.label));
-    head.appendChild(el("span", "fuel-value", `${fmt(value)} ${sig.kind === "min" ? "of" : "/"} ${fmt(goal)} ${sig.unit}${sig.kind === "max" ? " max" : ""}`));
+    head.appendChild(el("span", "fuel-value", sig.key === "upfPct"
+      ? `${value}% of kcal / ${goal}% max`
+      : `${fmt(value)} ${sig.kind === "min" ? "of" : "/"} ${fmt(goal)} ${sig.unit}${sig.kind === "max" ? " max" : ""}`));
     li.append(head, bar(value / (sig.kind === "max" ? goal * 1.5 : goal), status));
     list.appendChild(li);
   }
+  renderShakeNote();
   const alcohol = weekAlcohol(log, today);
   document.getElementById("food-alcohol").textContent = alcohol.drinks
     ? `This week: ${alcohol.drinks} drink${alcohol.drinks === 1 ? "" : "s"} · ${fmt(alcohol.kcal)} kcal from alcohol`
     : "No drinks logged this week.";
+}
+
+/* The shake is tagged "processed" assuming a few-ingredient whey. One
+   note explains that and lets Sean count it as ultra instead. */
+function renderShakeNote() {
+  const note = document.getElementById("shake-note");
+  const whey = foodLibrary().find((f) => f.id === "on-whey");
+  note.hidden = !whey || localStorage.getItem(SHAKE_NOTE_KEY) === "1";
+}
+
+document.getElementById("shake-note-ok").addEventListener("click", () => {
+  localStorage.setItem(SHAKE_NOTE_KEY, "1");
+  renderFood();
+});
+
+document.getElementById("shake-note-ultra").addEventListener("click", () => {
+  setFoodProcessing("on-whey", "ultra");
+  localStorage.setItem(SHAKE_NOTE_KEY, "1");
+  refreshFood();
+});
+
+function setFoodProcessing(foodId, tag) {
+  const lib = foodLibrary();
+  const food = lib.find((f) => f.id === foodId);
+  if (!food) return;
+  food.processing = tag;
+  saveJSON(FOOD_LIBRARY_KEY, lib);
 }
 
 const FUEL_FEEL_MIN_RATINGS = 3;
@@ -588,7 +635,7 @@ function renderTargets(s) {
   const fields = {
     "fs-maintenance": s.maintenance, "fs-protein": s.protein, "fs-fiber": s.limits.fiber,
     "fs-sugar": s.limits.addedSugar, "fs-sodium": s.limits.sodium, "fs-bank-sat": s.bank[6] || 0,
-    "fs-bank-sun": s.bank[0] || 0, "fs-age": s.profile.age, "fs-height": s.profile.heightCm,
+    "fs-bank-sun": s.bank[0] || 0, "fs-upf": s.limits.upfPct ?? UPF_LIMIT_PCT, "fs-age": s.profile.age, "fs-height": s.profile.heightCm,
     "fs-activity": s.profile.activity,
   };
   for (const [id, value] of Object.entries(fields)) document.getElementById(id).value = value;
@@ -666,7 +713,10 @@ document.getElementById("food-settings-form").addEventListener("submit", (e) => 
     goalPromptAnswered: s.goalPromptAnswered || goal.mode !== "maintain",
     maintenance: num("fs-maintenance", s.maintenance),
     protein: num("fs-protein", s.protein),
-    limits: { fiber: num("fs-fiber", s.limits.fiber), addedSugar: num("fs-sugar", s.limits.addedSugar), sodium: num("fs-sodium", s.limits.sodium) },
+    limits: {
+      fiber: num("fs-fiber", s.limits.fiber), addedSugar: num("fs-sugar", s.limits.addedSugar),
+      sodium: num("fs-sodium", s.limits.sodium), upfPct: num("fs-upf", s.limits.upfPct ?? UPF_LIMIT_PCT),
+    },
     bank: { 6: num("fs-bank-sat", s.bank[6] || 0), 0: num("fs-bank-sun", s.bank[0] || 0) },
   };
   settingsOpen = false;
@@ -813,7 +863,7 @@ async function runOnlineSearch(wrap, query) {
     ? "Picking one also saves it to My foods."
     : `Nothing online for “${query}”. Try fewer or different words, or Quick add.`;
   for (const food of foods) {
-    wrap.appendChild(pickRow(food.name, `${food.serving} · ${fmt(food.n.kcal)} kcal · ${fmt(food.n.protein)} g P`, () =>
+    wrap.appendChild(pickRow(food.name, `${food.serving} · ${fmt(food.n.kcal)} kcal · ${fmt(food.n.protein)} g P${food.processing === "ultra" ? " · ultra-processed" : ""}`, () =>
       logFromSheet(() => {
         saveToLibrary(food);
         logLibraryFood(food, sheetSlot);
@@ -850,7 +900,7 @@ function renderSearchResults(wrap, query) {
         logFromSheet(() => logMeal(r.item, sheetSlot, []))));
     } else if (r.type === "food") {
       const f = r.item;
-      wrap.appendChild(pickRow(f.name, `${f.serving} · ${fmt(f.n.kcal)} kcal · ${fmt(f.n.protein)} g P`, () =>
+      wrap.appendChild(pickRow(f.name, `${f.serving} · ${fmt(f.n.kcal)} kcal · ${fmt(f.n.protein)} g P${f.processing === "ultra" ? " · ultra-processed" : ""}`, () =>
         logFromSheet(() => logLibraryFood(f, sheetSlot))));
     } else {
       wrap.appendChild(takeoutRow(r.item));
@@ -920,6 +970,13 @@ function renderQuickAdd(body) {
     row.appendChild(input);
     form.appendChild(row);
   }
+  let processing = "processed";
+  const procLabel = el("div", "feel-label", "Processing");
+  const procRow = processingChips(processing, (tag) => {
+    processing = tag;
+    for (const c of procRow.children) c.classList.toggle("active", c.dataset.tag === tag);
+  });
+  form.append(procLabel, procRow);
   const save = el("label", "quick-save");
   const box = el("input");
   box.type = "checkbox";
@@ -935,11 +992,12 @@ function renderQuickAdd(body) {
     const n = emptyNutrients();
     for (const [key] of QUICK_FIELDS.slice(1)) n[key] = parseFloat(data.get(key)) || 0;
     n.sugar = n.addedSugar;
+    n.upf = processing === "ultra" ? n.kcal : 0;
     const name = String(data.get("name")).trim();
     if (!name) return;
     if (data.get("keep")) {
       const lib = foodLibrary();
-      lib.push({ id: `custom-${Date.now()}`, name, serving: "1 serving", n, confidence: "estimate", source: "custom", favorite: true });
+      lib.push({ id: `custom-${Date.now()}`, name, serving: "1 serving", n, confidence: "estimate", source: "custom", favorite: true, processing });
       saveJSON(FOOD_LIBRARY_KEY, lib);
     }
     logFromSheet(() => logFood({ slot: sheetSlot, name, n, confidence: "estimate" }));
@@ -974,10 +1032,23 @@ function openEditEntry(entry) {
     if (!Number.isFinite(v) || v <= 0) return;
     updateEntry(entry.id, (x) => { x.servings = v; });
   });
+  body.appendChild(form);
+  // A single food can be retagged; the tag sticks for future logs too.
+  const foodId = entry.ref && entry.ref.food;
+  if (foodId || !entry.ref) {
+    const current = entry.n.upf > 0 ? "ultra" : (foodLibrary().find((f) => f.id === foodId) || {}).processing || "processed";
+    body.appendChild(el("div", "feel-label", "Processing"));
+    body.appendChild(processingChips(current, (tag) => {
+      if (foodId) setFoodProcessing(foodId, tag);
+      updateEntry(entry.id, (x) => { x.n.upf = tag === "ultra" ? x.n.kcal : 0; });
+    }));
+  } else if (entry.n.upf > 0) {
+    body.appendChild(el("p", "hint", `${fmt(entry.n.upf)} of ${fmt(entry.n.kcal)} kcal per serving are from ultra-processed ingredients.`));
+  }
   const del = el("button", "pill-btn danger", "Delete entry");
   del.type = "button";
   del.addEventListener("click", () => updateEntry(entry.id, null));
-  body.append(form, del);
+  body.append(del);
   foodSheet.hidden = false;
 }
 

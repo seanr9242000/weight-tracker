@@ -20,7 +20,10 @@ coach. Five tabs:
 - **Food** — search (past entries first, then saved meals, foods,
   chains, takeout, plus "Search online" against the USDA food
   database; picked results are saved to My foods), calories and protein against a weekly budget with a
-  weekend bank, health signals (fiber, added sugar, sodium, alcohol),
+  weekend bank, health signals (fiber, added sugar, sodium, alcohol,
+  and ultra-processed share of calories: every food is tagged Whole /
+  Processed / Ultra, NOVA-style; online results are tagged from their
+  ingredient lists),
   quick add, S/M/L takeout estimates, chain items, one-tap drinks, and
   a weekly check-in that proposes a new maintenance estimate from
   logged intake + weight trend (you approve it). The first 14 days are
@@ -74,7 +77,7 @@ Click-through UI tests (real app at iPhone width, with a screenshot of
 where each script ends):
 
 ```
-python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js --interact tests/ui/online-search.js --interact tests/ui/snack-ideas.js --interact tests/ui/feel-checkin.js
+python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js --interact tests/ui/online-search.js --interact tests/ui/snack-ideas.js --interact tests/ui/feel-checkin.js --interact tests/ui/processing.js
 ```
 
 ## Notes

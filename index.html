@@ -110,6 +110,13 @@
         <h2>Health signals</h2>
         <ul id="food-signals" class="signal-list"></ul>
         <p class="hint food-alcohol" id="food-alcohol"></p>
+        <div class="shake-note" id="shake-note" hidden>
+          <p class="hint">Your shake counts as <strong>processed</strong>, assuming a few-ingredient whey (unflavored or grass-fed; just whey, maybe cocoa and salt). A flavored, sweetened powder like ON Gold Standard is ultra-processed.</p>
+          <div class="button-pair">
+            <button type="button" id="shake-note-ultra" class="secondary-btn">I'm keeping a flavored one</button>
+            <button type="button" id="shake-note-ok" class="primary-btn">Got it</button>
+          </div>
+        </div>
       </section>
 
       <section class="card" id="food-feel" hidden>
@@ -141,6 +148,7 @@
             <div class="field-row"><label for="fs-fiber">Fiber min g</label><input id="fs-fiber" type="number" inputmode="numeric"></div>
             <div class="field-row"><label for="fs-sugar">Added sugar max g</label><input id="fs-sugar" type="number" inputmode="numeric"></div>
             <div class="field-row"><label for="fs-sodium">Sodium max mg</label><input id="fs-sodium" type="number" inputmode="numeric"></div>
+            <div class="field-row"><label for="fs-upf">Ultra-processed max %</label><input id="fs-upf" type="number" inputmode="numeric"></div>
             <div class="field-row"><label for="fs-bank-sat">Sat bank kcal</label><input id="fs-bank-sat" type="number" inputmode="numeric"></div>
             <div class="field-row"><label for="fs-bank-sun">Sun bank kcal</label><input id="fs-bank-sun" type="number" inputmode="numeric"></div>
             <div class="field-row"><label for="fs-age">Age</label><input id="fs-age" type="number" inputmode="numeric"></div>

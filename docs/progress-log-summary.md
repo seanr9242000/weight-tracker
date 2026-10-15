@@ -152,3 +152,15 @@ Each one is saved with what he ate in the 4 hours before, and a "Fuel
 vs feel" card on the Food tab lines foods up against how the sessions
 went once there are 3+ check-ins: the data for adjusting snacks (and
 later for the AI coach).
+
+Last change of the night, after Sean said he wants food as natural as
+possible (processed food reduced, not banned): every food is tagged
+Whole / Processed / Ultra (NOVA-style) and Health signals show the
+ultra-processed share of the day's calories against a 20% target.
+Online results are tagged from their USDA ingredient lists (additives
+like isolates, corn syrup, sweeteners, gums, or a long list = ultra).
+The whey shake counts as processed on the assumption of a cleaner
+powder, with a one-tap option to count it as ultra. Snack ideas were
+swapped to whole-food versions (dates + banana, almonds + raisins,
+eggs + apple, milk + banana, natural PB on simple bread), and a test
+keeps ultra-processed foods out of them.

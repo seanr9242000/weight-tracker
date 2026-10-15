@@ -7,7 +7,10 @@
    Log entries store nutrients PER SERVING in `n` plus a `servings`
    count, so editing servings later never loses the original numbers. */
 
-const NUTRIENT_KEYS = ["kcal", "protein", "carbs", "fat", "fiber", "sugar", "addedSugar", "sodium", "alcohol"];
+/* `upf` = calories that came from ultra-processed food. It's carried
+   like a nutrient so it sums, scales and snapshots the same way. */
+const NUTRIENT_KEYS = ["kcal", "protein", "carbs", "fat", "fiber", "sugar", "addedSugar", "sodium", "alcohol", "upf"];
+const UPF_LIMIT_PCT = 20;
 
 const GUIDE_FLOOR = 1800;           // never suggest eating less than this in a day
 const DISCOVERY_DAYS = 14;          // first two weeks: measure, don't judge
@@ -37,6 +40,12 @@ function sumNutrients(list) {
   return scaleNutrients(total, 1);
 }
 
+/* One serving of a library food, with `upf` filled in from its
+   processing tag (all of its calories, or none). */
+function foodNutrients(food) {
+  return { ...scaleNutrients(food.n, 1), upf: food.processing === "ultra" ? food.n.kcal : 0 };
+}
+
 /* A saved meal's nutrients from the food library, plus any add-ons
    switched on. One estimated ingredient makes the whole meal an
    estimate. Unknown food ids (e.g. a deleted custom food) are skipped. */
@@ -45,14 +54,16 @@ function mealNutrients(meal, library, addonIds) {
   const parts = [...meal.items, ...(addonIds || []).map((foodId) => ({ foodId, servings: 1 }))];
   const foods = parts.filter((p) => byId[p.foodId]);
   return {
-    n: sumNutrients(foods.map((p) => scaleNutrients(byId[p.foodId].n, p.servings))),
+    n: sumNutrients(foods.map((p) => scaleNutrients(foodNutrients(byId[p.foodId]), p.servings))),
     confidence: foods.every((p) => byId[p.foodId].confidence === "exact") ? "exact" : "estimate",
   };
 }
 
-/* S/M/L takeout: every nutrient scales with the size's calories. */
+/* S/M/L takeout: every nutrient scales with the size's calories.
+   Takeout counts as ultra-processed. */
 function takeoutNutrients(preset, size) {
-  return scaleNutrients(preset.m, preset.sizes[size][0] / preset.m.kcal);
+  const n = scaleNutrients(preset.m, preset.sizes[size][0] / preset.m.kcal);
+  return { ...n, upf: n.kcal };
 }
 
 function entryTotal(entry) {
@@ -90,7 +101,7 @@ function defaultSettings(todayStr, weightLb) {
     goal: { mode: "maintain", rateLbPerWk: 0 },
     maintenance: weightLb ? startingMaintenance(profile, weightLb) : 3000,
     protein: 190,
-    limits: { addedSugar: 36, fiber: 38, sodium: 2300 },
+    limits: { addedSugar: 36, fiber: 38, sodium: 2300, upfPct: UPF_LIMIT_PCT },
     bank: { 6: 1500, 0: 500 },
     startDate: todayStr,
   };
@@ -144,7 +155,8 @@ function signalStatus(key, value, settings, discovery) {
     const min = key === "protein" ? settings.protein : settings.limits.fiber;
     return value >= min ? "good" : value >= min * 0.65 ? "warn" : "bad";
   }
-  const limit = settings.limits[key];
+  // Settings saved before the ultra-processed signal existed lack upfPct.
+  const limit = key === "upfPct" ? settings.limits.upfPct ?? UPF_LIMIT_PCT : settings.limits[key];
   return value <= limit ? "good" : value <= limit * 1.5 ? "warn" : "bad";
 }
 
@@ -160,6 +172,12 @@ function estimatedShare(log, dateStr) {
   if (!total) return 0;
   const est = entries.filter((e) => e.confidence !== "exact").reduce((sum, e) => sum + entryTotal(e).kcal, 0);
   return Math.round((est / total) * 100);
+}
+
+/* Share of the day's calories from ultra-processed food, 0-100. */
+function upfShare(log, dateStr) {
+  const t = dayTotals(log, dateStr);
+  return t.kcal ? Math.round((t.upf / t.kcal) * 100) : 0;
 }
 
 /* Most recent entry per distinct name, newest first. */
@@ -317,6 +335,37 @@ function searchFoods(query, { log, library, meals, presets }, limit = 30) {
    Measured/label data, so "exact" rather than an estimate. */
 const USDA_UNITS = { g: "g", grm: "g", ml: "ml", mlt: "ml" };
 
+/* NOVA-style tag for a USDA result. Branded foods are judged by their
+   ingredient list: industrial additives or a long list = ultra, a
+   single ingredient = whole, anything else = processed. Generic foods
+   have no ingredient list, so their USDA description decides. */
+const UPF_MARKERS = [
+  "corn syrup", "maltodextrin", "dextrose", "invert sugar", "natural flavor", "artificial flavor", "flavoring",
+  "sucralose", "acesulfame", "aspartame", "saccharin", "stevia", "rebaudioside", "sugar alcohol", "erythritol",
+  "hydrogenated", "interesterified", "modified starch", "modified food starch", "protein isolate", "isolate",
+  "hydrolyzed", "mono- and diglycerides", "monoglycerides", "polysorbate", "carrageenan", "xanthan", "guar gum",
+  "cellulose gum", "gellan", "lecithin", "emulsifier", "sodium nitrite", "caramel color", "red 40", "yellow 5",
+  "yellow 6", "blue 1", "soluble corn fiber", "polydextrose",
+];
+const UPF_GENERIC = /\b(snacks?|candies|candy|cookies?|cakes?|doughnuts?|crackers?|chips|soda|soft drinks?|beverages?, carbonated|cereals? ready-to-eat|fast foods?|mcdonald|burger king|wendy|taco bell|kfc|subway|pizza hut|domino|frankfurters?|hot dogs?|bologna|salami|pepperoni|nuggets?|frozen dinner|pastries|pop-tarts|ice cream)\b/i;
+const PROCESSED_GENERIC = /\b(cheese|bread|canned|smoked|cured|bacon|ham|sausage|yogurt|tofu|pasta|noodles|tortillas?|butter|syrup|jam|juice)\b/i;
+const UPF_MAX_INGREDIENTS = 10;
+
+function classifyProcessing(hit) {
+  const name = hit.name || "";
+  if (hit.dataType !== "Branded") {
+    if (UPF_GENERIC.test(name)) return "ultra";
+    return PROCESSED_GENERIC.test(name) ? "processed" : "whole";
+  }
+  const ingredients = String(hit.ingredients || "").toLowerCase();
+  if (!ingredients.trim()) return "processed";
+  if (UPF_MARKERS.some((m) => ingredients.includes(m))) return "ultra";
+  // Top-level ingredients only: commas inside parentheses are sub-lists.
+  const count = ingredients.replace(/\([^)]*\)/g, "").split(/[,;]/).filter((x) => x.trim()).length;
+  if (count > UPF_MAX_INGREDIENTS) return "ultra";
+  return count <= 1 ? "whole" : "processed";
+}
+
 function tidyName(text) {
   if (!text || text !== text.toUpperCase()) return text;
   return text.toLowerCase().replace(/(^|\s)(\S)/g, (m, sp, ch) => sp + ch.toUpperCase());
@@ -329,6 +378,8 @@ function usdaToFood(hit) {
   const per100 = hit.per100 || {};
   const n = scaleNutrients(per100, factor);
   if (per100.addedSugar === undefined) n.addedSugar = hit.dataType === "Branded" ? n.sugar : 0;
+  const processing = classifyProcessing(hit);
+  n.upf = processing === "ultra" ? n.kcal : 0;
   const name = tidyName(hit.name);
   const brand = tidyName(hit.brand) || undefined;
   // Branded entries often name only the product ("Protein Bar, Cookies
@@ -342,6 +393,7 @@ function usdaToFood(hit) {
     n,
     confidence: "exact",
     source: "usda",
+    processing,
   };
 }
 
@@ -399,7 +451,7 @@ function proposeMaintenance(settings, log, foodDays, entries, todayStr) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    NUTRIENT_KEYS, emptyNutrients, scaleNutrients, sumNutrients, mealNutrients, takeoutNutrients,
+    NUTRIENT_KEYS, emptyNutrients, scaleNutrients, sumNutrients, foodNutrients, mealNutrients, takeoutNutrients, upfShare, classifyProcessing,
     entryTotal, dayTotals, weekDates, targetCalories, mifflinStJeor, startingMaintenance,
     defaultSettings, dailyGuide, inDiscovery, signalStatus, plannedMealFor, estimatedShare,
     recentFoods, searchFoods, usdaToFood, dayType, snackIdeasFor, snackTip, fmtQty, portionText, foodsBefore, fuelVsFeel, weekAlcohol, weightSlope, proposeMaintenance,
