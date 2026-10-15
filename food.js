@@ -294,24 +294,178 @@ function renderFeelPanel(dateStr, item) {
   return panel;
 }
 
-function renderFuelRow(dateStr) {
-  const row = document.getElementById("today-fuel");
-  if (!row) return;
+/* ---- Today: the four rings (calories, protein, water, pouches) ----
+   Built once and updated in place so the arcs animate between values.
+   Tapping a ring opens its detail drawer underneath. */
+
+const RING_R = 28;
+const RING_C = 2 * Math.PI * RING_R;
+const RING_KEYS = ["kcal", "protein", "water", "pouch"];
+const RING_LABELS = { kcal: "Calories", protein: "Protein", water: "Water", pouch: "Pouches" };
+const RING_COLORS = { kcal: "--food", protein: "--protein", water: "--water", pouch: "--habits" };
+let openRing = null;
+const ringFractions = {}; // last fraction drawn per ring, to spot a goal being hit
+
+function buildRings(row) {
+  row.innerHTML = "";
+  for (const key of RING_KEYS) {
+    const tile = el("button", "ring-tile");
+    tile.type = "button";
+    tile.dataset.ring = key;
+    tile.style.setProperty("--ring", `var(${RING_COLORS[key]})`);
+    tile.innerHTML =
+      `<div class="ring"><svg viewBox="0 0 66 66">` +
+      `<circle class="ring-track" cx="33" cy="33" r="${RING_R}" stroke-width="8"></circle>` +
+      `<circle class="ring-fill" cx="33" cy="33" r="${RING_R}" stroke-width="8" stroke-dasharray="${RING_C}" stroke-dashoffset="${RING_C}"></circle>` +
+      `</svg><div class="ring-center"><span class="ring-value"></span><span class="ring-unit"></span></div></div>` +
+      `<div class="ring-label">${RING_LABELS[key]}</div><div class="ring-sub"></div>`;
+    tile.addEventListener("click", () => {
+      openRing = openRing === key ? null : key;
+      haptic();
+      renderFuelRow(todayLocalDateString());
+    });
+    row.appendChild(tile);
+  }
+  const detail = el("div", "ring-detail");
+  detail.style.gridColumn = "1 / -1";
+  row.appendChild(detail);
+}
+
+function ringData(dateStr) {
   const s = foodSettings();
   const log = foodLog();
   const totals = dayTotals(log, dateStr);
-  const { guide } = dailyGuide(s, log, dateStr);
-  row.innerHTML = "";
-  for (const [label, value, goal, unit] of [["Food", totals.kcal, guide, "kcal"], ["Protein", totals.protein, s.protein, "g"]]) {
-    const cell = el("div", "fuel-cell");
-    const head = el("div", "fuel-head");
-    head.appendChild(el("span", "fuel-label", label));
-    head.appendChild(el("span", "fuel-value", `${fmt(value)} / ${fmt(goal)} ${unit}`));
-    cell.appendChild(head);
-    cell.appendChild(bar(value / goal, "neutral"));
-    row.appendChild(cell);
+  const g = dailyGuide(s, log, dateStr);
+  const discovery = inDiscovery(s, dateStr);
+  const drank = waterTotal(waterLog(), dateStr);
+  const waterGoalOz = waterGoalFor(dateStr);
+  const step = taperStepFor(localStorage.getItem(TAPER_START_KEY), dateStr);
+  const used = pouchesByDate()[dateStr] || 0;
+  const allowance = step ? step.allowance : null;
+  return {
+    s, log, totals, g, discovery, drank, waterGoalOz, step, used,
+    kcal: {
+      value: fmt(totals.kcal), unit: "kcal", sub: `of ${fmt(g.guide)}`,
+      fraction: totals.kcal / g.guide,
+      color: !discovery && totals.kcal > g.guide ? "--warn" : null,
+    },
+    protein: {
+      value: fmt(totals.protein), unit: "g", sub: `of ${fmt(s.protein)} g`,
+      fraction: totals.protein / s.protein, done: totals.protein >= s.protein,
+    },
+    water: {
+      value: fmt(drank), unit: "oz", sub: `of ${fmt(waterGoalOz)}`,
+      fraction: drank / waterGoalOz, done: drank >= waterGoalOz,
+    },
+    pouch: allowance === null
+      ? { value: `${used}`, unit: "today", sub: "no taper", fraction: 0 }
+      : allowance === 0
+        ? { value: `${used}`, unit: "today", sub: "goal 0", fraction: 1, color: used > 0 ? "--danger" : null }
+        : {
+            value: `${used}`, unit: "today", sub: `of ${allowance}`,
+            fraction: used / allowance, color: used > allowance ? "--danger" : null,
+          },
+  };
+}
+
+function renderFuelRow(dateStr) {
+  const row = document.getElementById("today-fuel");
+  if (!row) return;
+  if (!row.querySelector(".ring-tile")) buildRings(row);
+  const d = ringData(dateStr);
+
+  for (const key of RING_KEYS) {
+    const r = d[key];
+    const tile = row.querySelector(`.ring-tile[data-ring="${key}"]`);
+    tile.style.setProperty("--ring", `var(${r.color || RING_COLORS[key]})`);
+    tile.querySelector(".ring-value").textContent = r.value;
+    tile.querySelector(".ring-unit").textContent = r.unit;
+    tile.querySelector(".ring-sub").textContent = r.sub;
+    const fraction = Math.max(0, Math.min(1, r.fraction || 0));
+    tile.querySelector(".ring-fill").setAttribute("stroke-dashoffset", String(RING_C * (1 - fraction)));
+    tile.classList.toggle("done", Boolean(r.done));
+    tile.setAttribute("aria-expanded", String(openRing === key));
+    tile.setAttribute("aria-label", `${RING_LABELS[key]}: ${r.value} ${r.unit}, ${r.sub}`);
+
+    // First time today a goal ring closes while the app is open.
+    const prev = ringFractions[key];
+    ringFractions[key] = r.fraction || 0;
+    if (r.done && prev !== undefined && prev < 1 && claimCelebration(dateStr, key)) {
+      tile.classList.remove("celebrate");
+      void tile.offsetWidth;
+      tile.classList.add("celebrate");
+      celebrate(key === "protein" ? "Protein goal hit 💪" : "Water goal hit 💧", cssVar(RING_COLORS[key]));
+    }
   }
-  row.appendChild(waterCell(dateStr));
+
+  const detail = row.querySelector(".ring-detail");
+  detail.hidden = !openRing;
+  detail.innerHTML = "";
+  if (openRing) {
+    detail.style.setProperty("--ring", `var(${RING_COLORS[openRing]})`);
+    ringDetail(openRing, dateStr, d, detail);
+  }
+}
+
+function detailStat(wrap, num, unit, cap) {
+  const cell = el("div");
+  const n = el("div", "detail-num", num);
+  if (unit) n.appendChild(el("small", "", unit));
+  cell.append(n, el("div", "detail-cap", cap));
+  wrap.appendChild(cell);
+}
+
+function detailButton(actions, label, dark, onClick) {
+  const b = el("button", dark ? "pill-btn dark" : "pill-btn", label);
+  b.type = "button";
+  b.addEventListener("click", onClick);
+  actions.appendChild(b);
+}
+
+function ringDetail(key, dateStr, d, detail) {
+  const stats = el("div", "detail-stats");
+  const actions = el("div", "detail-actions");
+  const line = (text) => detail.appendChild(el("p", "detail-line", text));
+
+  if (key === "kcal") {
+    const left = d.g.guide - d.totals.kcal;
+    detailStat(stats, fmt(d.totals.kcal), "kcal", "Eaten");
+    detailStat(stats, fmt(Math.abs(left)), "kcal", left >= 0 ? "Left today" : "Over today");
+    detail.appendChild(stats);
+    line(`This week: ${fmt(Math.max(0, d.g.weekLeft))} kcal left over ${d.g.daysLeft} day${d.g.daysLeft === 1 ? "" : "s"}.` +
+      (d.discovery ? " Discovery phase: log honestly, no judging yet." : ""));
+    detailButton(actions, "Log food", true, () => openFoodSheet({}));
+    detailButton(actions, "Food diary", false, () => activateTab("food-panel"));
+  } else if (key === "protein") {
+    detailStat(stats, fmt(d.totals.protein), "g", "Eaten");
+    detailStat(stats, fmt(Math.max(0, d.s.protein - d.totals.protein)), "g", "To go");
+    detail.appendChild(stats);
+    line(d.protein.done
+      ? "Target hit for today."
+      : "Protein builds through the day; it's judged at 8 PM.");
+    detailButton(actions, "Log food", true, () => openFoodSheet({}));
+  } else if (key === "water") {
+    detail.appendChild(waterCell(dateStr));
+    return;
+  } else {
+    if (!d.step) {
+      detailStat(stats, `${d.used}`, "", "Pouches today");
+      detail.appendChild(stats);
+      line(localStorage.getItem(TAPER_START_KEY) ? "Your taper hasn't started yet. Log now to see your baseline." : "No taper set up yet.");
+    } else {
+      const left = d.step.allowance - d.used;
+      detailStat(stats, `${d.used}`, "", "Used today");
+      detailStat(stats, `${Math.abs(left)}`, "", left >= 0 ? "Left today" : "Over limit");
+      detail.appendChild(stats);
+      const last = lastPouchAt(loadJSON(HABIT_LOG_KEY, []));
+      line((d.step.allowance === 0 ? "Quit phase." : `Week ${d.step.week} · ${d.step.mg} mg.`) +
+        (last === null ? "" : ` Last pouch ${formatGap(Math.max(0, Math.floor((Date.now() - last) / 60000)))} ago.`));
+    }
+    detailButton(actions, "Log a pouch", true, logPouch);
+    detailButton(actions, "Craving", false, () => openQuickAdd("craving"));
+    detailButton(actions, "Details", false, () => activateTab("habits-panel"));
+  }
+  detail.appendChild(actions);
 }
 
 /* ---- Water (Today fuel row) ---- */
@@ -348,8 +502,14 @@ function waterCell(dateStr) {
 
 function addWater(dateStr, oz) {
   const log = waterLog();
-  log.push({ id: newId(), at: Date.now(), date: dateStr, oz });
+  const id = newId();
+  log.push({ id, at: Date.now(), date: dateStr, oz });
   saveJSON(WATER_LOG_KEY, log);
+  haptic();
+  showToast(`+${oz} oz water · ${fmt(waterTotal(log, dateStr))} of ${fmt(waterGoalFor(dateStr))}`, () => {
+    saveJSON(WATER_LOG_KEY, waterLog().filter((e) => e.id !== id));
+    renderToday();
+  });
   renderToday();
 }
 

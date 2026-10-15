@@ -6,7 +6,9 @@
 <title>Weight & Save</title>
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#f3f3f1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Weight & Save">
@@ -17,30 +19,32 @@
 </head>
 <body>
 <div class="app">
-  <header class="app-header glass">
-    <h1 class="wordmark">Weight<span>&amp; Save</span></h1>
-  </header>
-
   <main>
+    <!-- ================= TODAY ================= -->
     <div id="today-panel" class="tab-panel">
-      <section class="card glass-card">
-        <div class="today-head">
-          <div>
-            <div class="today-date" id="today-date"></div>
-            <div class="today-sub" id="today-sub"></div>
-          </div>
-          <div class="today-score" id="today-score">0%</div>
+      <header class="page-head">
+        <div class="page-eyebrow" id="today-date"></div>
+        <div class="page-title-row">
+          <h1 class="page-title">Today</h1>
+          <span class="day-pill" id="day-pill" hidden></span>
         </div>
-        <div class="progress"><div class="progress-fill" id="today-progress"></div></div>
-        <div class="stat-grid three" id="today-stats"></div>
-        <div class="fuel-row" id="today-fuel"></div>
+      </header>
+
+      <section class="card glass-card hero">
+        <div class="rings" id="today-fuel"></div>
+        <div class="hero-stats" id="today-stats"></div>
       </section>
 
-      <section class="card">
+      <section class="card area-today">
         <div class="card-head">
-          <h2>Today</h2>
+          <h2>Schedule</h2>
           <button type="button" id="edit-day-btn" class="pill-btn">Edit day</button>
         </div>
+        <div class="sched-progress">
+          <div class="today-sub" id="today-sub"></div>
+          <div class="sched-score" id="today-score">0%</div>
+        </div>
+        <div class="progress"><div class="progress-fill" id="today-progress"></div></div>
         <div id="edit-day-tools" class="edit-day-tools" hidden>
           <p class="hint">Change times or remove items for today only. Your weekly plan stays the same.</p>
           <form id="add-item-form" class="add-item-form">
@@ -54,7 +58,7 @@
         <p id="checklist-empty" class="empty-message">Nothing scheduled today.</p>
       </section>
 
-      <section class="card" id="reminders-card">
+      <section class="card area-neutral" id="reminders-card">
         <div class="card-head">
           <h2>Reminders</h2>
           <button type="button" id="reminders-btn" class="pill-btn dark" hidden>Turn on</button>
@@ -64,21 +68,27 @@
       </section>
     </div>
 
-    <div id="food-panel" class="tab-panel" hidden>
-      <section class="card glass-card">
+    <!-- ================= FOOD ================= -->
+    <div id="food-panel" class="tab-panel area-food" hidden>
+      <header class="page-head">
+        <div class="page-eyebrow">Fuel</div>
+        <h1 class="page-title">Food</h1>
+      </header>
+
+      <section class="card glass-card hero">
         <div class="today-head">
           <div>
-            <div class="today-date">Food today</div>
+            <div class="today-date">Calories today</div>
             <div class="today-sub" id="food-sub"></div>
           </div>
           <div class="today-score" id="food-kcal">0</div>
         </div>
         <div class="progress"><div class="progress-fill" id="food-kcal-bar"></div></div>
-        <div id="food-protein" class="fuel-cell"></div>
+        <div id="food-protein" class="fuel-cell protein-cell"></div>
         <p class="food-badge" id="food-badge"></p>
       </section>
 
-      <section class="card">
+      <section class="card area-food">
         <h2>Log</h2>
         <div class="chip-row" id="food-quick-chips"></div>
         <div class="food-actions">
@@ -88,7 +98,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card area-food">
         <div class="card-head">
           <h2>Today's log</h2>
           <span class="card-note" id="food-est"></span>
@@ -101,12 +111,12 @@
         </label>
       </section>
 
-      <section class="card" id="food-checkin" hidden>
+      <section class="card area-food" id="food-checkin" hidden>
         <h2>Weekly check-in</h2>
         <div id="food-checkin-body"></div>
       </section>
 
-      <section class="card">
+      <section class="card area-food">
         <h2>Health signals</h2>
         <ul id="food-signals" class="signal-list"></ul>
         <p class="hint food-alcohol" id="food-alcohol"></p>
@@ -119,19 +129,19 @@
         </div>
       </section>
 
-      <section class="card" id="food-feel" hidden>
+      <section class="card area-train" id="food-feel" hidden>
         <h2>Fuel vs feel</h2>
         <p class="hint">What you ate in the 4 hours before games and lifts, and how they went.</p>
         <ul id="food-feel-list" class="signal-list"></ul>
       </section>
 
-      <section class="card">
+      <section class="card area-food">
         <h2>This week</h2>
         <ul id="food-week" class="food-week"></ul>
         <p class="hint week-legend">Dot = protein target hit. Tap the box to mark a day fully logged.</p>
       </section>
 
-      <section class="card">
+      <section class="card area-neutral">
         <div class="card-head">
           <h2>Targets</h2>
           <button type="button" id="food-settings-btn" class="pill-btn">Edit</button>
@@ -172,122 +182,131 @@
       </section>
     </div>
 
-    <div id="habits-panel" class="tab-panel" hidden>
-      <section class="card glass-card" id="taper-setup">
-        <h2>Quit Zyn</h2>
-        <p class="lead">A 6-week taper: fewer pouches, then a lower strength, then a quit date. Each week starts on a Monday.</p>
-        <div class="field-row">
-          <label for="taper-start-input">Week 1 starts</label>
-          <div class="date-field">
-            <div class="date-display" id="taper-start-display"></div>
-            <input id="taper-start-input" type="date" class="date-input-overlay">
+    <!-- ================= PROGRESS ================= -->
+    <div id="progress-panel" class="tab-panel area-weight" hidden>
+      <header class="page-head">
+        <div class="page-eyebrow">Trends</div>
+        <h1 class="page-title">Progress</h1>
+      </header>
+
+      <div class="segmented" id="progress-seg" role="tablist">
+        <button type="button" class="seg-btn active" data-seg="weight-view" role="tab">Weight</button>
+        <button type="button" class="seg-btn" data-seg="habits-view" role="tab">Habits</button>
+      </div>
+
+      <div id="weight-view" class="seg-view area-weight">
+        <section class="card glass-card hero">
+          <form id="entry-form">
+            <div class="field-row">
+              <label for="weight-input">Weight (lbs)</label>
+              <input id="weight-input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" required>
+            </div>
+            <div class="field-row">
+              <label for="date-input">Date</label>
+              <div class="date-field">
+                <div class="date-display" id="date-display"></div>
+                <input id="date-input" type="date" class="date-input-overlay" required>
+              </div>
+            </div>
+            <button type="submit">Add entry</button>
+          </form>
+        </section>
+
+        <section class="card area-weight">
+          <h2>Trend</h2>
+          <canvas id="chart" width="600" height="240"></canvas>
+          <p id="chart-empty" class="empty-message">Add at least two entries to see a trend line.</p>
+        </section>
+
+        <section class="card area-weight">
+          <h2>History</h2>
+          <ul id="entry-list" class="entry-list"></ul>
+          <p id="list-empty" class="empty-message">No entries yet.</p>
+        </section>
+
+        <section class="card area-weight">
+          <h2>Progress photos</h2>
+          <div class="photo-actions">
+            <div class="field-row photo-date-row">
+              <label for="photo-date-input">Date</label>
+              <div class="date-field">
+                <div class="date-display" id="photo-date-display"></div>
+                <input id="photo-date-input" type="date" class="date-input-overlay" required>
+              </div>
+            </div>
+            <label for="photo-file-input" class="secondary-btn photo-add-btn">Add photo</label>
+            <input id="photo-file-input" type="file" accept="image/*" class="photo-file-input" hidden>
           </div>
-        </div>
-        <button type="button" id="taper-start-btn" class="primary-btn">Start my taper</button>
-      </section>
+          <div id="photo-grid" class="photo-grid"></div>
+          <p id="photo-grid-empty" class="empty-message">No photos yet.</p>
+        </section>
+      </div>
 
-      <section class="card glass-card" id="taper-today" hidden>
-        <div class="taper-week" id="taper-week"></div>
-        <div class="pouch-count" id="pouch-count">0</div>
-        <div class="pouch-sub" id="pouch-sub"></div>
-        <button type="button" id="log-pouch-btn" class="primary-btn">Log a pouch</button>
-        <button type="button" id="undo-pouch-btn" class="link-btn">Undo last pouch</button>
-      </section>
-
-      <section class="card">
-        <h2>Today's pouches</h2>
-        <p class="pouch-last" id="pouch-last"></p>
-        <ul class="pouch-times" id="pouch-times"></ul>
-      </section>
-
-      <section class="card">
-        <h2>Craving</h2>
-        <p class="hint">Log it when it hits — before deciding. Most urges pass in about 10 minutes.</p>
-        <div class="chip-row" id="trigger-chips"></div>
-        <p class="craving-tip" id="craving-tip"></p>
-        <div class="field-row">
-          <label for="urge-input">Urge strength: <span id="urge-value">3</span> / 5</label>
-          <input id="urge-input" type="range" min="1" max="5" value="3" class="range">
-        </div>
-        <div class="button-pair">
-          <button type="button" id="craving-used-btn" class="secondary-btn">Used a pouch</button>
-          <button type="button" id="craving-resisted-btn" class="primary-btn">Resisted</button>
-        </div>
-        <p class="craving-status" id="craving-status"></p>
-      </section>
-
-      <section class="card" id="habit-progress" hidden>
-        <h2>Progress</h2>
-        <div class="stat-grid" id="habit-stats"></div>
-        <ul class="pouch-week" id="pouch-week"></ul>
-      </section>
-
-      <section class="card">
-        <h2>Plan</h2>
-        <ul class="taper-plan" id="taper-plan"></ul>
-        <button type="button" id="taper-restart-btn" class="link-btn">Change start date</button>
-      </section>
-
-      <section class="card doctor-note" id="doctor-note">
-        <h2>Worth a call</h2>
-        <p class="hint">Talk to your doctor about quitting. Nicotine replacement or prescription options can make a taper much easier, and they can set the right dose. This app tracks your plan; it doesn't give medical advice.</p>
-        <button type="button" id="doctor-note-dismiss" class="link-btn">Got it</button>
-      </section>
-    </div>
-
-    <div id="weight-panel" class="tab-panel" hidden>
-      <section class="card glass-card">
-        <form id="entry-form">
+      <div id="habits-view" class="seg-view area-habits" hidden>
+        <section class="card glass-card hero" id="taper-setup">
+          <h2>Quit Zyn</h2>
+          <p class="lead">A 6-week taper: fewer pouches, then a lower strength, then a quit date. Each week starts on a Monday.</p>
           <div class="field-row">
-            <label for="weight-input">Weight (lbs)</label>
-            <input id="weight-input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" required>
-          </div>
-          <div class="field-row">
-            <label for="date-input">Date</label>
+            <label for="taper-start-input">Week 1 starts</label>
             <div class="date-field">
-              <div class="date-display" id="date-display"></div>
-              <input id="date-input" type="date" class="date-input-overlay" required>
+              <div class="date-display" id="taper-start-display"></div>
+              <input id="taper-start-input" type="date" class="date-input-overlay">
             </div>
           </div>
-          <button type="submit">Add Entry</button>
-        </form>
-      </section>
+          <button type="button" id="taper-start-btn" class="primary-btn">Start my taper</button>
+        </section>
 
-      <section class="card">
-        <h2>Trend</h2>
-        <canvas id="chart" width="600" height="240"></canvas>
-        <p id="chart-empty" class="empty-message">Add at least two entries to see a trend line.</p>
-      </section>
+        <section class="card glass-card hero" id="taper-today" hidden>
+          <div class="taper-week" id="taper-week"></div>
+          <div class="pouch-count" id="pouch-count">0</div>
+          <div class="pouch-sub" id="pouch-sub"></div>
+          <button type="button" id="log-pouch-btn" class="primary-btn">Log a pouch</button>
+          <button type="button" id="undo-pouch-btn" class="link-btn">Undo last pouch</button>
+        </section>
 
-      <section class="card">
-        <h2>History</h2>
-        <ul id="entry-list" class="entry-list"></ul>
-        <p id="list-empty" class="empty-message">No entries yet.</p>
-      </section>
+        <section class="card area-habits">
+          <h2>Today's pouches</h2>
+          <p class="pouch-last" id="pouch-last"></p>
+          <ul class="pouch-times" id="pouch-times"></ul>
+        </section>
 
-      <section class="card">
-        <h2>Progress Photos</h2>
-        <div class="photo-actions">
-          <div class="field-row photo-date-row">
-            <label for="photo-date-input">Date</label>
-            <div class="date-field">
-              <div class="date-display" id="photo-date-display"></div>
-              <input id="photo-date-input" type="date" class="date-input-overlay" required>
-            </div>
-          </div>
-          <label for="photo-file-input" class="secondary-btn photo-add-btn">Add Photo</label>
-          <input id="photo-file-input" type="file" accept="image/*" class="photo-file-input" hidden>
-        </div>
-        <div id="photo-grid" class="photo-grid"></div>
-        <p id="photo-grid-empty" class="empty-message">No photos yet.</p>
-      </section>
+        <section class="card area-habits">
+          <h2>Craving</h2>
+          <p class="hint">Log it when it hits, before deciding. Most urges pass in about 10 minutes.</p>
+          <button type="button" id="open-craving-btn" class="secondary-btn wide-btn">Log a craving</button>
+        </section>
+
+        <section class="card area-habits" id="habit-progress" hidden>
+          <h2>Progress</h2>
+          <div class="stat-grid" id="habit-stats"></div>
+          <ul class="pouch-week" id="pouch-week"></ul>
+        </section>
+
+        <section class="card area-habits">
+          <h2>Plan</h2>
+          <ul class="taper-plan" id="taper-plan"></ul>
+          <button type="button" id="taper-restart-btn" class="link-btn">Change start date</button>
+        </section>
+
+        <section class="card area-neutral doctor-note" id="doctor-note">
+          <h2>Worth a call</h2>
+          <p class="hint">Talk to your doctor about quitting. Nicotine replacement or prescription options can make a taper much easier, and they can set the right dose. This app tracks your plan; it doesn't give medical advice.</p>
+          <button type="button" id="doctor-note-dismiss" class="link-btn">Got it</button>
+        </section>
+      </div>
     </div>
 
-    <div id="runs-panel" class="tab-panel" hidden>
-      <section class="card glass-card">
-        <div class="run-type-toggle" id="run-type-toggle">
-          <button type="button" class="run-type-btn active" data-type="run">Run</button>
-          <button type="button" class="run-type-btn" data-type="walk">Walk</button>
+    <!-- ================= TRAIN ================= -->
+    <div id="train-panel" class="tab-panel area-train" hidden>
+      <header class="page-head">
+        <div class="page-eyebrow">Runs &amp; walks</div>
+        <h1 class="page-title">Train</h1>
+      </header>
+
+      <section class="card glass-card hero">
+        <div class="run-type-toggle segmented" id="run-type-toggle">
+          <button type="button" class="run-type-btn seg-btn active" data-type="run">Run</button>
+          <button type="button" class="run-type-btn seg-btn" data-type="walk">Walk</button>
         </div>
 
         <div class="timer-display" id="timer-display">0:00</div>
@@ -312,12 +331,12 @@
           </div>
           <div class="run-save-actions">
             <button type="button" id="run-discard-btn" class="secondary-btn">Discard</button>
-            <button type="submit">Save Run</button>
+            <button type="submit">Save run</button>
           </div>
         </form>
       </section>
 
-      <section class="card">
+      <section class="card area-train">
         <h2>History</h2>
         <ul id="run-list" class="entry-list"></ul>
         <p id="run-list-empty" class="empty-message">No runs yet.</p>
@@ -325,64 +344,142 @@
     </div>
   </main>
 
-  <nav class="bottom-nav glass" role="tablist">
-    <button type="button" class="nav-btn active" data-tab="today-panel" role="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="4" y="3" width="16" height="18" rx="3"></rect>
-        <polyline points="8,9 9.5,10.5 12,8"></polyline>
-        <line x1="14" y1="9.5" x2="16.5" y2="9.5"></line>
-        <polyline points="8,15 9.5,16.5 12,14"></polyline>
-        <line x1="14" y1="15.5" x2="16.5" y2="15.5"></line>
+  <!-- Floating glass tab bar + separate quick-add button (iOS 26 style) -->
+  <div class="dock">
+    <nav class="bottom-nav glass" role="tablist">
+      <button type="button" class="nav-btn active" data-tab="today-panel" role="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="8.5"></circle>
+          <circle cx="12" cy="12" r="4.5"></circle>
+        </svg>
+        <span>Today</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="food-panel" role="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3v5a2.5 2.5 0 0 0 5 0V3"></path>
+          <line x1="7.5" y1="3" x2="7.5" y2="21"></line>
+          <path d="M18 21V3c-2.2 1.2-3.5 3.8-3.5 7.5V14H18"></path>
+        </svg>
+        <span>Food</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="progress-panel" role="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3,17 9,11 13,14 21,6"></polyline>
+          <polyline points="15,6 21,6 21,12"></polyline>
+        </svg>
+        <span>Progress</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="train-panel" role="tab">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="17.3" cy="3.6" r="2.1"></circle>
+          <polygon points="14.6,5.1 10.4,10.7 12.8,12.5 17,6.9"></polygon>
+          <circle cx="15.8" cy="6" r="1.5"></circle>
+          <circle cx="11.6" cy="11.6" r="1.5"></circle>
+          <polygon points="15.29,8.2 18.69,6.3 17.91,4.9 14.51,6.8"></polygon>
+          <circle cx="14.9" cy="7.5" r="0.8"></circle>
+          <circle cx="18.3" cy="5.6" r="0.8"></circle>
+          <polygon points="12.56,7.53 8.56,10.13 9.44,11.47 13.44,8.87"></polygon>
+          <circle cx="13" cy="8.2" r="0.8"></circle>
+          <circle cx="9" cy="10.8" r="0.8"></circle>
+          <polygon points="11.5,12.8 16.5,13.2 16.7,10.8 11.7,10.4"></polygon>
+          <circle cx="11.6" cy="11.6" r="1.2"></circle>
+          <circle cx="16.6" cy="12" r="1.2"></circle>
+          <polygon points="15.69,11.73 13.79,18.03 15.61,18.57 17.51,12.27"></polygon>
+          <circle cx="16.6" cy="12" r="0.95"></circle>
+          <circle cx="14.7" cy="18.3" r="0.95"></circle>
+          <polygon points="10.83,10.68 5.83,14.88 7.37,16.72 12.37,12.52"></polygon>
+          <circle cx="11.6" cy="11.6" r="1.2"></circle>
+          <circle cx="6.6" cy="15.8" r="1.2"></circle>
+        </svg>
+        <span>Train</span>
+      </button>
+    </nav>
+    <button type="button" class="fab" id="fab" aria-label="Log something" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
       </svg>
-      <span>Today</span>
     </button>
-    <button type="button" class="nav-btn" data-tab="food-panel" role="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M5 3v5a2.5 2.5 0 0 0 5 0V3"></path>
-        <line x1="7.5" y1="3" x2="7.5" y2="21"></line>
-        <path d="M18 21V3c-2.2 1.2-3.5 3.8-3.5 7.5V14H18"></path>
-      </svg>
-      <span>Food</span>
-    </button>
-    <button type="button" class="nav-btn" data-tab="habits-panel" role="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1-3.6 2-4.6.3 1.6 1.2 2.6 2 3 0-3 .2-5.6 1-8.4z"></path>
-      </svg>
-      <span>Habits</span>
-    </button>
-    <button type="button" class="nav-btn" data-tab="weight-panel" role="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="4"></rect>
-        <circle cx="12" cy="12" r="3.5"></circle>
-        <line x1="12" y1="12" x2="14" y2="10"></line>
-      </svg>
-      <span>Weight</span>
-    </button>
-    <button type="button" class="nav-btn" data-tab="runs-panel" role="tab">
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <circle cx="17.3" cy="3.6" r="2.1"></circle>
-        <polygon points="14.6,5.1 10.4,10.7 12.8,12.5 17,6.9"></polygon>
-        <circle cx="15.8" cy="6" r="1.5"></circle>
-        <circle cx="11.6" cy="11.6" r="1.5"></circle>
-        <polygon points="15.29,8.2 18.69,6.3 17.91,4.9 14.51,6.8"></polygon>
-        <circle cx="14.9" cy="7.5" r="0.8"></circle>
-        <circle cx="18.3" cy="5.6" r="0.8"></circle>
-        <polygon points="12.56,7.53 8.56,10.13 9.44,11.47 13.44,8.87"></polygon>
-        <circle cx="13" cy="8.2" r="0.8"></circle>
-        <circle cx="9" cy="10.8" r="0.8"></circle>
-        <polygon points="11.5,12.8 16.5,13.2 16.7,10.8 11.7,10.4"></polygon>
-        <circle cx="11.6" cy="11.6" r="1.2"></circle>
-        <circle cx="16.6" cy="12" r="1.2"></circle>
-        <polygon points="15.69,11.73 13.79,18.03 15.61,18.57 17.51,12.27"></polygon>
-        <circle cx="16.6" cy="12" r="0.95"></circle>
-        <circle cx="14.7" cy="18.3" r="0.95"></circle>
-        <polygon points="10.83,10.68 5.83,14.88 7.37,16.72 12.37,12.52"></polygon>
-        <circle cx="11.6" cy="11.6" r="1.2"></circle>
-        <circle cx="6.6" cy="15.8" r="1.2"></circle>
-      </svg>
-      <span>Runs</span>
-    </button>
-  </nav>
+  </div>
+
+  <div id="qa-scrim" class="scrim" hidden></div>
+  <div id="quick-add" class="sheet glass qa-sheet" role="dialog" aria-label="Log" hidden>
+    <div class="sheet-handle"></div>
+
+    <div class="qa-view" id="qa-main">
+      <div class="sheet-title">Log</div>
+      <div class="qa-suggest" id="qa-suggest"></div>
+
+      <div class="qa-water area-water">
+        <div class="qa-water-head">
+          <span class="qa-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c-.3 0-.6.2-.8.4C9.4 5.3 5.5 10.4 5.5 14a6.5 6.5 0 0 0 13 0c0-3.6-3.9-8.7-5.7-11.1-.2-.2-.5-.4-.8-.4z"></path></svg></span>
+          <span class="qa-water-label">Water</span>
+          <span class="qa-water-value" id="qa-water-value"></span>
+        </div>
+        <div class="qa-water-buttons" id="qa-water-buttons"></div>
+      </div>
+
+      <div class="qa-grid">
+        <button type="button" class="qa-tile area-food" data-qa="food">
+          <span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a2.5 2.5 0 0 0 5 0V3"></path><line x1="7.5" y1="3" x2="7.5" y2="21"></line><path d="M18 21V3c-2.2 1.2-3.5 3.8-3.5 7.5V14H18"></path></svg></span>
+          <span>Food</span>
+        </button>
+        <button type="button" class="qa-tile area-habits" data-qa="pouch">
+          <span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="8" rx="8" ry="3"></ellipse><path d="M4 8v7c0 1.7 3.6 3 8 3s8-1.3 8-3V8"></path></svg></span>
+          <span>Pouch</span>
+        </button>
+        <button type="button" class="qa-tile area-weight" data-qa="weight">
+          <span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="5"></rect><path d="M8 10a4 4 0 0 1 8 0"></path><line x1="12" y1="10" x2="13.6" y2="8.2"></line></svg></span>
+          <span>Weight</span>
+        </button>
+        <button type="button" class="qa-tile area-habits" data-qa="craving">
+          <span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1-3.6 2-4.6.3 1.6 1.2 2.6 2 3 0-3 .2-5.6 1-8.4z"></path></svg></span>
+          <span>Craving</span>
+        </button>
+        <button type="button" class="qa-tile area-train" data-qa="run">
+          <span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,12 7,12 10,5 14,19 17,12 21,12"></polyline></svg></span>
+          <span id="qa-run-label">Start run</span>
+        </button>
+        <label for="photo-file-input" class="qa-tile area-weight" data-qa="photo">
+          <span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></span>
+          <span>Photo</span>
+        </label>
+      </div>
+    </div>
+
+    <form class="qa-view" id="qa-weight" hidden>
+      <div class="sheet-title">Weigh in</div>
+      <p class="hint" id="qa-weight-hint"></p>
+      <div class="qa-weight-row">
+        <input id="qa-weight-input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" required>
+        <span class="qa-weight-unit">lb</span>
+      </div>
+      <button type="submit">Save weight</button>
+    </form>
+
+    <div class="qa-view area-habits" id="qa-craving" hidden>
+      <div class="sheet-title">Craving</div>
+      <p class="hint">What set it off? Most urges pass in about 10 minutes.</p>
+      <div class="chip-row" id="trigger-chips"></div>
+      <p class="craving-tip" id="craving-tip"></p>
+      <div class="field-row">
+        <label for="urge-input">Urge strength: <span id="urge-value">3</span> / 5</label>
+        <input id="urge-input" type="range" min="1" max="5" value="3" class="range">
+      </div>
+      <div class="button-pair">
+        <button type="button" id="craving-used-btn" class="secondary-btn">Used a pouch</button>
+        <button type="button" id="craving-resisted-btn" class="primary-btn">Resisted</button>
+      </div>
+      <p class="craving-status" id="craving-status"></p>
+    </div>
+
+    <button type="button" id="qa-close" class="link-btn">Close</button>
+  </div>
+
+  <div id="toast" class="toast glass" role="status" aria-live="polite" hidden>
+    <span id="toast-text"></span>
+    <button type="button" id="toast-undo" class="toast-undo" hidden>Undo</button>
+  </div>
 
   <div id="route-modal" class="route-modal glass" hidden>
     <button type="button" id="route-modal-close" class="secondary-btn route-modal-close">Close</button>
@@ -399,6 +496,7 @@
   </div>
 
   <div id="reason-sheet" class="sheet glass" hidden>
+    <div class="sheet-handle"></div>
     <div class="sheet-title" id="reason-sheet-title"></div>
     <p class="hint">What got in the way? Patterns show up in your weekly review.</p>
     <div class="chip-row" id="reason-options"></div>
@@ -406,6 +504,7 @@
   </div>
 
   <div id="food-sheet" class="sheet glass food-sheet" hidden>
+    <div class="sheet-handle"></div>
     <div class="sheet-title" id="food-sheet-title"></div>
     <div class="chip-row" id="food-sheet-tabs"></div>
     <div class="food-sheet-body" id="food-sheet-body"></div>
@@ -414,12 +513,14 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="ui.js"></script>
 <script src="coach-core.js"></script>
 <script src="food-data.js"></script>
 <script src="food-core.js"></script>
 <script src="app.js"></script>
 <script src="coach.js"></script>
 <script src="food.js"></script>
+<script src="quickadd.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script defer src="reminders.js"></script>
 </body>

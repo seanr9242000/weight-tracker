@@ -188,9 +188,12 @@ def make_handler(seed_json, scripts):
     return functools.partial(Handler, directory=str(REPO))
 
 
+EXTRA_FLAGS = []  # e.g. dark mode, set from --dark
+
+
 def run_edge(edge, profile, args):
     cmd = [edge, "--headless=new", "--disable-gpu", "--hide-scrollbars",
-           "--no-first-run", f"--user-data-dir={profile}", *args]
+           "--no-first-run", f"--user-data-dir={profile}", *EXTRA_FLAGS, *args]
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
 
 
@@ -198,12 +201,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--tabs", help="comma-separated tab panel ids (default: every tab in the bottom nav)")
     parser.add_argument("--height", type=int, default=1900, help="screenshot height in px (default 1900)")
+    parser.add_argument("--dark", action="store_true", help="render with prefers-color-scheme: dark")
     parser.add_argument("--out", default=None, help="screenshot folder (default: a temp folder)")
     parser.add_argument("--seed", default=None, help="JSON file of localStorage key/values to preload")
     parser.add_argument("--interact", action="append", default=[], metavar="SCRIPT.js",
                         help="click-through script to run (repeatable); screenshots its final state")
     parser.add_argument("--budget", type=int, default=10000, help="virtual ms each page gets (default 10000)")
     opts = parser.parse_args()
+    if opts.dark:
+        EXTRA_FLAGS.extend(["--force-dark-mode", "--blink-settings=preferredColorScheme=0"])
     if opts.interact:
         return run_interact(opts)
 

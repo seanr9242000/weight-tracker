@@ -1,13 +1,22 @@
 # Weight & Save
 
 An installable PWA that's growing into a personal accountability
-coach. Five tabs:
+coach. Four tabs in a floating glass tab bar, plus a **+** button that
+logs anything from any tab (one-tap water and pouches, food, a weigh-in,
+a craving, starting a run, a progress photo), with a suggestion row for
+the most likely log right now. Every quick log shows an Undo toast.
+Follows the iPhone's light/dark setting; each area has its own color
+(food green, protein pink, water blue, habits teal, weight purple,
+training orange).
 
 - **Today** — a daily checklist built from a weekly schedule (wake,
   weigh-in, meals, lifts, league games, wind-down, lights out). Check
   items off, skip or explain misses with a reason, and edit a single
-  day's plan without changing the weekly template. Shows completion,
-  streak, last night's sleep, and today's Zyn count. Every meal and
+  day's plan without changing the weekly template. Four rings up top
+  (calories, protein, water, pouches vs. the taper limit); tap one for
+  its details and actions. Closing the protein or water ring for the
+  first time in a day plays a small celebration. Also shows completion,
+  streak and last night's sleep. Every meal and
   snack is an item (weekday mid-morning and afternoon snacks, a lift-day
   evening snack), so each one gets a reminder. Meal items log their
   planned meal in one tap ("As planned") or open food search; tapping a
@@ -28,16 +37,18 @@ coach. Five tabs:
   a weekly check-in that proposes a new maintenance estimate from
   logged intake + weight trend (you approve it). The first 14 days are
   "Discovery": numbers show but nothing is judged.
-- **Habits** — a 6-week Zyn taper (fewer pouches, then 3 mg, then a
-  quit date), a pouch counter against the day's allowance, a craving
-  log with triggers and replacement tips, and progress stats.
-- **Weight** — weight entries, trend line, progress photos.
-- **Runs** — live timer, GPS distance, route map.
+- **Progress** — two views. *Weight*: weight entries, trend line,
+  progress photos. *Habits*: a 6-week Zyn taper (fewer pouches, then
+  3 mg, then a quit date), a pouch counter against the day's allowance,
+  a craving log with triggers and replacement tips (opens in the +
+  sheet), and progress stats.
+- **Train** — runs and walks: live timer, GPS distance, route map.
 
 Schedule/taper rules live in `coach-core.js` and food math in
 `food-core.js` (no DOM, testable on their own); seed foods and meals
-are in `food-data.js`; the UI is `coach.js` (Today/Habits) and
-`food.js` (Food). App data is stored on your device
+are in `food-data.js`; the UI is `coach.js` (Today checklist, Habits),
+`food.js` (Food, Today rings), `quickadd.js` (the + sheet) and `ui.js`
+(toast, haptics, celebrations). App data is stored on your device
 (`localStorage`/IndexedDB). Two things use a server (Supabase, see
 `supabase/`): the next 7 days of checklist items sync so `send-pings`
 can notify you, and "Search online" goes through the `food-search`
@@ -77,8 +88,10 @@ Click-through UI tests (real app at iPhone width, with a screenshot of
 where each script ends):
 
 ```
-python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js --interact tests/ui/online-search.js --interact tests/ui/snack-ideas.js --interact tests/ui/feel-checkin.js --interact tests/ui/processing.js
+python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js --interact tests/ui/snacks-search.js --interact tests/ui/online-search.js --interact tests/ui/snack-ideas.js --interact tests/ui/feel-checkin.js --interact tests/ui/processing.js --interact tests/ui/water-pouches.js --interact tests/ui/redesign.js
 ```
+
+Add `--dark` to render in dark mode.
 
 ## Notes
 

@@ -246,8 +246,10 @@ function renderChart(entries) {
   const yFor = (w) =>
     canvas.height - padding - ((w - minW) / range) * (canvas.height - padding * 2);
 
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = 2;
+  const color = cssVar("--weight") || "#a24fd6";
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.lineJoin = "round";
   ctx.beginPath();
   points.forEach((p, i) => {
     const x = padding + i * xStep;
@@ -257,12 +259,12 @@ function renderChart(entries) {
   });
   ctx.stroke();
 
-  ctx.fillStyle = "#111111";
+  ctx.fillStyle = color;
   points.forEach((p, i) => {
     const x = padding + i * xStep;
     const y = yFor(p.weight);
     ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
     ctx.fill();
   });
 }
@@ -368,32 +370,65 @@ photoFileInput.addEventListener("change", async () => {
   });
 
   photoDateField.reset();
+  showToast("Progress photo saved");
 
   renderPhotoGrid();
 });
 
 /* ---- Tabs ---- */
 
+const PROGRESS_SEG_KEY = "weight-tracker-progress-seg";
 const tabButtons = document.querySelectorAll(".nav-btn");
 
 const tabIds = [...tabButtons].map((btn) => btn.dataset.tab);
 
+/* The old five tabs folded into four: Weight and Habits live under
+   Progress, Runs under Train. Old ids (saved tab, links) still work. */
+const LEGACY_TABS = {
+  "weight-panel": ["progress-panel", "weight-view"],
+  "habits-panel": ["progress-panel", "habits-view"],
+  "runs-panel": ["train-panel"],
+};
+
 function activateTab(tabId) {
+  const [target, seg] = LEGACY_TABS[tabId] || [tabId];
+  if (!tabIds.includes(target)) return;
   for (const btn of tabButtons) {
-    btn.classList.toggle("active", btn.dataset.tab === tabId);
+    btn.classList.toggle("active", btn.dataset.tab === target);
   }
   for (const id of tabIds) {
-    document.getElementById(id).hidden = id !== tabId;
+    document.getElementById(id).hidden = id !== target;
   }
-  localStorage.setItem(ACTIVE_TAB_KEY, tabId);
+  if (seg) activateSeg(seg);
+  localStorage.setItem(ACTIVE_TAB_KEY, target);
+  window.scrollTo(0, 0);
 }
 
 for (const btn of tabButtons) {
   btn.addEventListener("click", () => activateTab(btn.dataset.tab));
 }
 
+const segButtons = document.querySelectorAll("#progress-seg .seg-btn");
+
+function activateSeg(segId) {
+  for (const btn of segButtons) {
+    btn.classList.toggle("active", btn.dataset.seg === segId);
+    document.getElementById(btn.dataset.seg).hidden = btn.dataset.seg !== segId;
+  }
+  localStorage.setItem(PROGRESS_SEG_KEY, segId);
+  // The canvas can't size itself while hidden.
+  if (segId === "weight-view") render();
+}
+
+for (const btn of segButtons) {
+  btn.addEventListener("click", () => activateSeg(btn.dataset.seg));
+}
+
+const savedSeg = localStorage.getItem(PROGRESS_SEG_KEY);
+activateSeg(savedSeg === "habits-view" ? "habits-view" : "weight-view");
+
 const savedTab = localStorage.getItem(ACTIVE_TAB_KEY);
-activateTab(tabIds.includes(savedTab) ? savedTab : "today-panel");
+activateTab(tabIds.includes(savedTab) || LEGACY_TABS[savedTab] ? savedTab : "today-panel");
 
 /* ---- Runs: timer + GPS tracking + map + history ---- */
 
@@ -458,10 +493,10 @@ function ensureLiveMap() {
     maxZoom: 19,
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(liveMap);
-  livePolyline = L.polyline([], { color: "#111111", weight: 4 }).addTo(liveMap);
+  livePolyline = L.polyline([], { color: cssVar("--train") || "#ff8a00", weight: 5 }).addTo(liveMap);
   liveMarker = L.circleMarker([0, 0], {
     radius: 6,
-    color: "#111111",
+    color: cssVar("--train") || "#ff8a00",
     fillColor: "#ffffff",
     fillOpacity: 1,
     weight: 2,
@@ -656,7 +691,7 @@ function ensureRouteModalMap() {
     maxZoom: 19,
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(routeModalMap);
-  routeModalPolyline = L.polyline([], { color: "#111111", weight: 4 }).addTo(routeModalMap);
+  routeModalPolyline = L.polyline([], { color: cssVar("--train") || "#ff8a00", weight: 5 }).addTo(routeModalMap);
   return routeModalMap;
 }
 

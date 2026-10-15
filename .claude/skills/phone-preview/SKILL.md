@@ -23,6 +23,7 @@ Exit code 0 = clean; 1 = a JS error, a failed check, or a page that never report
 | Taller page | `... --height 2600` |
 | Click-through tests | `... --interact tests/ui/food-flow.js --interact tests/ui/food-checkin.js` |
 | Long script ran out of time | `... --budget 20000` (virtual ms per page, default 10000) |
+| Dark mode | `... --dark` (prefers-color-scheme: dark) |
 
 After it runs, **Read each screenshot** and look at it: clipped text, overflow, empty cards, overlapping elements. A clean exit code only proves no JS errors and passing checks.
 
@@ -37,7 +38,7 @@ A script is the body of an async function, run after the app loads. It starts on
 | `clickText(text, root?)` / `byText(text, root?)` | Click / find the element whose whole text is `text` |
 | `item(title)` | Today checklist `<li>` by its title |
 | `fill(selOrEl, value)` | Set a value and fire input + change |
-| `tab(panelId)` | Tap a bottom-nav tab |
+| `tab(panelId)` | Tap a bottom-nav tab (`today-panel`, `food-panel`, `progress-panel`, `train-panel`) |
 | `ls(key)` | Parsed app localStorage value |
 | `eq(name, got, want)` / `check(name, cond, info?)` | Record PASS/FAIL |
 | `today`, `day(offset)` | `YYYY-MM-DD` strings in local time |

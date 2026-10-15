@@ -1,5 +1,6 @@
 // Water goal on Today (by day type, tumbler-size buttons, editable under
-// Targets) and pouch timestamps on Habits (times, gaps, remove one).
+// Targets) and pouch timestamps on Progress > Habits (times, gaps, remove one).
+// Reloading into the old "habits-panel" id also checks the legacy-tab mapping.
 const dow = new Date().getDay();
 const kind = [1, 2, 4].includes(dow) ? "game" : [3, 5, 6].includes(dow) ? "lift" : "rest";
 const extra = { game: 32, lift: 20, rest: 0 }[kind];
@@ -7,6 +8,7 @@ const waterValue = () => $(".water-cell .fuel-value").textContent;
 
 // 200 lb -> base 100 oz, plus the day's extra.
 await reload({ "coach-started-at": "0", "weight-tracker-entries": [{ id: "w", date: today, weight: 200 }] });
+click('.ring-tile[data-ring="water"]'); // water detail lives in its ring's drawer
 eq(`water goal for a ${kind} day`, waterValue(), `0 / ${100 + extra} oz`);
 eq("tumbler buttons", $$(".water-buttons .chip").map((b) => b.textContent), ["+8 oz", "+20 oz", "+40 oz"]);
 check("no undo before any water", !$(".water-undo"));

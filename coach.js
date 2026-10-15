@@ -120,8 +120,15 @@ function renderTodaySummary(dateStr, items, checkins, overrides) {
   document.getElementById("today-date").textContent = new Date().toLocaleDateString(undefined, {
     weekday: "long", month: "long", day: "numeric",
   });
+  const type = typeof dayType === "function" ? dayType(items) : null;
+  const pill = document.getElementById("day-pill");
+  pill.hidden = !type;
+  if (type) {
+    pill.textContent = { game: "Game day", lift: "Lift day", rest: "Rest day" }[type];
+    pill.className = `day-pill ${type === "rest" ? "area-sleep-pill" : "area-train"}`;
+  }
   document.getElementById("today-sub").textContent =
-    due === 0 ? `${items.length} items today` : `${done} of ${due} due items done · ${items.length} total`;
+    due === 0 ? `${items.length} items today` : `${done} of ${due} due done · ${items.length} total`;
   document.getElementById("today-score").textContent = `${pct}%`;
   document.getElementById("today-progress").style.width = `${pct}%`;
 
@@ -129,20 +136,14 @@ function renderTodaySummary(dateStr, items, checkins, overrides) {
   stats.innerHTML = "";
   const streak = completionStreak(checkins, overrides, dateStr, now);
   const sleep = sleepHours(checkins, dateStr);
-  const step = taperStepFor(localStorage.getItem(TAPER_START_KEY), dateStr);
-  const pouches = pouchesByDate()[dateStr] || 0;
-
-  const tiles = [
-    { label: "Streak", value: `${streak} day${streak === 1 ? "" : "s"}` },
-    { label: "Sleep", value: sleep === null ? "--" : `${Math.floor(sleep)}h ${Math.round((sleep % 1) * 60)}m` },
-    { label: "Zyn", value: step ? `${pouches} / ${step.allowance}` : `${pouches}` },
-  ];
-  for (const tile of tiles) {
-    const t = el("div", "stat-tile");
-    t.appendChild(el("div", "stat-value", tile.value));
-    t.appendChild(el("div", "stat-label", tile.label));
-    stats.appendChild(t);
-  }
+  const chip = (icon, strong, rest) => {
+    const c = el("span", "hero-chip");
+    c.append(icon + " ", el("b", "", strong), rest ? ` ${rest}` : "");
+    stats.appendChild(c);
+  };
+  if (streak > 0) chip("🔥", `${streak}`, `day streak`);
+  else chip("🔥", "80%", "today starts a streak");
+  if (sleep !== null) chip("🌙", `${Math.floor(sleep)}h ${Math.round((sleep % 1) * 60)}m`, "sleep");
   // food.js loads after this file; the first render happens without it.
   if (typeof renderFuelRow === "function") renderFuelRow(dateStr);
 }
@@ -150,6 +151,7 @@ function renderTodaySummary(dateStr, items, checkins, overrides) {
 function renderChecklistItem(dateStr, item, checkin, now) {
   const li = el("li", "check-item");
   li.dataset.itemId = item.id;
+  li.dataset.kind = item.kind || "routine";
   const isDue = timeToMinutes(item.time) <= now;
   const scheduledAt = new Date(`${dateStr}T${item.time}`).getTime();
   const isMissed = !checkin && timeToMinutes(item.time) + MISSED_AFTER_MINUTES <= now && scheduledAt >= coachStartedAt;
@@ -520,10 +522,27 @@ document.getElementById("taper-restart-btn").addEventListener("click", () => {
   renderToday();
 });
 
-document.getElementById("log-pouch-btn").addEventListener("click", () => {
+/* One-tap pouch log (Habits card, Today ring, + sheet), with Undo. */
+function logPouch() {
   addHabitLog({ type: "pouch" });
+  const id = loadJSON(HABIT_LOG_KEY, []).at(-1).id;
   renderHabits();
   renderToday();
+  haptic();
+  const today = todayLocalDateString();
+  const step = taperStepFor(localStorage.getItem(TAPER_START_KEY), today);
+  const used = pouchesByDate()[today] || 0;
+  showToast(step ? `Pouch logged · ${used} of ${step.allowance} today` : `Pouch logged · ${used} today`, () => {
+    saveJSON(HABIT_LOG_KEY, loadJSON(HABIT_LOG_KEY, []).filter((l) => l.id !== id));
+    renderHabits();
+    renderToday();
+  });
+}
+
+document.getElementById("log-pouch-btn").addEventListener("click", logPouch);
+
+document.getElementById("open-craving-btn").addEventListener("click", () => {
+  if (typeof openQuickAdd === "function") openQuickAdd("craving");
 });
 
 document.getElementById("undo-pouch-btn").addEventListener("click", () => {
@@ -566,12 +585,16 @@ function logCraving(resisted) {
   }
   addHabitLog({ type: "craving", trigger: cravingTrigger, urge: Number(urgeInput.value), resisted });
   if (!resisted) addHabitLog({ type: "pouch", trigger: cravingTrigger });
-  status.textContent = resisted ? "Logged. That's one rep stronger." : "Logged honestly. That counts too.";
+  const message = resisted ? "Logged. That's one rep stronger." : "Logged honestly. That counts too.";
+  status.textContent = "";
   cravingTrigger = null;
   for (const c of triggerChips.children) c.classList.remove("active");
   document.getElementById("craving-tip").textContent = "";
   renderHabits();
   renderToday();
+  haptic();
+  if (typeof closeQuickAdd === "function") closeQuickAdd();
+  showToast(message);
 }
 
 document.getElementById("craving-resisted-btn").addEventListener("click", () => logCraving(true));
