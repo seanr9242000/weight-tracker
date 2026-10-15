@@ -107,5 +107,6 @@ Session total: ~71 min between commits (brainstorm interview + spec + build + te
 | 22:41 | Track ultra-processed food; whole-food snack swaps | — |
 | 23:02 | Split 10-14 work into its own progress-log session | 21 min |
 | 23:04 | Add water goals, pouch timestamps, Oikos vanilla label; fit food sheet above keyboard | 2 min |
+| 23:06 | Add My Chipotle order; Chipotle bowls count as processed | 2 min |
 
-Session total: ~23 min between commits, 3 commits (a /clear and a short Q&A on water/pouch/Oikos preceded the third).
+Session total: ~25 min between commits, 4 commits (a /clear and a short Q&A on water/pouch/Oikos preceded the third).

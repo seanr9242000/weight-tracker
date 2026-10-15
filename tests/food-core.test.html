@@ -32,6 +32,10 @@ run(() => {
   const lunchBbq = mealNutrients(meal("meal-prep-lunch"), lib, ["bbq-low"]);
   eq("BBQ add-on adds sodium", lunchBbq.n.sodium - lunch.n.sodium, 300);
   near("egg dinner ~770 kcal", mealNutrients(meal("meal-egg-dinner"), lib, []).n.kcal, 770, 15);
+  const chipotle = mealNutrients(meal("meal-chipotle"), lib, []);
+  eq("My Chipotle order = bowl + chips & queso", [chipotle.n.kcal, chipotle.n.protein, chipotle.n.sodium], [1520, 65, 2590]);
+  eq("Chipotle order is an estimate, not ultra", [chipotle.confidence, chipotle.n.upf], ["estimate", 0]);
+  eq("Chipotle bowls processed, burrito ultra", ["chipotle-bowl", "chipotle-my-bowl", "chipotle-burrito"].map((id) => lib.find((f) => f.id === id).processing), ["processed", "processed", "ultra"]);
   const chainMeal = { items: [{ foodId: "chipotle-bowl", servings: 1 }, { foodId: "banana", servings: 1 }] };
   eq("any estimate item makes a meal an estimate", mealNutrients(chainMeal, lib, []).confidence, "estimate");
   eq("missing food ids are skipped", mealNutrients({ items: [{ foodId: "nope", servings: 1 }] }, lib, []).n.kcal, 0);

@@ -70,7 +70,17 @@ const FOOD_SEED_LIBRARY = [
   { id: "light-beer", name: "Light beer", serving: "12 oz", n: nut(95, 0.6, 2.6, 0, 0, 0, 0, 10, 11), confidence: "exact", drink: true, processing: "processed" },
 
   // Chains - published nutrition for a standard order
-  { id: "chipotle-bowl", group: "chain", name: "Chipotle chicken bowl", serving: "white rice, black beans, fajita veg, salsa, cheese, lettuce", n: nut(670, 51, 72, 21, 11, 5, 0, 1810), confidence: "estimate", processing: "ultra" },
+  // Bowls are processed (cooked in-store from simple ingredients); the
+  // burrito stays ultra for its commercial flour tortilla.
+  { id: "chipotle-bowl", rev: 1, group: "chain", name: "Chipotle chicken bowl", serving: "white rice, black beans, fajita veg, salsa, cheese, lettuce", n: nut(670, 51, 72, 21, 11, 5, 0, 1810), confidence: "estimate", processing: "processed" },
+  // Sean's usual order, summed from Chipotle's US per-ingredient chart
+  // (Oct 2024). Pollo asado and chili lime chips are 2026 limited-time
+  // items with no official macros: pollo asado uses third-party 4 oz
+  // numbers, the chips use the official 550 kcal with regular-chip macros
+  // (sodium is probably higher). Cooked in-store from simple ingredients,
+  // so "processed", not ultra.
+  { id: "chipotle-my-bowl", group: "chain", name: "My Chipotle bowl", serving: "pollo asado, white rice, fajitas, sour cream, cheese, lettuce, green + corn salsa", n: nut(730, 48, 70, 29.5, 6, 10, 0, 1710), confidence: "estimate", processing: "processed" },
+  { id: "chipotle-chili-lime-queso", group: "chain", name: "Chipotle chili lime chips & queso", serving: "regular chips + side queso (serves 2)", n: nut(790, 17, 80, 43, 7, 3, 0, 880), confidence: "estimate", processing: "processed" },
   { id: "chipotle-burrito", group: "chain", name: "Chipotle chicken burrito", serving: "same fillings as the bowl + tortilla", n: nut(990, 59, 122, 30, 14, 6, 0, 2410), confidence: "estimate", processing: "ultra" },
   { id: "cfa-sandwich", group: "chain", name: "Chick-fil-A Chicken Sandwich", serving: "1 sandwich", n: nut(420, 29, 41, 18, 1, 6, 5, 1460), confidence: "estimate", processing: "ultra" },
   { id: "cfa-nuggets-8", group: "chain", name: "Chick-fil-A nuggets, 8 ct", serving: "8 nuggets, no sauce", n: nut(250, 27, 11, 11, 0, 1, 1, 1210), confidence: "estimate", processing: "ultra" },
@@ -106,6 +116,7 @@ const FOOD_SEED_MEALS = [
   { id: "meal-recovery", name: "Shake + banana", detail: "Recovery snack", items: [...SHAKE, { foodId: "banana", servings: 1 }], slots: ["post-lift"], days: ALL_DAYS },
   { id: "meal-pregame", name: "Banana + Oikos Pro", detail: "1–2 hours before tip", items: [{ foodId: "banana", servings: 1 }, { foodId: "oikos-pro", servings: 1 }], slots: ["pregame-snack"], days: ALL_DAYS },
   { id: "meal-oikos", name: "Oikos Pro", detail: "Quick protein between meals", items: [{ foodId: "oikos-pro", servings: 1 }], slots: ["snack-am", "snack-eve"], days: ALL_DAYS },
+  { id: "meal-chipotle", name: "My Chipotle order", detail: "Bowl + chili lime chips & queso", items: [{ foodId: "chipotle-my-bowl", servings: 1 }, { foodId: "chipotle-chili-lime-queso", servings: 1 }], slots: [], days: [] },
   { id: "meal-postgame", name: "Oikos Pro + banana", detail: "Protein first, not whatever's around", items: [{ foodId: "oikos-pro", servings: 1 }, { foodId: "banana", servings: 1 }], slots: ["postgame"], days: ALL_DAYS },
 ];
 

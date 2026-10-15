@@ -181,3 +181,12 @@ installed copies, since stored values normally win. The food search
 sheet now sits above the iPhone keyboard instead of behind it; that
 fix couldn't be tested headless and needs an on-phone check. Also
 deleted four leftover anonymous test users in Supabase Auth.
+
+Then Sean's usual Chipotle order became a one-tap saved meal, "My
+Chipotle order": a pollo asado bowl (white rice, fajitas, sour cream,
+cheese, lettuce, green and corn salsa) plus chili lime chips and queso,
+about 1,520 kcal and 65 g protein. The numbers come from Chipotle's
+official US per-ingredient chart. Pollo asado and the chips are 2026
+limited-time items without published macros, so they are estimates.
+Chipotle bowls now count as processed (cooked in-store from simple
+ingredients), while the burrito stays ultra for its commercial tortilla.
