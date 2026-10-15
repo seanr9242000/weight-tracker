@@ -190,3 +190,23 @@ official US per-ingredient chart. Pollo asado and the chips are 2026
 limited-time items without published macros, so they are estimates.
 Chipotle bowls now count as processed (cooked in-store from simple
 ingredients), while the burrito stays ultra for its commercial tortilla.
+
+Last, the start of a full redesign. Sean wanted the app to look and
+work like modern food, weight and habit trackers while keeping the
+Liquid Glass look, and answered a one-at-a-time Q&A. The approach mixes
+what research supports: logging often matters most, so logging is made
+fast; progress toward goals is shown as rings; weight trends will be
+smoothed. Step 1 shipped: a new design with white cards on a gray page
+(black in dark mode, following the iPhone setting), one color per area,
+and glass on the floating chrome. The five tabs became four in a
+floating glass bar (Today, Food, Progress, Train), with Weight and
+Habits under Progress and Runs under Train, plus a separate + button
+that logs anything from any tab (one-tap water and pouches, food,
+weigh-in, craving, start a run, progress photo) and suggests the most
+likely log right now. Today opens on four rings (calories, protein,
+water, pouches) that open detail drawers when tapped. Quick logs show
+an Undo toast, and closing the protein or water ring plays a small
+celebration once a day. Next: Food, then Progress (charts, badges,
+streak freeze for the taper), then Train, each checked on Sean's phone
+in turn. Sean also asked for full gamification (streaks, badges,
+milestones), which comes with Progress.
