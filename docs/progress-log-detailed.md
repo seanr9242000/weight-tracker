@@ -95,6 +95,15 @@ Session total: ~1473 min between commits (planning interview + Phase 1 build pre
 | 23:04 | Add online food search (USDA via food-search function) | 21 min |
 | 23:15 | Add snack ideas with portions, matched to game/lift/rest days | 11 min |
 | 23:25 | Add after-game/lift check-in and Fuel vs feel | 10 min |
-| 22:41 (10-14) | Track ultra-processed food; whole-food snack swaps | 1396 min |
 
-Session total: ~1467 min between commits (brainstorm interview + spec + build + tests preceded the first), 7 commits. Ran past midnight into 2026-10-14.
+Session total: ~71 min between commits (brainstorm interview + spec + build + tests preceded the first), 6 commits.
+
+---
+
+## Session: 2026-10-14 — Ultra-processed tracking
+
+| Time  | Change                                                  | Elapsed |
+|-------|------------------------------------------------------------|---------|
+| 22:41 | Track ultra-processed food; whole-food snack swaps | — |
+
+Session total: 1 commit (design Q&A + build + tests preceded it).

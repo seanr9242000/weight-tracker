@@ -153,8 +153,9 @@ vs feel" card on the Food tab lines foods up against how the sessions
 went once there are 3+ check-ins: the data for adjusting snacks (and
 later for the AI coach).
 
-Last change of the night, after Sean said he wants food as natural as
-possible (processed food reduced, not banned): every food is tagged
+## 2026-10-14 — Mostly natural: ultra-processed tracking
+After Sean said he wants food as natural as possible (processed food
+reduced, not banned), every food is now tagged
 Whole / Processed / Ultra (NOVA-style) and Health signals show the
 ultra-processed share of the day's calories against a 20% target.
 Online results are tagged from their USDA ingredient lists (additives
