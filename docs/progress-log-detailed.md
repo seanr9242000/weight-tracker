@@ -111,3 +111,21 @@ Session total: ~71 min between commits (brainstorm interview + spec + build + te
 | 23:47 | Redesign step 1: four-tab glass dock, + quick-add sheet, Today rings, light/dark theme | 41 min |
 
 Session total: ~66 min between commits, 5 commits (a /clear and a short Q&A on water/pouch/Oikos preceded the third; a /clear and a one-question-at-a-time design Q&A preceded the fifth).
+
+---
+
+## Session: 2026-10-15 — Feedback batch 1 design
+
+| Time  | Change                                                  | Elapsed |
+|-------|------------------------------------------------------------|---------|
+| 22:02 | Add design spec for feedback batch 1 (backup, multi-add, meals, savings, water) | — |
+
+Session total: 1 commit (design Q&A on Sean's first-day feedback, plus diagnosing the data loss: reinstalling the home-screen app wipes its storage).
+
+---
+
+## Session: 2026-10-21 — Injury mode added to spec
+
+| Time  | Change                                                  | Elapsed |
+|-------|------------------------------------------------------------|---------|
+| 22:32 | Add Injury mode (ankle avulsion fracture, recheck 2026-12-07) to feedback batch 1 spec | — |

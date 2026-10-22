@@ -210,3 +210,26 @@ celebration once a day. Next: Food, then Progress (charts, badges,
 streak freeze for the taper), then Train, each checked on Sean's phone
 in turn. Sean also asked for full gamification (streaks, badges,
 milestones), which comes with Progress.
+
+## 2026-10-15 / 10-21 — Feedback batch 1 planned; data loss explained
+After a day of using the redesign, Sean sent feedback: log several
+foods at once, swipe sheets closed, split the food log into
+Breakfast/Lunch/Dinner/Snacks, timestamps on everything, more
+restaurant foods (Chick-fil-A large fries were missing), bring back
+Zyn savings (widened to general savings: Zyn, alcohol, eating out,
+energy drinks, with Sean's real baselines), and water reminders. He
+also reported that all his data kept disappearing. The cause: updates
+often didn't show up on reopen (GitHub Pages' 10-minute file cache,
+no reload when a new version installs, and iOS resuming rather than
+relaunching the app), so he deleted and re-added the home-screen icon,
+and iOS deletes an installed web app's storage along with its icon.
+The lost data isn't recoverable. The approved spec
+(`docs/superpowers/specs/2026-10-15-feedback-batch-1-design.md`) puts
+the fix first: updates that always arrive, plus automatic cloud backup
+with a restore code and a file export. On 10-21 Sean's sprained ankle
+turned out to be an avulsion fracture (brace 6 weeks, no basketball,
+lifting allowed, recheck Dec 7), so an Injury mode was added as step
+0.5: games and runs paused, an ankle-safe leg day, and an ankle pain
+question after lifts. Restaurant data will come from testing two free
+databases (FatSecret Basic, Spoonacular Free) once Sean has keys.
+Nothing is built yet; the implementation plan is next.

@@ -122,6 +122,82 @@ Updates didn't show up for three reasons:
   - UI script for the card and the restore flow, with the Supabase calls
     stubbed.
 
+### 0.5 Injury mode (added 2026-10-21)
+**Context:** Sean's ankle sprain turned out to be an avulsion fracture.
+Doctor's orders:
+- Brace for 6 weeks, then PT later.
+- No basketball (cuts and pivots).
+- Working out is allowed.
+- Recheck is **2026-12-07**.
+
+Sean wants to keep training legs without straining the ankle.
+
+**Data:** `coach-injury` = `{ part: "ankle", start, until: "2026-12-07",
+note }` in localStorage. It is included in the backup (step 0). Injury
+mode is on while `start <= today <= until`.
+
+**Schedule (`coach-core.js`, pure).** The injury is passed into
+`itemsForDate` like overrides. For each item:
+- **Removed:**
+  - `game`
+  - `pregame-prep`
+  - the game-day "how did it go?" check-in
+- **Retitled snacks:**
+  - `pregame-snack` stays, retitled "Afternoon snack".
+  - `postgame` stays, retitled "Evening snack" (food reminders
+    unchanged).
+- **`lift`:** title stays. The note becomes the ankle-safe plan:
+  - leg extension, seated/lying leg curl, hip thrust or glute bridge
+    (brace on), hip abduction/adduction
+  - single-leg work on the good leg (cross-education)
+  - upper body as normal
+  - arm-bike or upper-body finisher
+  - "Ask PT first: leg press (feet high), RDLs. Avoid until cleared:
+    squats, lunges, step-ups, calf raises, jumps, sled, rower, running."
+- **`post-lunch` / `post-dinner` walks:** retitled "Easy walk in brace —
+  skip if sore". Skipping is never counted as a miss.
+- **New item on `until`:** "Ankle recheck" (`kind: "appointment"`, 9:00).
+  Tapping it asks "Cleared?":
+  - **Yes** ends Injury mode (sets `until` to yesterday's date and keeps
+    the history).
+  - **Not yet** asks for a new date and extends `until`.
+- **PT exercises:** an "Add PT exercises" action in Injury settings lets
+  Sean add daily items (title + time) once PT starts. They live in
+  overrides-like storage and only apply while Injury mode is on. No
+  exercises are pre-filled.
+
+**Elsewhere:**
+- **Water:** the game-day +32 oz bonus is off. There are no games, so
+  the day is no longer a game day.
+- **Train tab / Runs:** a banner reads "Runs paused: ankle (back after
+  Dec 7 recheck)". The Start buttons are still there but de-emphasized,
+  not removed.
+- **Lift check-in:** adds "Ankle pain (0–10)". If pain is ≥ 4, or this
+  week's average is higher than the week before, show "Back off leg
+  work and mention it to your PT." Stored with the check-in, so Fuel vs
+  feel and the future coach can read it.
+- **Food:** no target change. The weekly check-in already re-estimates
+  maintenance from logs and weight. Snack ideas use lift/rest-day logic,
+  since there are no game days.
+- **Today chip:** "🩹 Ankle · day N of 47 · recheck Dec 7". Tapping it
+  opens Injury settings (dates, note, PT items, end now).
+
+**Setup:** ships pre-filled for Sean (start 2026-10-21, until
+2026-12-07). Settings can edit it, and the next injury can be started
+from the same card.
+
+**Tests:**
+- `tests/run.py`:
+  - game items removed
+  - snacks retitled
+  - lift note swapped
+  - recheck item on `until`
+  - nothing changes outside the date range
+  - water bonus off
+  - pain flag rule
+- UI script: injury chip, recheck "Cleared?" flow, lift check-in with
+  the pain question.
+
 ### A1. Swipe down to close (all sheets)
 - Applies to the food sheet, the + quick-add sheet, and the third sheet
   in `index.html`. All three share `.sheet-handle`.
@@ -383,11 +459,12 @@ Sean checks each step on his phone before the next one starts:
 
 1. **0:** reliable updates and backup. Until this ships, Sean should
    not delete the icon. To update, he swipes the app away and reopens it.
-2. **A:** swipe-to-close, timestamps, Chick-fil-A items
-3. **B:** tray and meal sections
-4. **C:** savings and energy drinks
-5. **D:** water reminders
-6. **E:** restaurant database probe, then its own design
+2. **0.5:** Injury mode (ankle, through the 2026-12-07 recheck)
+3. **A:** swipe-to-close, timestamps, Chick-fil-A items
+4. **B:** tray and meal sections
+5. **C:** savings and energy drinks
+6. **D:** water reminders
+7. **E:** restaurant database probe, then its own design
 
 For every step:
 - **Logic tests:** `python tests/run.py`, with new checks for
