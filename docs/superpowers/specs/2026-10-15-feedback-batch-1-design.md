@@ -462,9 +462,21 @@ Sean checks each step on his phone before the next one starts:
 2. **0.5:** Injury mode (ankle, through the 2026-12-07 recheck)
 3. **A:** swipe-to-close, timestamps, Chick-fil-A items
 4. **B:** tray and meal sections
-5. **C:** savings and energy drinks
-6. **D:** water reminders
-7. **E:** restaurant database probe, then its own design
+5. **T:** training basics, a slim slice of Phase 3 pulled forward on
+   2026-10-21 because lifting is Sean's only training until the ankle
+   is cleared:
+   - lift-day workouts as an editable plan (ankle-safe legs plus upper
+     body)
+   - set logging (weight × reps) with last session's numbers shown
+   - simple progression (all reps hit → suggest a small increase)
+   - ankle pain per session (from 0.5)
+
+   Basketball work (plyos, lateral work, shooting) and the AI coach wait
+   until he's cleared. **Needs its own short Q&A first** (training days,
+   split, main lifts, gym equipment), then a spec section.
+6. **C:** savings and energy drinks
+7. **D:** water reminders
+8. **E:** restaurant database probe, then its own design
 
 For every step:
 - **Logic tests:** `python tests/run.py`, with new checks for
