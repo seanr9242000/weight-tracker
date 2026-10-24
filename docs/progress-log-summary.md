@@ -233,3 +233,25 @@ lifting allowed, recheck Dec 7), so an Injury mode was added as step
 question after lifts. Restaurant data will come from testing two free
 databases (FatSecret Basic, Spoonacular Free) once Sean has keys.
 Nothing is built yet; the implementation plan is next.
+
+## 2026-10-23 / 10-24 — Step 0 built: updates that arrive, and backup
+Built step 0 of feedback batch 1 on a branch (batch1-step0), one task at a
+time with a review after each and a full review at the end. Updates should
+now show up without reinstalling: the service worker checks with the server
+for every file instead of trusting GitHub Pages' 10-minute cache, the app
+checks for a new version on launch and whenever it comes back to the
+foreground, and it reloads itself once, never in the middle of a run. The
+version number (v31) shows in a new "Backup & updates" card on Today. That
+card turns on automatic cloud backup: the app makes a restore code (like
+WS-7K3M-Q9TP-2XHD) for Sean to save in Notes, and uploads his data about 30
+seconds after changes, at most once a minute, and when the app goes to the
+background. A fresh install offers "Restore from backup" at the top of
+Today. Progress photos are too big for the cloud copy, so "Export backup"
+saves a file (with photos) to Files, and "Import backup" reads it back. The
+final review caught one serious flow: after restoring by code, importing an
+older file just for its photos would have overwritten newer logs and the
+cloud copy. Import now offers "add the photos, keep this phone's logs"
+first. It also stopped a stale copy (like a Safari test) from uploading
+just by being opened, and the server now keeps the previous backup too.
+The Supabase migration isn't applied and nothing is pushed yet; both wait
+for Sean's OK, then his phone check.

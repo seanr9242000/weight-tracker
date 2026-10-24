@@ -136,3 +136,20 @@ Session total: 1 commit (design Q&A on Sean's first-day feedback, plus diagnosin
 | Time  | Change                                                  | Elapsed |
 |-------|------------------------------------------------------------|---------|
 | 22:25 | Add implementation plan for feedback batch 1 steps 0 and 0.5 (13a7af4) | — |
+| 22:26 | Log plan commit in progress log (f4172d0, branch batch1-step0) | 1 min |
+| 22:28 | Step 0a: revalidate same-origin files, precache past the HTTP cache, add version.js (84ec233) | 2 min |
+| 22:30 | Step 0a: check for updates on load and foreground, reload once (not mid-run), show Updated to vN (9b15ae6) | 2 min |
+| 22:32 | Step 0b: backup-core (backed-up keys, restore codes, backup file, timing) (eb9df3b) | 2 min |
+| 22:33 | Step 0b: backups table with save_backup/load_backup RPCs (2cd476f) | 1 min |
+| 22:36 | Step 0b: Backup & updates card with restore code and automatic cloud backup (ffd1689) | 3 min |
+| 22:39 | Step 0b: restore from a backup code (fresh-install card + Backup card) (312c718) | 3 min |
+| 22:44 | Step 0b: export/import a backup file with progress photos (c85c7ad) | 5 min |
+| 22:46 | Step 0b fix: import decodes photos first, reports failures, accurate confirm (0b16cfb) | 2 min |
+
+Session total: 10 commits (plan, then step 0 built task by task with a review after each; committed on branch batch1-step0 with Sean's per-plan approval).
+
+## Session: 2026-10-24 — Step 0 final review fixes
+
+| Time  | Change                                                  | Elapsed |
+|-------|------------------------------------------------------------|---------|
+| 12:13 | Step 0 final-review fixes: data-safety for backup, import and restore (7710227) | — |
