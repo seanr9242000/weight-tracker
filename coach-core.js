@@ -174,6 +174,7 @@ function injuryItems(items, injury, dateStr) {
       if (!INJURY_TITLES[item.id]) return item;
       const changed = { ...item, title: INJURY_TITLES[item.id] };
       delete changed.note; // "before tip", "note shots" no longer fit
+      delete changed.trigger; // else "After eating: ..." shows under the retitled walk
       if (INJURY_OPTIONAL.includes(item.id)) changed.optional = true;
       return changed;
     });

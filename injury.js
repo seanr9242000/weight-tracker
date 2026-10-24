@@ -36,6 +36,14 @@ function currentInjury() {
   return injury && injury.until >= todayLocalDateString() ? injury : null;
 }
 
+/* An injury that ended in the last 14 days: Start pre-fills from it, so an
+   accidental End (or a flare-up) isn't a re-type of everything. */
+function recentInjury() {
+  const injury = loadInjury();
+  const today = todayLocalDateString();
+  return injury && injury.until < today && injury.until >= shiftDate(today, -14) ? injury : null;
+}
+
 function setDateField(input, value) {
   input.value = value || "";
   document.getElementById(`${input.id}-display`).textContent = value ? formatDate(value) : "";
@@ -47,10 +55,11 @@ for (const input of [injuryStart, injuryUntil]) {
 
 function fillInjuryForm() {
   const current = currentInjury();
-  document.getElementById("injury-part").value = current ? current.part : "";
-  document.getElementById("injury-note").value = current ? current.note || "" : "";
-  setDateField(injuryStart, current ? current.start : todayLocalDateString());
-  setDateField(injuryUntil, current ? current.until : "");
+  const base = current || recentInjury();
+  document.getElementById("injury-part").value = base ? base.part : "";
+  document.getElementById("injury-note").value = base ? base.note || "" : "";
+  setDateField(injuryStart, base ? base.start : todayLocalDateString());
+  setDateField(injuryUntil, current ? current.until : ""); // a recent one needs a fresh recheck date
   document.getElementById("injury-form-status").textContent = "";
 }
 
@@ -123,7 +132,7 @@ document.getElementById("injury-edit-btn").addEventListener("click", () => {
   }
 });
 
-document.getElementById("injury-pt-add-btn").addEventListener("click", () => {
+function addPtExercise() {
   const time = document.getElementById("injury-pt-time").value;
   const titleInput = document.getElementById("injury-pt-title");
   const title = titleInput.value.trim();
@@ -134,7 +143,19 @@ document.getElementById("injury-pt-add-btn").addEventListener("click", () => {
   titleInput.value = "";
   renderInjury();
   renderToday();
-});
+}
+
+document.getElementById("injury-pt-add-btn").addEventListener("click", addPtExercise);
+
+/* The PT fields sit inside the injury form: Enter adds the exercise
+   instead of submitting the whole form. */
+for (const id of ["injury-pt-title", "injury-pt-time"]) {
+  document.getElementById(id).addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    addPtExercise();
+  });
+}
 
 injuryForm.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -151,7 +172,10 @@ injuryForm.addEventListener("submit", (e) => {
     return;
   }
   const current = currentInjury();
-  saveJSON(INJURY_KEY, { part, start, until, note: document.getElementById("injury-note").value.trim(), pt: current ? current.pt || [] : [] });
+  const recent = recentInjury();
+  /* PT carries over when editing, or when restarting the same part. */
+  const source = current || (recent && recent.part.toLowerCase() === part ? recent : null);
+  saveJSON(INJURY_KEY, { part, start, until, note: document.getElementById("injury-note").value.trim(), pt: source ? source.pt || [] : [] });
   injuryEditing = false;
   renderInjury();
   renderToday();
@@ -218,6 +242,7 @@ function renderRecheckPanel(dateStr, item) {
 document.getElementById("injury-end-btn").addEventListener("click", () => {
   const injury = loadInjury();
   if (!injury) return;
+  if (!confirm("End injury mode? Games and runs come back on the schedule today.")) return;
   saveJSON(INJURY_KEY, endInjury(injury, todayLocalDateString()));
   injuryEditing = false;
   renderInjury();

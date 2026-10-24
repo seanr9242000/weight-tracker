@@ -223,6 +223,7 @@ function renderChecklistItem(dateStr, item, checkin, now) {
       mealOpenFor = mealOpenFor === item.id ? null : item.id;
     } else if (hasRecheckPanel(item)) {
       recheckOpenFor = recheckOpenFor === item.id ? null : item.id;
+      recheckExtending = false; // reopen at "Cleared?", not a stale date picker
     } else if (item.id === "weigh") {
       weighOpenFor = weighOpenFor === dateStr ? null : dateStr;
     } else {
@@ -364,6 +365,7 @@ function openChecklistItem(id) {
   activateTab("today-panel");
   const item = scheduleFor(todayLocalDateString()).find((i) => i.id === id);
   if (item && hasMealPanel(item)) mealOpenFor = id;
+  if (item && hasRecheckPanel(item)) recheckOpenFor = id;
   renderToday();
   const li = document.querySelector(`#checklist li[data-item-id="${CSS.escape(id)}"]`);
   if (li) li.scrollIntoView({ block: "center" });

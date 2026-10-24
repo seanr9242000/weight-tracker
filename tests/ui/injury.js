@@ -58,6 +58,14 @@ check("PT exercise on today's schedule", Boolean(item("Ankle alphabet")));
 click(".pouch-remove", $("#injury-pt-list"));
 eq("PT exercise removed", ls("coach-injury").pt, []);
 
+// Enter in the PT fields adds the exercise; it must not submit the form.
+fill("#injury-pt-time", "08:00");
+fill("#injury-pt-title", "Calf raises");
+$("#injury-pt-title").dispatchEvent(new (app().KeyboardEvent)("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+eq("Enter adds the PT exercise", ls("coach-injury").pt.map((p) => [p.time, p.title]), [["08:00", "Calf raises"]]);
+check("form stays open after Enter", !$("#injury-form").hidden);
+click(".pouch-remove", $("#injury-pt-list"));
+
 tab("train-panel");
 eq("runs paused banner", $("#runs-paused").textContent, `Runs paused: ankle (back after ${md(day(10))} recheck)`);
 check("Start de-emphasized, not removed", $("#timer-btn").classList.contains("deemphasized") && !$("#timer-btn").hidden);
@@ -67,6 +75,12 @@ fill("#injury-until", day(-5));
 $("#injury-form").requestSubmit();
 eq("recheck before start refused", $("#injury-form-status").textContent, "The recheck date can't be before the start.");
 
+let endAsked = null;
+app().confirm = (msg) => { endAsked = msg; return false; };
+click("#injury-end-btn");
+eq("End now asks first", endAsked, "End injury mode? Games and runs come back on the schedule today.");
+eq("declining End now changes nothing", ls("coach-injury").until, day(10));
+app().confirm = () => true;
 click("#injury-end-btn");
 eq("End now ends it as of yesterday", ls("coach-injury").until, day(-1));
 check("chip gone", !$(".injury-chip"));
@@ -74,7 +88,8 @@ check("banner gone", $("#runs-paused").hidden);
 
 eq("card offers a new one", $("#injury-edit-btn").textContent, "Start");
 click("#injury-edit-btn");
-eq("blank form for a new injury", $("#injury-part").value, "");
+/* Just ended, so Start pre-fills (part, start, note) and wants a new recheck. */
+eq("recently ended injury pre-fills", [$("#injury-part").value, $("#injury-start").value, $("#injury-until").value], ["ankle", day(-3), ""]);
 fill("#injury-part", "Knee");
 fill("#injury-start", today);
 fill("#injury-until", day(20));
@@ -140,3 +155,41 @@ check("feel panel still open after re-render", Boolean(item(LIFT) && $(".feel-pa
 check("no stale pain warning after ending", !$(".pain-warning", item(LIFT)));
 check("no pain question after ending", !$$(".feel-panel .feel-label", item(LIFT)).some((e) => e.textContent.includes("pain")));
 check("Save stays disabled on the invisible answer", $$(".feel-panel button", item(LIFT)).find((b) => b.textContent === "Save").disabled);
+
+// Restarting a recently ended injury pre-fills and carries the PT list over.
+const pt = [{ id: "pt-1", time: "07:00", title: "Ankle alphabet" }];
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-20), day(-3), pt) });
+eq("card offers Start", $("#injury-edit-btn").textContent, "Start");
+click("#injury-edit-btn");
+eq("form pre-filled from the recent one", [$("#injury-part").value, $("#injury-start").value, $("#injury-until").value, $("#injury-note").value], ["ankle", day(-20), "", "Brace on"]);
+fill("#injury-until", day(10));
+$("#injury-form").requestSubmit();
+eq("PT carried over", ls("coach-injury").pt, pt);
+check("chip back with the original start's day count", $(".injury-chip").textContent.startsWith("🩹 Ankle · day 21 of 31"), $(".injury-chip")?.textContent);
+
+// A different part does not inherit the PT list.
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-20), day(-3), pt) });
+click("#injury-edit-btn");
+fill("#injury-part", "Knee");
+fill("#injury-until", day(10));
+$("#injury-form").requestSubmit();
+eq("different part drops PT", ls("coach-injury").pt, []);
+
+// Ended more than 14 days ago: blank form.
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-40), day(-20), pt) });
+click("#injury-edit-btn");
+eq("old injury gives a blank form", [$("#injury-part").value, $("#injury-start").value, $("#injury-until").value, $("#injury-note").value], ["", today, "", ""]);
+
+// Closing the recheck panel resets "Not yet" so it reopens at "Cleared?".
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-30), today) });
+click(".check-box", item("Ankle recheck"));
+clickText("Not yet", item("Ankle recheck"));
+check("date picker shown", Boolean($(".recheck-panel input[type=date]", item("Ankle recheck"))));
+click(".check-box", item("Ankle recheck"));
+check("panel closed", !$(".recheck-panel", item("Ankle recheck")));
+click(".check-box", item("Ankle recheck"));
+check("reopened without the date picker", Boolean($(".recheck-panel", item("Ankle recheck"))) && !$(".recheck-panel input[type=date]", item("Ankle recheck")));
+
+// Tapping the recheck push opens "Cleared?".
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-30), today) }, "food-panel", "item=injury-recheck");
+check("push tap opens the Cleared? panel", Boolean($(".recheck-panel", item("Ankle recheck"))));

@@ -22,6 +22,7 @@ run(() => {
   eq("snacks retitled", ["pregame-snack", "postgame"].map((id) => find("2026-10-12", id).title), ["Late-afternoon snack", "Evening snack"]);
   eq("game-day notes dropped", ["pregame-snack", "postgame"].map((id) => find("2026-10-12", id).note), [undefined, undefined]);
   eq("lunch walk retitled + optional", [find("2026-10-12", "post-lunch").title, find("2026-10-12", "post-lunch").optional], [INJURY_WALK_TITLE, true]);
+  eq("injured walks carry no meal trigger", [find("2026-10-12", "post-lunch").trigger, find("2026-10-14", "post-dinner").trigger], [undefined, undefined]);
   eq("lift title kept", find("2026-10-14", "lift").title, "Lift — 45 min");
   eq("lift note swapped", find("2026-10-14", "lift").note, INJURY_LIFT_NOTE);
   eq("dinner walk retitled", find("2026-10-14", "post-dinner").title, INJURY_WALK_TITLE);
