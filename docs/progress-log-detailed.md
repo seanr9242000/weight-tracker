@@ -129,3 +129,4 @@ Session total: 1 commit (design Q&A on Sean's first-day feedback, plus diagnosin
 | Time  | Change                                                  | Elapsed |
 |-------|------------------------------------------------------------|---------|
 | 22:32 | Add Injury mode (ankle avulsion fracture, recheck 2026-12-07) to feedback batch 1 spec | — |
+| 22:34 | Pull training basics (step T) forward in feedback batch 1 order | 2 min |
