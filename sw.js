@@ -1,9 +1,10 @@
-const CACHE_NAME = "weight-tracker-v30";
+const CACHE_NAME = "weight-tracker-v31";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./ui.js",
+  "./version.js",
   "./coach-core.js",
   "./food-data.js",
   "./food-core.js",
@@ -18,8 +19,13 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
+  // "reload" skips the browser's HTTP cache. GitHub Pages serves every
+  // file with max-age=600, so a plain addAll could precache the
+  // previous deploy's files under the new version's name.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(ASSETS.map((url) => new Request(url, { cache: "reload" })))
+    )
   );
   self.skipWaiting();
 });
@@ -38,8 +44,12 @@ self.addEventListener("fetch", (event) => {
   // caching them would serve stale data and can't store POSTs anyway.
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.hostname.endsWith(".supabase.co")) return;
+  // Our own files revalidate with the server on every request (a cheap
+  // 304 when unchanged) instead of trusting the 10-minute HTTP cache,
+  // so a deploy shows up on the next check. CDN files keep the default.
+  const init = url.origin === self.location.origin ? { cache: "no-cache" } : undefined;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, init)
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
