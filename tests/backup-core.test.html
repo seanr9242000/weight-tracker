@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html><body><pre id="out"></pre>
+<script src="test-utils.js"></script>
+<script src="../backup-core.js"></script>
+<script>
+function fakeStorage(entries) {
+  const map = new Map(Object.entries(entries || {}));
+  return {
+    get length() { return map.size; },
+    key: (i) => [...map.keys()][i] ?? null,
+    getItem: (k) => (map.has(k) ? map.get(k) : null),
+    setItem: (k, v) => { map.set(k, String(v)); },
+    removeItem: (k) => { map.delete(k); },
+    dump: () => Object.fromEntries(map),
+  };
+}
+
+run(() => {
+  // ---- which keys ----
+  eq("app keys are backed up",
+    ["weight-tracker-entries", "weight-tracker-runs", "coach-checkins", "coach-injury", "food-log", "water-log", "ui-celebrated", "savings-settings"].map(isBackupKey),
+    Array(8).fill(true));
+  eq("device, auth and backup keys are not",
+    ["coach-reminders-on", "weight-tracker-active-tab", "weight-tracker-active-run", "weight-tracker-progress-seg",
+     "sb-inewcgtwhuwjmiyxlrvy-auth-token", "backup-code", "backup-on", "backup-last", "app-version-seen", "water-log-old"].map(isBackupKey),
+    Array(10).fill(false));
+
+  // ---- collect + restore round trip ----
+  const src = fakeStorage({
+    "weight-tracker-entries": '[{"id":"w","date":"2026-10-20","weight":201}]',
+    "coach-reminders-on": "1", "food-log": "[]", "sb-x-auth-token": "secret", "backup-code": "WS-0000-0000-0000",
+  });
+  const b = collectBackup(src, 1000);
+  eq("backup shape", b, { app: "weight-and-save", format: 1, savedAt: 1000,
+    keys: { "food-log": "[]", "weight-tracker-entries": '[{"id":"w","date":"2026-10-20","weight":201}]' } });
+
+  const dest = fakeStorage({ "coach-checkins": '{"stale":1}', "coach-reminders-on": "1", "backup-code": "WS-1111-1111-1111" });
+  eq("restore writes the backup's keys", applyBackup(dest, b), 2);
+  eq("restore round-trips", collectBackup(dest, 1000), b);
+  eq("restore removes app keys the backup lacks", dest.getItem("coach-checkins"), null);
+  eq("restore leaves device keys alone", [dest.getItem("coach-reminders-on"), dest.getItem("backup-code")], ["1", "WS-1111-1111-1111"]);
+  const d2 = fakeStorage();
+  applyBackup(d2, { app: "weight-and-save", format: 1, keys: { "sb-x": "t", "food-log": "[]" } });
+  eq("restore skips non-app keys inside a backup", d2.dump(), { "food-log": "[]" });
+  let err = null;
+  const keep = fakeStorage({ "food-log": '[{"id":1}]' });
+  try { applyBackup(keep, { app: "other", keys: {} }); } catch (e) { err = e.message; }
+  eq("restore rejects a foreign backup", err, "That isn't a Weight & Save backup.");
+  eq("a rejected restore changes nothing", keep.getItem("food-log"), '[{"id":1}]');
+
+  // ---- fresh install vs real data ----
+  eq("seeds alone aren't user data", hasUserData(fakeStorage({
+    "food-library": "[1]", "coach-started-at": "1", "coach-injury": '{"part":"ankle"}', "ui-celebrated": "{}", "weight-tracker-entries": "[]" })), false);
+  eq("a weigh-in is", hasUserData(fakeStorage({ "weight-tracker-entries": '[{"id":"w"}]' })), true);
+  eq("a check-in is", hasUserData(fakeStorage({ "coach-checkins": '{"2026-10-21|wake":{}}' })), true);
+  eq("corrupt JSON isn't", hasUserData(fakeStorage({ "food-log": "{oops" })), false);
+
+  // ---- restore codes ----
+  eq("code format", newRestoreCode(new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 31])), "WS-0123-4567-89AZ");
+  eq("high bits ignored", newRestoreCode(new Uint8Array(12).fill(255)), "WS-ZZZZ-ZZZZ-ZZZZ");
+  eq("normalize: exact", normalizeCode("WS-7K3M-Q9TP-2XHD"), "WS-7K3M-Q9TP-2XHD");
+  eq("normalize: lowercase + spaces", normalizeCode(" ws 7k3m q9tp 2xhd "), "WS-7K3M-Q9TP-2XHD");
+  eq("normalize: no prefix", normalizeCode("7K3MQ9TP2XHD"), "WS-7K3M-Q9TP-2XHD");
+  eq("normalize: O read as 0", normalizeCode("WS-7K3M-Q9TP-2XHO"), "WS-7K3M-Q9TP-2XH0");
+  eq("normalize: I and L read as 1", normalizeCode("WS-IL00-0000-0000"), "WS-1100-0000-0000");
+  eq("normalize: body starting with WS, no prefix", normalizeCode("WS7KQ9TP2XHD"), "WS-WS7K-Q9TP-2XHD");
+  eq("normalize: too short", normalizeCode("WS-7K3M-Q9TP"), null);
+  eq("normalize: U isn't a code letter", normalizeCode("WS-UUUU-0000-0000"), null);
+  eq("normalize: empty", normalizeCode(""), null);
+
+  // ---- timing ----
+  eq("first backup 30 s after a change", backupDelay(100000, 0), 30000);
+  eq("at most once a minute", backupDelay(100000, 80000), 40000);
+  eq("never sooner than 30 s", backupDelay(100000, 99000), 59000);
+  eq("ago", [0, 59e3, 120e3, 3 * 3600e3, 26 * 3600e3, 3 * 86400e3].map((ms) => formatAgo(1e9 - ms, 1e9)),
+    ["just now", "just now", "2 min ago", "3 h ago", "yesterday", "3 days ago"]);
+
+  // ---- backup file ----
+  const file = JSON.stringify({ ...b, photos: [
+    { id: "p1", date: "2026-10-20", dataUrl: "data:image/jpeg;base64,AAAA" },
+    { id: "bad", date: "2026-10-20", dataUrl: "javascript:alert(1)" },
+  ] });
+  const parsed = parseBackupFile(file);
+  eq("file: backup part", parsed.backup, b);
+  eq("file: only image photos kept", parsed.photos.map((p) => p.id), ["p1"]);
+  let ferr = null;
+  try { parseBackupFile("not json"); } catch (e) { ferr = e.message; }
+  eq("file: not JSON", ferr, "That file isn't a Weight & Save backup.");
+  ferr = null;
+  try { parseBackupFile('{"app":"other","keys":{}}'); } catch (e) { ferr = e.message; }
+  eq("file: someone else's JSON", ferr, "That file isn't a Weight & Save backup.");
+  eq("file name", backupFileName("2026-10-21"), "weight-and-save-backup-2026-10-21.json");
+});
+</script></body></html>

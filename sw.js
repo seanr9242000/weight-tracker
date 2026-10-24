@@ -8,6 +8,7 @@ const ASSETS = [
   "./coach-core.js",
   "./food-data.js",
   "./food-core.js",
+  "./backup-core.js",
   "./app.js",
   "./coach.js",
   "./food.js",
