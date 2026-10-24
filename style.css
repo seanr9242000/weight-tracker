@@ -2490,3 +2490,45 @@ canvas {
   flex: 1;
   text-align: center;
 }
+
+/* ---- Injury mode ---- */
+
+button.hero-chip {
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.injury-chip {
+  background: color-mix(in srgb, var(--train) 16%, transparent);
+}
+
+.check-item[data-kind="pt"],
+.check-item[data-kind="appointment"] { --kind: var(--train); }
+
+.runs-paused {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--train) 14%, transparent);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.timer-btn.deemphasized:not(.running) {
+  opacity: 0.45;
+}
+
+.pt-add {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.pt-add input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}

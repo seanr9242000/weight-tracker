@@ -165,6 +165,9 @@ function renderTodaySummary(dateStr, items, checkins, overrides) {
   if (streak > 0) chip("🔥", `${streak}`, `day streak`);
   else chip("🔥", "80%", "today starts a streak");
   if (sleep !== null) chip("🌙", `${Math.floor(sleep)}h ${Math.round((sleep % 1) * 60)}m`, "sleep");
+  // injury.js loads after this file; the first render happens without it.
+  const injuryTag = typeof injuryChip === "function" ? injuryChip(dateStr) : null;
+  if (injuryTag) stats.appendChild(injuryTag);
   // food.js loads after this file; the first render happens without it.
   if (typeof renderFuelRow === "function") renderFuelRow(dateStr);
 }

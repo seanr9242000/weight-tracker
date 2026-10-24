@@ -100,6 +100,45 @@
         </form>
         <p class="hint" id="backup-restore-status"></p>
       </section>
+      <section class="card area-train" id="injury-card">
+        <div class="card-head">
+          <h2>Injury mode</h2>
+          <button type="button" id="injury-edit-btn" class="pill-btn">Edit</button>
+        </div>
+        <p class="hint" id="injury-summary"></p>
+        <form id="injury-form" class="food-settings" hidden>
+          <div class="field-row"><label for="injury-part">Injury</label><input id="injury-part" type="text" placeholder="ankle" autocomplete="off"></div>
+          <div class="field-grid">
+            <div class="field-row">
+              <label for="injury-start">Started</label>
+              <div class="date-field">
+                <div class="date-display" id="injury-start-display"></div>
+                <input id="injury-start" type="date" class="date-input-overlay">
+              </div>
+            </div>
+            <div class="field-row">
+              <label for="injury-until">Recheck</label>
+              <div class="date-field">
+                <div class="date-display" id="injury-until-display"></div>
+                <input id="injury-until" type="date" class="date-input-overlay">
+              </div>
+            </div>
+          </div>
+          <div class="field-row"><label for="injury-note">Note</label><input id="injury-note" type="text" autocomplete="off"></div>
+          <div id="injury-pt">
+            <h3 class="sub-head">PT exercises (daily)</h3>
+            <ul id="injury-pt-list" class="pouch-times"></ul>
+            <div class="pt-add">
+              <input id="injury-pt-time" type="time">
+              <input id="injury-pt-title" type="text" placeholder="Add a PT exercise" autocomplete="off">
+              <button type="button" id="injury-pt-add-btn" class="pill-btn dark">Add</button>
+            </div>
+          </div>
+          <p class="hint" id="injury-form-status"></p>
+          <button type="submit" class="primary-btn">Save</button>
+          <button type="button" id="injury-end-btn" class="link-btn">End injury mode now</button>
+        </form>
+      </section>
     </div>
 
     <!-- ================= FOOD ================= -->
@@ -338,6 +377,7 @@
       </header>
 
       <section class="card glass-card hero">
+        <p class="runs-paused" id="runs-paused" hidden></p>
         <div class="run-type-toggle segmented" id="run-type-toggle">
           <button type="button" class="run-type-btn seg-btn active" data-type="run">Run</button>
           <button type="button" class="run-type-btn seg-btn" data-type="walk">Walk</button>
@@ -557,6 +597,7 @@
 <script src="coach.js"></script>
 <script src="food.js"></script>
 <script src="quickadd.js"></script>
+<script src="injury.js"></script>
 <script src="updates.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script defer src="reminders.js"></script>
