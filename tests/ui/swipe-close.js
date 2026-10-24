@@ -76,6 +76,30 @@ await wait(500);
 $(".qa-water-buttons button", qa()).click();
 eq("a tap after a drag still works", (ls("water-log") || []).length, 1);
 
+// iPhone Safari captures a touch to the element under the finger; when the
+// sheet takes capture, Safari fires lostpointercapture on that element,
+// which bubbles to the sheet. That handoff must not end the drag (seen on
+// an iPhone 2026-10-24: every swipe sprang back at about 11 px).
+click("#fab");
+check("+ sheet open for the capture-handoff test", !qa().hidden);
+{
+  const handle = $(".sheet-handle", qa());
+  const y0 = handle.getBoundingClientRect().top + 3;
+  const path = slow(h * 0.5);
+  PE("pointerdown", handle, y0);
+  await wait(100);
+  PE("pointermove", handle, y0 + path[0]);
+  PE("lostpointercapture", handle, y0 + path[0]); // capture moves handle -> sheet
+  for (const dy of path.slice(1)) {
+    await wait(100);
+    PE("pointermove", handle, y0 + dy);
+  }
+  PE("pointerup", handle, y0 + path.at(-1));
+  PE("lostpointercapture", qa(), y0 + path.at(-1)); // the sheet's own release, after pointerup
+}
+await wait(300);
+eq("iOS capture handoff doesn't cancel the drag", qa().hidden, true);
+
 // A touch whose pointerup never reached the sheet (say its target was
 // re-rendered away) must not lock swiping until a reload.
 click("#fab");

@@ -245,7 +245,12 @@ function attachSwipeClose(sheet, { close, scroller = sheet, scrim = null }) {
   };
   sheet.addEventListener("pointerup", (e) => end(e, false));
   sheet.addEventListener("pointercancel", (e) => end(e, true));
-  sheet.addEventListener("lostpointercapture", (e) => end(e, true));
+  // Only the sheet itself losing capture ends a drag. On iPhone a touch is
+  // first captured by the element under the finger, and handing that
+  // capture to the sheet fires lostpointercapture on the child, bubbling here.
+  sheet.addEventListener("lostpointercapture", (e) => {
+    if (e.target === sheet) end(e, true);
+  });
 
   sheet.addEventListener("click", (e) => {
     if (performance.now() < suppressClicksUntil) {
