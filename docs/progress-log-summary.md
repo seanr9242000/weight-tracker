@@ -298,5 +298,13 @@ older ones were corrected the same way, and a processing tag Sean picks
 himself now survives corrections like this. A search for "chick" no longer
 pushes the takeout presets out of the results. The final review led to
 three fixes in the swipe code; one iPhone-only question (an upward swipe
-at the top of a list) is on the phone check. Ships as v33 once Sean OKs the
-push.
+at the top of a list) is on the phone check. Shipped as v33 (main 87125a9).
+
+On Sean's iPhone every swipe sprang back. Synthetic tests and desktop
+browsers couldn't show why, so a small on-device event log (a private test
+page) captured what Safari actually sends: it captures a touch to the
+element under the finger, and moving that capture to the sheet fires a
+"capture lost" event that one of the review fixes treated as a cancel. Only
+the sheet itself losing capture ends a drag now, pinned by a test that
+replays Safari's sequence. Sean confirmed the fix on the test page; it
+shipped as v34 and passed his full step A phone check.

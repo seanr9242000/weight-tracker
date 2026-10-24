@@ -168,5 +168,6 @@ Session total: 10 commits (plan, then step 0 built task by task with a review af
 | 13:47 | Step A2: times on pouches, cravings, weigh-ins and runs (7d82f37) | 2 min |
 | 13:50 | Step A3: Chick-fil-A items from the official page; rev keeps Sean's processing tag (053da0f) | 3 min |
 | 14:06 | Step A final-review fixes: lost pointer can't lock swiping, header-only touch-action, swipe close drops the keyboard (85b5314) | 16 min |
+| 14:39 | Fix swipe-to-close on iPhone: a capture handoff no longer cancels the drag, v34 (465a6ca) | 33 min |
 
 Session total so far: step 0 shipped as v31 (main 6b7e2e4, Sean's phone check passed), then step 0.5 built on branch batch1-step05 task by task with a review after each and a final whole-branch review (per-plan commit approval). Step 0.5 shipped as v32 (Sean's phone check passed); step A then planned and built inline on branch batch1-stepA (native execution, one final whole-branch review; per-plan commit approval).
