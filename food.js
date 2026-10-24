@@ -220,14 +220,19 @@ function renderSnackIdeas(panel, dateStr, item) {
 
 const feelDrafts = {}; // item id -> answers picked so far
 
-function feelQuestions(kind) {
+function feelQuestions(kind, injuredPart) {
   const scale = [1, 2, 3, 4, 5].map((v) => [v, String(v)]);
-  return [
+  const questions = [
     { key: "energy", label: "Energy", options: scale },
     { key: "stomach", label: "Stomach", options: [["full", "Too full"], ["right", "Just right"], ["hungry", "Hungry"]] },
     { key: "legs", label: "Legs / body", options: [["fresh", "Fresh"], ["normal", "Normal"], ["heavy", "Heavy"]] },
     { key: "performance", label: kind === "game" ? "Shooting" : "Weights moved", options: scale },
   ];
+  // Injury mode: lifts also track how the injury held up, for Sean's PT.
+  if (kind === "lift" && injuredPart) {
+    questions.push({ key: "injuryPain", label: `${capitalize(injuredPart)} pain (0–10)`, options: Array.from({ length: 11 }, (_, v) => [v, String(v)]) });
+  }
+  return questions;
 }
 
 function feelRated(dateStr, itemId) {
@@ -238,9 +243,11 @@ function feelRated(dateStr, itemId) {
    game/lift, so the Food tab can line fuel up against how it went. */
 function renderFeelPanel(dateStr, item) {
   const draft = feelDrafts[item.id] || (feelDrafts[item.id] = {});
+  const injury = loadInjury();
+  const injuredPart = injuryActive(injury, dateStr) ? injury.part : null;
   const panel = el("div", "meal-panel feel-panel");
   panel.appendChild(el("div", "meal-name", "How did it go?"));
-  for (const q of feelQuestions(item.id)) {
+  for (const q of feelQuestions(item.id, injuredPart)) {
     panel.appendChild(el("div", "feel-label", q.label));
     const row = el("div", "chip-row");
     for (const [value, label] of q.options) {
@@ -254,6 +261,7 @@ function renderFeelPanel(dateStr, item) {
     }
     panel.appendChild(row);
   }
+  if (draft.injuryPain >= 4) panel.appendChild(el("div", "pain-warning", PAIN_WARNING));
   const note = el("input", "feel-note");
   note.type = "text";
   note.placeholder = "Note (optional)";
@@ -276,18 +284,21 @@ function renderFeelPanel(dateStr, item) {
   });
   const save = el("button", "pill-btn dark", "Save");
   save.type = "button";
-  save.disabled = !["energy", "stomach", "legs", "performance"].some((k) => draft[k] !== undefined);
+  save.disabled = !["energy", "stomach", "legs", "performance", "injuryPain"].some((k) => draft[k] !== undefined);
   save.addEventListener("click", () => {
     const log = feelLog();
+    const pain = draft.injuryPain;
     log.push({
       id: newId(), date: dateStr, itemId: item.id, kind: item.id, at: Date.now(),
       energy: draft.energy, stomach: draft.stomach, legs: draft.legs, performance: draft.performance,
+      injuryPain: pain, injuryPart: pain === undefined ? undefined : injuredPart,
       note: (draft.note || "").trim() || undefined, ate,
     });
     saveJSON(FEEL_LOG_KEY, log);
     delete feelDrafts[item.id];
     feelOpenFor = null;
     refreshFood();
+    if (pain !== undefined && injuryPainFlag(log, dateStr, pain)) showToast(PAIN_WARNING);
   });
   actions.append(skip, save);
   panel.appendChild(actions);

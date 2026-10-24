@@ -2555,3 +2555,10 @@ button.hero-chip {
   font-weight: 650;
   box-shadow: none;
 }
+
+.pain-warning {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--danger);
+}

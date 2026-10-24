@@ -101,3 +101,28 @@ clickText("Yes", item("Ankle recheck"));
 eq("Yes ends it as of yesterday, keeping the start", [ls("coach-injury").start, ls("coach-injury").until], [day(-30), day(-1)]);
 check("chip gone after clearing", !$(".injury-chip"));
 eq("toast", $("#toast-text").textContent, "Injury mode off. Games and runs are back on the schedule.");
+
+// Lift check-in asks about pain while injured and warns at 4+.
+const liftDay = async (injury) => {
+  await reload({ "coach-started-at": "0", "coach-injury": injury });
+  if (!item(LIFT)) {
+    await reload({ "coach-started-at": "0", "coach-injury": injury,
+      "coach-overrides": { [today]: { removed: [], moved: {}, added: [{ id: "lift", time: "06:00", title: LIFT, kind: "train" }] } } });
+  }
+};
+await liftDay(ankle(day(-3), day(10)));
+click(".check-box", item(LIFT));
+const labels = $$(".feel-panel .feel-label", item(LIFT)).map((e) => e.textContent);
+const painIdx = labels.indexOf("Ankle pain (0–10)");
+check("pain question asked", painIdx >= 0, JSON.stringify(labels));
+clickText("5", $$(".feel-panel .chip-row", item(LIFT))[painIdx]);
+eq("warning at 4+", $(".pain-warning", item(LIFT))?.textContent, "Back off leg work and mention it to your PT.");
+check("pain alone enables Save", !$$(".feel-panel button", item(LIFT)).find((b) => b.textContent === "Save").disabled);
+clickText("Save", item(LIFT));
+const painRec = ls("coach-feel-log").at(-1);
+eq("pain saved with the check-in", [painRec.itemId, painRec.injuryPain, painRec.injuryPart], ["lift", 5, "ankle"]);
+eq("warning toast", $("#toast-text").textContent, "Back off leg work and mention it to your PT.");
+
+await liftDay(null);
+click(".check-box", item(LIFT));
+check("no pain question when not injured", !$$(".feel-panel .feel-label", item(LIFT)).some((e) => e.textContent.includes("pain")));
