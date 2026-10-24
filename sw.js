@@ -12,6 +12,7 @@ const ASSETS = [
   "./coach.js",
   "./food.js",
   "./quickadd.js",
+  "./updates.js",
   "./reminders.js",
   "./manifest.json",
   "./icon-192.png",

@@ -651,6 +651,7 @@ timerBtn.addEventListener("click", () => {
 
 document.getElementById("run-discard-btn").addEventListener("click", () => {
   enterIdleState();
+  if (typeof applyPendingUpdate === "function") applyPendingUpdate();
 });
 
 runSaveForm.addEventListener("submit", (e) => {
@@ -676,6 +677,8 @@ runSaveForm.addEventListener("submit", (e) => {
 
   enterIdleState();
   renderRunList();
+  // An update that arrived mid-run was held back until now (updates.js).
+  if (typeof applyPendingUpdate === "function") applyPendingUpdate();
 });
 
 /* ---- Route viewer modal ---- */
@@ -806,8 +809,3 @@ render();
 renderRunList();
 renderPhotoGrid();
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
-  });
-}
