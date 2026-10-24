@@ -2431,3 +2431,23 @@ canvas {
     transition: none !important;
   }
 }
+
+/* ---- Backup & updates ---- */
+
+.backup-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.backup-code {
+  font: 700 17px/1.2 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.04em;
+  -webkit-user-select: all;
+  user-select: all;
+}

@@ -15,6 +15,7 @@ const ASSETS = [
   "./quickadd.js",
   "./updates.js",
   "./reminders.js",
+  "./backup.js",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",

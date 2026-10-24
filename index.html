@@ -66,6 +66,19 @@
         <p class="hint" id="reminders-status"></p>
         <button type="button" id="reminders-test-btn" class="link-btn" hidden>Send a test ping</button>
       </section>
+      <section class="card area-neutral" id="backup-card">
+        <div class="card-head">
+          <h2>Backup &amp; updates</h2>
+          <button type="button" id="backup-toggle" class="pill-btn dark">Turn on</button>
+        </div>
+        <p class="hint" id="backup-version"></p>
+        <p class="hint" id="backup-status"></p>
+        <div class="backup-code-row" id="backup-code-row" hidden>
+          <code class="backup-code" id="backup-code"></code>
+          <button type="button" id="backup-copy" class="pill-btn">Copy</button>
+        </div>
+        <p class="hint" id="backup-code-note" hidden>Save this code in Notes. On a new install it brings everything back.</p>
+      </section>
     </div>
 
     <!-- ================= FOOD ================= -->
@@ -526,5 +539,6 @@
 <script src="updates.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script defer src="reminders.js"></script>
+<script defer src="backup.js"></script>
 </body>
 </html>
