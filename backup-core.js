@@ -113,7 +113,7 @@ function parseBackupFile(text) {
   }
   if (!validBackup(data)) throw new Error(NOT_A_BACKUP_FILE);
   const photos = Array.isArray(data.photos)
-    ? data.photos.filter((p) => p && p.id && p.date && typeof p.dataUrl === "string" && p.dataUrl.startsWith("data:image/"))
+    ? data.photos.filter((p) => p && typeof p.id === "string" && typeof p.date === "string" && typeof p.dataUrl === "string" && p.dataUrl.startsWith("data:image/"))
     : [];
   return { backup: { app: data.app, format: data.format, savedAt: data.savedAt, keys: data.keys }, photos };
 }

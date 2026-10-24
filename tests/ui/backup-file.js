@@ -63,3 +63,36 @@ eq("weights imported", ls("weight-tracker-entries")[0].weight, 199.2);
 eq("photo imported", (await done(app().getAllPhotos())).map((p) => p.id), ["p1"]);
 eq("reloaded after import", reloads, 1);
 check("confirm wording", asked.startsWith("Replace your logs and settings on this phone with the backup file from ") && asked.endsWith("Its 1 photo will be added to the ones already here."));
+
+// A phone that already has logs: the first offer is photos only, so an older file can't overwrite newer logs.
+const newer = [{ id: "n", date: today, weight: 185.5, unit: "lbs" }];
+const asks = [];
+const answers = (...a) => { asks.length = 0; app().confirm = (m) => { asks.push(m); return a[asks.length - 1]; }; };
+await reload({ "weight-tracker-entries": newer });
+stub();
+await done(app().deletePhotoRecord("p1"));
+answers(true);
+reloads = 0;
+await pick(JSON.stringify(json));
+await until(() => reloads > 0);
+eq("photos-only: one confirm", asks.length, 1);
+eq("photos-only: wording", asks[0], "Add the file's 1 photo and keep this phone's logs and settings?");
+eq("photos-only: logs untouched", ls("weight-tracker-entries")[0].weight, 185.5);
+eq("photos-only: photo added", (await done(app().getAllPhotos())).map((p) => p.id), ["p1"]);
+eq("photos-only: reloads once", reloads, 1);
+
+// Cancel on that offer falls through to the full replace.
+await reload({ "weight-tracker-entries": newer });
+stub();
+await done(app().deletePhotoRecord("p1"));
+answers(false, true);
+reloads = 0;
+await pick(JSON.stringify(json));
+await until(() => reloads > 0);
+eq("full replace: two confirms", asks.length, 2);
+check("full replace: second is the replace confirm", asks[1].startsWith("Replace your logs and settings on this phone with the backup file from "));
+eq("full replace: logs replaced", ls("weight-tracker-entries")[0].weight, 199.2);
+eq("full replace: photo added", (await done(app().getAllPhotos())).map((p) => p.id), ["p1"]);
+eq("full replace: no code, so a hint is left for after the reload", app().localStorage.getItem("backup-import-hint"), "1");
+await reload({ "backup-import-hint": "1" });
+eq("hint shown while backup is off", $("#backup-status").textContent, "Imported. Turn backup on, or enter your restore code below so backups continue under it.");

@@ -79,10 +79,12 @@ run(() => {
   const file = JSON.stringify({ ...b, photos: [
     { id: "p1", date: "2026-10-20", dataUrl: "data:image/jpeg;base64,AAAA" },
     { id: "bad", date: "2026-10-20", dataUrl: "javascript:alert(1)" },
+    { id: 7, date: "2026-10-20", dataUrl: "data:image/jpeg;base64,AAAA" },
+    { id: "nodate", date: 20261020, dataUrl: "data:image/jpeg;base64,AAAA" },
   ] });
   const parsed = parseBackupFile(file);
   eq("file: backup part", parsed.backup, b);
-  eq("file: only image photos kept", parsed.photos.map((p) => p.id), ["p1"]);
+  eq("file: only image photos with string id and date kept",parsed.photos.map((p) => p.id), ["p1"]);
   let ferr = null;
   try { parseBackupFile("not json"); } catch (e) { ferr = e.message; }
   eq("file: not JSON", ferr, "That file isn't a Weight & Save backup.");

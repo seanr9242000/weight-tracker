@@ -8,7 +8,11 @@
 create table public.backups (
   code_hash text primary key,
   data jsonb not null,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- One generation back: a last-writer-wins accident (an old copy uploading
+  -- over a newer one) becomes recoverable with SQL.
+  previous_data jsonb,
+  previous_updated_at timestamptz
 );
 
 alter table public.backups enable row level security;
@@ -35,7 +39,10 @@ begin
   insert into public.backups (code_hash, data, updated_at)
   values (encode(sha256(convert_to(p_code, 'UTF8')), 'hex'), p_data, v_at)
   on conflict (code_hash) do update
-    set data = excluded.data, updated_at = excluded.updated_at;
+    set previous_data = public.backups.data,
+        previous_updated_at = public.backups.updated_at,
+        data = excluded.data,
+        updated_at = excluded.updated_at;
   return v_at;
 end;
 $$;

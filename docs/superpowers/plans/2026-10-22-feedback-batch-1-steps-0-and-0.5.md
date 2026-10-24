@@ -1460,12 +1460,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 3: Push (ask Sean first).** `git push`. This also pushes the earlier spec commits.
 
 - [ ] **Step 4: Phone check with Sean** (he does it; the next step waits on his OK)
-  1. **Don't delete the home-screen icon.** Swipe the app away and reopen it. The first launch after this push may still show v30, because the old service worker serves it; reopen once more. The Backup card should read "Weight & Save v31".
+  1. **Don't delete the home-screen icon.** Swipe the app away and reopen it. The first launch after this push may still show v30, because the old service worker serves it; reopen once more. The Backup card should read "Weight & Save v31". The first launch on v31 won't show an "Updated to" toast, because the app has never recorded a version before. The card's version line is the check.
   2. Backup → **Turn on**. A code appears. Tap **Copy** and paste it into Notes.
   3. Log something, wait a minute, and check that the card says "Last backed up … ago".
   4. **Export backup** → **Share backup file** → Save to Files.
-  5. Optional, safe restore test: open the site in **Safari** (not the installed app; it has separate storage). The restore card should appear. Enter the code. Data appears after the reload. Then close the Safari tab.
-  6. The real update test happens with step 0.5: after that push, reopening the app should show "Updated to v32" with no reinstall.
+  5. In Safari (or the app), tap **Import backup**, pick the file you just saved to Files, check that the confirm appears, then tap **Cancel**. The status should read "Import cancelled. Nothing changed." If the file is greyed out in the picker, tell Claude.
+  6. Optional, safe restore test: open the site in **Safari** (not the installed app; it has separate storage). The restore card should appear. Enter the code. Data appears after the reload. Then, still in Safari, tap Backup → **Turn off** before closing the tab, so that copy never uploads again.
+  7. The real update test happens with step 0.5: after that push, reopening the app should show "Updated to v32" with no reinstall.
 
 ---
 

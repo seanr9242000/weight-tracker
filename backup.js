@@ -8,6 +8,12 @@ const BACKUP_CODE_KEY = "backup-code";
 const BACKUP_ON_KEY = "backup-on";
 const BACKUP_LAST_KEY = "backup-last";
 const RESTORE_DISMISSED_KEY = "backup-restore-dismissed";
+/* A change that hasn't gone up yet, kept across launches. The backup- prefix
+   keeps it out of backups. */
+const BACKUP_DIRTY_KEY = "backup-dirty";
+/* Set after an import on a phone with no code, since the reload wipes any message. */
+const IMPORT_HINT_KEY = "backup-import-hint";
+const ROLLBACK_FAILED = "Restore failed and this phone's data may be incomplete. Close and reopen the app before logging anything.";
 const BACKUP_RETRY_MS = 5 * 60000;
 
 /* The only two server calls. On window so UI tests can stub them. */
@@ -55,9 +61,16 @@ Storage.prototype.removeItem = function (key) {
   if (this === localStorage && isBackupKey(String(key))) noteBackupChange();
 };
 
+/* Native setItem on purpose: the flag isn't a backed-up key, but this
+   can't re-enter the hook either way. */
+function markBackupDirty() {
+  backupDirty = true;
+  nativeSetItem.call(localStorage, BACKUP_DIRTY_KEY, "1");
+}
+
 function noteBackupChange() {
   if (restoring || !backupOn()) return;
-  backupDirty = true;
+  markBackupDirty();
   if (!backupTimer) {
     backupTimer = setTimeout(runBackup, backupDelay(Date.now(), Number(localStorage.getItem(BACKUP_LAST_KEY) || 0)));
   }
@@ -76,6 +89,8 @@ async function runBackup() {
   try {
     await backupRemote.save(backupCode(), collectBackup(localStorage, Date.now()));
     localStorage.setItem(BACKUP_LAST_KEY, String(Date.now()));
+    // A change made during the upload keeps the flag.
+    if (!backupDirty) nativeRemoveItem.call(localStorage, BACKUP_DIRTY_KEY);
     backupError = null;
   } catch (err) {
     // Offline or a server hiccup: keep the change and try again later.
@@ -94,7 +109,8 @@ function turnBackupOn() {
     localStorage.setItem(BACKUP_CODE_KEY, newRestoreCode(crypto.getRandomValues(new Uint8Array(12))));
   }
   localStorage.setItem(BACKUP_ON_KEY, "1");
-  backupDirty = true;
+  localStorage.removeItem(IMPORT_HINT_KEY);
+  markBackupDirty();
   runBackup();
   renderBackupCard();
 }
@@ -104,6 +120,7 @@ function turnBackupOff() {
   clearTimeout(backupTimer);
   backupTimer = null;
   backupDirty = false;
+  localStorage.removeItem(BACKUP_DIRTY_KEY);
   backupError = null;
   renderBackupCard();
 }
@@ -115,8 +132,11 @@ function renderBackupCard() {
   const toggle = document.getElementById("backup-toggle");
   toggle.textContent = on ? "Turn off" : "Turn on";
   toggle.classList.toggle("dark", !on);
+  const offNote = localStorage.getItem(IMPORT_HINT_KEY) === "1"
+    ? "Imported. Turn backup on, or enter your restore code below so backups continue under it."
+    : "Off. Turn on to back up to the cloud automatically and get a restore code.";
   document.getElementById("backup-status").textContent = !on
-    ? "Off. Turn on to back up to the cloud automatically and get a restore code."
+    ? offNote
     : backupError
       ? `Backup failed: ${backupError}. Will retry.`
       : last
@@ -128,6 +148,27 @@ function renderBackupCard() {
   // Offered on a fresh install only: nothing logged, no code yet, not dismissed.
   document.getElementById("restore-card").hidden =
     hasUserData(localStorage) || Boolean(backupCode()) || localStorage.getItem(RESTORE_DISMISSED_KEY) === "1";
+}
+
+/* applyBackup can fail partway (it removes keys, then writes). Snapshot
+   first and write it back on failure. Returns null on success, else the
+   message to show; when the rollback fails too, restoring stays true so
+   nothing gets backed up from the half-written state. */
+function applyWithRollback(backup) {
+  const snapshot = collectBackup(localStorage, Date.now());
+  restoring = true;
+  try {
+    applyBackup(localStorage, backup);
+    return null;
+  } catch (err) {
+    try {
+      applyBackup(localStorage, snapshot);
+    } catch {
+      return ROLLBACK_FAILED;
+    }
+    restoring = false;
+    return err.message || String(err);
+  }
 }
 
 /* Fetches the backup for a typed code and, once confirmed, replaces
@@ -152,20 +193,22 @@ async function restoreFromCode(input, statusEl) {
     return;
   }
   const when = backup.savedAt ? new Date(backup.savedAt).toLocaleString() : "an unknown date";
-  if (!confirm(`Replace everything on this phone with the backup from ${when}?`)) {
+  const old = backupCode();
+  const replaced = old && old !== code ? ` This phone's current restore code (${old}) will be replaced.` : "";
+  if (!confirm(`Replace everything on this phone with the backup from ${when}?${replaced}`)) {
     statusEl.textContent = "Restore cancelled. Nothing changed.";
     return;
   }
-  restoring = true;
-  try {
-    applyBackup(localStorage, backup);
-  } catch (err) {
-    restoring = false;
-    statusEl.textContent = err.message;
+  const failure = applyWithRollback(backup);
+  if (failure) {
+    statusEl.textContent = failure;
     return;
   }
   localStorage.setItem(BACKUP_CODE_KEY, code);
   localStorage.setItem(BACKUP_ON_KEY, "1");
+  // The restored data is the cloud copy, so nothing is pending.
+  localStorage.removeItem(BACKUP_DIRTY_KEY);
+  localStorage.removeItem(IMPORT_HINT_KEY);
   reloadApp();
 }
 
@@ -225,35 +268,56 @@ async function exportBackup() {
   }
 }
 
-/* Reads a backup file and, once confirmed, replaces this phone's data
-   (and photos) with it, then reloads into the restored data. */
+/* Reads a backup file, then reloads into it. If this phone already has
+   logs and the file has photos, the first offer is photos only, so an
+   older export can't overwrite newer logs (and, via backup, the cloud
+   copy). Otherwise, once confirmed, it replaces the logs and settings
+   and adds the photos. */
 async function importBackup(file, statusEl) {
   let parsed;
+  const blobs = [];
   try {
     parsed = parseBackupFile(await file.text());
+    // Decode every photo first so a corrupt file fails before anything changes.
+    for (const p of parsed.photos) blobs.push(await dataUrlToBlob(p.dataUrl));
   } catch (err) {
-    statusEl.textContent = err.message;
+    statusEl.textContent = parsed ? `Couldn't import the backup: ${err.message || err}` : err.message;
     return;
   }
   const when = parsed.backup.savedAt ? new Date(parsed.backup.savedAt).toLocaleString() : "an unknown date";
   const n = parsed.photos.length;
+  if (n && hasUserData(localStorage) && confirm(`Add the file's ${n} photo${n === 1 ? "" : "s"} and keep this phone's logs and settings?`)) {
+    try {
+      for (let i = 0; i < n; i++) await addPhoto({ id: parsed.photos[i].id, date: parsed.photos[i].date, blob: blobs[i] });
+    } catch (err) {
+      statusEl.textContent = `Couldn't add the photos: ${err.message || err}`;
+      return;
+    }
+    reloadApp();
+    return;
+  }
   const photoNote = n ? ` Its ${n} photo${n === 1 ? "" : "s"} will be added to the ones already here.` : "";
   if (!confirm(`Replace your logs and settings on this phone with the backup file from ${when}?${photoNote}`)) {
     statusEl.textContent = "Import cancelled. Nothing changed.";
     return;
   }
-  try {
-    // Decode every photo first so a corrupt file fails before anything changes.
-    const blobs = [];
-    for (const p of parsed.photos) blobs.push(await dataUrlToBlob(p.dataUrl));
-    restoring = true;
-    applyBackup(localStorage, parsed.backup);
-    for (let i = 0; i < n; i++) await addPhoto({ id: parsed.photos[i].id, date: parsed.photos[i].date, blob: blobs[i] });
-  } catch (err) {
-    restoring = false;
-    statusEl.textContent = `Couldn't import the backup: ${err.message || err}`;
+  const failure = applyWithRollback(parsed.backup);
+  if (failure) {
+    statusEl.textContent = `Couldn't import the backup: ${failure}`;
     return;
   }
+  // restoring hid the writes from the change hook; with backup on, the cloud copy is now behind.
+  if (backupOn()) markBackupDirty();
+  else if (!backupCode()) localStorage.setItem(IMPORT_HINT_KEY, "1");
+  let failed = 0;
+  for (let i = 0; i < n; i++) {
+    try {
+      await addPhoto({ id: parsed.photos[i].id, date: parsed.photos[i].date, blob: blobs[i] });
+    } catch {
+      failed++;
+    }
+  }
+  if (failed) statusEl.textContent = `Logs and settings restored, but ${failed} photo${failed === 1 ? "" : "s"} couldn't be saved.`;
   reloadApp();
 }
 
@@ -305,4 +369,5 @@ setInterval(renderBackupCard, 60000);
 
 renderBackupCard();
 // Changes from the last session may not have gone up before it closed.
-noteBackupChange();
+// Only a pending change uploads: just opening a copy must not overwrite the cloud one.
+if (localStorage.getItem(BACKUP_DIRTY_KEY) === "1") noteBackupChange();

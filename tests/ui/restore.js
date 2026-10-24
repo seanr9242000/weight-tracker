@@ -64,3 +64,46 @@ check("connection error explained", $("#restore-card-status").textContent.starts
 // "Start fresh" hides the card for good.
 clickText("Start fresh");
 check("start fresh hides the card", $("#restore-card").hidden);
+
+// A restore that fails partway is rolled back to what was on the phone.
+const realApply = app().applyBackup;
+const reloadsBefore = reloads;
+const mine = [{ id: "m", date: today, weight: 180, unit: "lbs" }];
+await reload({ "weight-tracker-entries": mine });
+stub(true);
+let calls = 0;
+app().applyBackup = (storage, b) => {
+  calls++;
+  if (calls === 1) { storage.removeItem("weight-tracker-entries"); throw new Error("disk full"); }
+  return realApply(storage, b);
+};
+fill("#backup-restore-input", code);
+await submit("#backup-restore-form");
+eq("failed restore shows the error", $("#backup-restore-status").textContent, "disk full");
+eq("failed restore rolled back", ls("weight-tracker-entries")[0].weight, 180);
+eq("no reload after a failed restore", reloads, reloadsBefore);
+eq("backing up isn't stuck after a clean rollback", app().eval("restoring"), false);
+
+// If the rollback fails too, say so and keep backups from running.
+await reload({ "weight-tracker-entries": mine });
+stub(true);
+app().applyBackup = () => { throw new Error("storage gone"); };
+fill("#backup-restore-input", code);
+await submit("#backup-restore-form");
+eq("double failure explained", $("#backup-restore-status").textContent, "Restore failed and this phone's data may be incomplete. Close and reopen the app before logging anything.");
+eq("restoring stays on", app().eval("restoring"), true);
+app().applyBackup = realApply;
+
+// Restoring over a different code warns that the code is replaced.
+const oldCode = "WS-AAAA-BBBB-CCCC";
+await reload({ "weight-tracker-entries": mine, "backup-code": oldCode, "backup-on": "1", "backup-dirty": "1" });
+stub(true);
+fill("#backup-restore-input", code);
+await submit("#backup-restore-form");
+check("confirm names the code being replaced", asked.endsWith(` This phone's current restore code (${oldCode}) will be replaced.`), asked);
+eq("restore clears the dirty flag", app().localStorage.getItem("backup-dirty"), null);
+await reload({ "weight-tracker-entries": mine, "backup-code": code, "backup-on": "1" });
+stub(true);
+fill("#backup-restore-input", code);
+await submit("#backup-restore-form");
+check("same code: no replaced note", !asked.includes("will be replaced"), asked);
