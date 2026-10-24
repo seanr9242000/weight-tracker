@@ -255,3 +255,25 @@ first. It also stopped a stale copy (like a Safari test) from uploading
 just by being opened, and the server now keeps the previous backup too.
 The Supabase migration isn't applied and nothing is pushed yet; both wait
 for Sean's OK, then his phone check.
+
+## 2026-10-24 — Step 0.5 built: Injury mode for the ankle
+
+Step 0 went out as v31 and passed Sean's phone check (backup code, export,
+import cancel). Step 0.5 then turned the coach into an injury-aware one for
+his ankle avulsion fracture (brace, no basketball, recheck Dec 7). While
+Injury mode is on, the schedule drops the League game and pre-game prep,
+keeps the two game-day snacks as "Late-afternoon snack" and "Evening
+snack", swaps the lift note for an ankle-safe leg plan, and turns the
+after-meal walks into optional "Easy walk in brace — skip if sore" items
+that never count as missed and ping only once. The game-day water bonus
+goes away with the games. Today shows a "🩹 Ankle · day N of 48 · recheck
+Dec 7" chip that opens an Injury card (dates, note, daily PT exercises, end
+now, start a new one), and Train shows "Runs paused" above a dimmed Start.
+On Dec 7 the recheck item asks "Cleared?": Yes ends Injury mode, Not yet
+picks a new date. Lift check-ins add "Ankle pain (0–10)" and warn to back
+off at 4+ or when the week's average is rising. Every part of the app now
+reads the day's plan through one helper, so Today, food, water and push
+pings always agree. The final review's main catch: one stray tap or a
+missed recheck day would end Injury mode and lose the PT list, so End now
+asks first and a recently ended injury pre-fills when started again.
+Ships as v32 once Sean OKs the push.

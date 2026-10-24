@@ -153,3 +153,13 @@ Session total: 10 commits (plan, then step 0 built task by task with a review af
 | Time  | Change                                                  | Elapsed |
 |-------|------------------------------------------------------------|---------|
 | 12:13 | Step 0 final-review fixes: data-safety for backup, import and restore (7710227) | — |
+| 12:36 | Step 0.5: Injury mode schedule rules (games off, snacks retitled, ankle-safe lift, optional walks, PT, recheck) (7fefce7) | 19 min |
+| 12:39 | Step 0.5: seed Sean's ankle injury and use the injured schedule on Today, food, water and pings (bfe2a6f) | 3 min |
+| 12:41 | Step 0.5: make the injury UI test assert on every day, not just game and lift days (ce75cf9) | 2 min |
+| 12:44 | Step 0.5: injury chip, Injury card (dates, note, PT, end, start new), runs paused banner (65a042e) | 3 min |
+| 12:47 | Step 0.5: recheck item asks Cleared? (Yes ends Injury mode, Not yet moves the recheck) (04822d1) | 3 min |
+| 12:49 | Step 0.5: ankle pain (0-10) on lift check-ins with a back-off warning (73bb476) | 2 min |
+| 12:51 | Step 0.5: drop a draft pain answer once the injury has ended (678b6bc) | 2 min |
+| 13:01 | Step 0.5 final-review fixes: confirm End, prefill a recent injury, Enter adds PT, push opens Cleared?, no meal tip on injured walks (1ce1b93) | 10 min |
+
+Session total so far: step 0 shipped as v31 (main 6b7e2e4, Sean's phone check passed), then step 0.5 built on branch batch1-step05 task by task with a review after each and a final whole-branch review (per-plan commit approval).
