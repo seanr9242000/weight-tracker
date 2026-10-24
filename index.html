@@ -29,6 +29,16 @@
           <span class="day-pill" id="day-pill" hidden></span>
         </div>
       </header>
+      <section class="card area-neutral" id="restore-card" hidden>
+        <h2>Restore from backup</h2>
+        <p class="hint">New install? Enter your restore code (it's in Notes and starts with WS-) or import a backup file.</p>
+        <form id="restore-card-form" class="code-form">
+          <input id="restore-card-input" type="text" placeholder="WS-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <button type="submit" class="pill-btn dark">Restore</button>
+        </form>
+        <p class="hint" id="restore-card-status"></p>
+        <button type="button" id="restore-card-dismiss" class="link-btn">Start fresh</button>
+      </section>
 
       <section class="card glass-card hero">
         <div class="rings" id="today-fuel"></div>
@@ -78,6 +88,11 @@
           <button type="button" id="backup-copy" class="pill-btn">Copy</button>
         </div>
         <p class="hint" id="backup-code-note" hidden>Save this code in Notes. On a new install it brings everything back.</p>
+        <form id="backup-restore-form" class="code-form">
+          <input id="backup-restore-input" type="text" placeholder="Restore code" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <button type="submit" class="pill-btn">Restore</button>
+        </form>
+        <p class="hint" id="backup-restore-status"></p>
       </section>
     </div>
 

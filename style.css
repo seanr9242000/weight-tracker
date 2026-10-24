@@ -2451,3 +2451,31 @@ canvas {
   -webkit-user-select: all;
   user-select: all;
 }
+
+.code-form {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.code-form input {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+}
+
+/* Beat the full-width submit-button rule so the input keeps its room. */
+.code-form button[type="submit"] {
+  width: auto;
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.code-form button[type="submit"]:not(.dark) {
+  background: var(--surface-2);
+  color: var(--text);
+}

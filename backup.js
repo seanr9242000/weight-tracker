@@ -125,11 +125,68 @@ function renderBackupCard() {
   document.getElementById("backup-code-row").hidden = !on;
   document.getElementById("backup-code-note").hidden = !on;
   document.getElementById("backup-code").textContent = backupCode() || "";
+  // Offered on a fresh install only: nothing logged, no code yet, not dismissed.
+  document.getElementById("restore-card").hidden =
+    hasUserData(localStorage) || Boolean(backupCode()) || localStorage.getItem(RESTORE_DISMISSED_KEY) === "1";
+}
+
+/* Fetches the backup for a typed code and, once confirmed, replaces
+   this phone's data with it. Keeps the code (and backup on) so backups
+   continue under it, then reloads into the restored data. */
+async function restoreFromCode(input, statusEl) {
+  const code = normalizeCode(input);
+  if (!code) {
+    statusEl.textContent = "That doesn't look like a restore code. It starts with WS- and has 12 letters and numbers.";
+    return;
+  }
+  statusEl.textContent = "Looking up your backup…";
+  let backup;
+  try {
+    backup = await backupRemote.load(code);
+  } catch (err) {
+    statusEl.textContent = `Couldn't reach the backup: ${err.message || err}. Check your connection and try again.`;
+    return;
+  }
+  if (!backup) {
+    statusEl.textContent = "No backup found for that code. Check it against your Notes.";
+    return;
+  }
+  const when = backup.savedAt ? new Date(backup.savedAt).toLocaleString() : "an unknown date";
+  if (!confirm(`Replace everything on this phone with the backup from ${when}?`)) {
+    statusEl.textContent = "Restore cancelled. Nothing changed.";
+    return;
+  }
+  restoring = true;
+  try {
+    applyBackup(localStorage, backup);
+  } catch (err) {
+    restoring = false;
+    statusEl.textContent = err.message;
+    return;
+  }
+  localStorage.setItem(BACKUP_CODE_KEY, code);
+  localStorage.setItem(BACKUP_ON_KEY, "1");
+  reloadApp();
 }
 
 document.getElementById("backup-toggle").addEventListener("click", () => {
   if (backupOn()) turnBackupOff();
   else turnBackupOn();
+});
+
+document.getElementById("backup-restore-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  restoreFromCode(document.getElementById("backup-restore-input").value, document.getElementById("backup-restore-status"));
+});
+
+document.getElementById("restore-card-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  restoreFromCode(document.getElementById("restore-card-input").value, document.getElementById("restore-card-status"));
+});
+
+document.getElementById("restore-card-dismiss").addEventListener("click", () => {
+  localStorage.setItem(RESTORE_DISMISSED_KEY, "1");
+  renderBackupCard();
 });
 
 document.getElementById("backup-copy").addEventListener("click", async () => {
