@@ -991,6 +991,7 @@ git commit -m "Step A3: Chick-fil-A items from the official page; rev keeps Sean
   2. Open the + sheet and drag it down by the handle: it follows the finger, and the backdrop fades. A short drag springs back; a longer one or a flick closes it.
   3. Open Food → Log food. Swipe down from the title: it closes. Open it again, scroll the list a bit, and drag down inside the list: it scrolls instead of closing. At the top of the list, a drag down closes it.
   4. Drag the urge slider in Craving: the slider moves and the sheet stays put.
+  4b. (Final review #1) With Chains open and the list at the top, swipe **up** to scroll, several times in a row: it should scroll every time, with no dead swipes. Also swipe the food sheet away while the search keyboard is up: the keyboard goes away.
   5. The Food log shows a time on each entry. Tap one, change the time, and save: the entry moves to its new place and stays on today.
   6. The water drawer lists today's water with times. Habits lists today's cravings with times. Weight shows today's weigh-in time. A new run shows its start time.
   7. Chains lists the new Chick-fil-A items, and searching "polynesian" finds the sauce.

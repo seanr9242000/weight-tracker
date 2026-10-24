@@ -996,6 +996,8 @@ function openFoodSheet({ slot = "extra", title = "Log food", mode = "search" } =
 }
 
 function closeFoodSheet() {
+  // Hiding a focused search box doesn't always drop the iOS keyboard.
+  if (foodSheet.contains(document.activeElement)) document.activeElement.blur();
   foodSheet.hidden = true;
   foodSheet.classList.remove("keyboard-up");
 }

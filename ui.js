@@ -193,7 +193,10 @@ function attachSwipeClose(sheet, { close, scroller = sheet, scrim = null }) {
 
   sheet.addEventListener("pointerdown", (e) => {
     suppressClicksUntil = 0; // a new touch is a new tap, never the drag's
-    if (drag || (e.pointerType === "mouse" && e.button !== 0)) return;
+    // A second finger mid-drag is ignored, but a drag that never moved is
+    // replaced: its pointerup may never have reached the sheet, and keeping
+    // it would lock swiping until a reload.
+    if ((drag && drag.moving && e.pointerId !== drag.id) || (e.pointerType === "mouse" && e.button !== 0)) return;
     if (e.target.closest("input, textarea, select")) return;
     const fromHeader = e.target.closest(".sheet-handle") || !scroller.contains(e.target);
     if (!fromHeader && scroller.scrollTop > 0) return;
@@ -242,6 +245,7 @@ function attachSwipeClose(sheet, { close, scroller = sheet, scrim = null }) {
   };
   sheet.addEventListener("pointerup", (e) => end(e, false));
   sheet.addEventListener("pointercancel", (e) => end(e, true));
+  sheet.addEventListener("lostpointercapture", (e) => end(e, true));
 
   sheet.addEventListener("click", (e) => {
     if (performance.now() < suppressClicksUntil) {

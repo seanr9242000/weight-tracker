@@ -1419,15 +1419,15 @@ button[type="submit"]:active,
   margin: 0 auto 12px;
 }
 
-/* Drags on the handle and title move the sheet (attachSwipeClose), never
-   the page; a sheet's chip row still scrolls sideways. */
+/* Drags on the handle and on the food and reason sheets' headers move the
+   sheet (attachSwipeClose), never the page. Titles and chips inside a
+   scrolling body keep native scrolling; the touchmove guard covers a
+   downward drag there. */
 .sheet-handle,
-.sheet-title {
+.food-sheet > .sheet-title,
+#food-sheet-tabs,
+#reason-sheet > .sheet-title {
   touch-action: none;
-}
-
-.sheet .chip-row {
-  touch-action: pan-x;
 }
 
 /* The handle is 5px tall; give the finger a bigger target. */

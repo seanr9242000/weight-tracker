@@ -2,8 +2,8 @@
 // skip-reason sheet follow a downward drag. Past a third of their height,
 // or on a flick, they close through their own close function; otherwise
 // they spring back. Synthetic touch pointers stand in for a finger.
-const PE = (type, target, y) => target.dispatchEvent(new (app().PointerEvent)(type, {
-  bubbles: true, cancelable: true, pointerId: 7, pointerType: "touch", isPrimary: true, clientX: 120, clientY: y,
+const PE = (type, target, y, pointerId = 7) => target.dispatchEvent(new (app().PointerEvent)(type, {
+  bubbles: true, cancelable: true, pointerId, pointerType: "touch", isPrimary: true, clientX: 120, clientY: y,
 }));
 /* Drags `target` through the dy offsets, one move every stepMs, then ends
    with `end` ("pointerup", "pointercancel", or null to keep holding). */
@@ -76,6 +76,23 @@ await wait(500);
 $(".qa-water-buttons button", qa()).click();
 eq("a tap after a drag still works", (ls("water-log") || []).length, 1);
 
+// A touch whose pointerup never reached the sheet (say its target was
+// re-rendered away) must not lock swiping until a reload.
+click("#fab");
+check("+ sheet open for the lost-pointer test", !qa().hidden);
+PE("pointerdown", $(".sheet-handle", qa()), 100, 99);
+await swipe($(".sheet-handle", qa()), slow(h * 0.5));
+await wait(300);
+eq("a lost pointerup doesn't lock swiping", qa().hidden, true);
+click("#fab");
+
+// Only the header blocks native panning; chips and titles inside a
+// scrolling body still scroll (spec A1: "the body still scrolls normally").
+const ta = (el) => getComputedStyle(el).touchAction;
+eq("+ sheet handle drags", ta($(".sheet-handle", qa())), "none");
+eq("+ sheet title scrolls (it's inside the scroller)", ta($("#qa-main .sheet-title")), "auto");
+eq("craving chips scroll", ta($("#trigger-chips")), "auto");
+
 // Dragging the urge slider moves the slider, not the sheet.
 app().openQuickAdd("craving");
 await swipe($("#urge-input"), slow(h * 0.5));
@@ -90,6 +107,22 @@ const fs = $("#food-sheet");
 await swipe($("#food-sheet-title"), slow(fs.offsetHeight * 0.5));
 await wait(300);
 eq("food sheet closes from its title", fs.hidden, true);
+
+// Header vs body touch-action, and closing with the search keyboard up
+// drops focus so the keyboard goes away.
+click("#food-log-btn");
+eq("food header tabs drag", ta($("#food-sheet-tabs")), "none");
+eq("food title drags", ta($("#food-sheet-title")), "none");
+const search = $("#food-sheet-body .food-search");
+search.focus();
+check("search focused", doc().activeElement === search, doc().activeElement && doc().activeElement.className);
+await swipe($("#food-sheet-title"), slow(fs.offsetHeight * 0.5));
+await wait(300);
+eq("swipe close drops the keyboard", [fs.hidden, doc().activeElement === search], [true, false]);
+click("#food-log-btn");
+clickText("Quick add", $("#food-sheet-tabs"));
+eq("chips inside the body scroll", ta($("#food-sheet-body .processing-chips")), "auto");
+click("#food-sheet-cancel");
 
 // Inside the body a drag starts only when the body is scrolled to the top.
 click("#food-log-btn");
