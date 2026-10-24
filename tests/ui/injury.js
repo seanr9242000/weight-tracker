@@ -81,3 +81,23 @@ fill("#injury-until", day(20));
 $("#injury-form").requestSubmit();
 eq("new injury saved", [ls("coach-injury").part, ls("coach-injury").pt], ["knee", []]);
 check("chip back", $(".injury-chip").textContent.startsWith("🩹 Knee · day 1 of 21"));
+
+// Recheck day: "Cleared?" -> Not yet moves the recheck; Yes ends Injury mode.
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-30), today) });
+check("recheck on the until day", Boolean(item("Ankle recheck")));
+click(".check-box", item("Ankle recheck"));
+eq("asks Cleared?", $(".recheck-panel .meal-name", item("Ankle recheck"))?.textContent, "Cleared?");
+check("not checked off by the tap", !item("Ankle recheck").classList.contains("done"));
+clickText("Not yet", item("Ankle recheck"));
+fill($(".recheck-panel input[type=date]", item("Ankle recheck")), day(14));
+$(".recheck-panel form", item("Ankle recheck")).requestSubmit();
+eq("Not yet moves the recheck", ls("coach-injury").until, day(14));
+check("recheck leaves today", !item("Ankle recheck"));
+check("still injured", Boolean($(".injury-chip")));
+
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-30), today) });
+click(".check-box", item("Ankle recheck"));
+clickText("Yes", item("Ankle recheck"));
+eq("Yes ends it as of yesterday, keeping the start", [ls("coach-injury").start, ls("coach-injury").until], [day(-30), day(-1)]);
+check("chip gone after clearing", !$(".injury-chip"));
+eq("toast", $("#toast-text").textContent, "Injury mode off. Games and runs are back on the schedule.");

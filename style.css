@@ -2532,3 +2532,26 @@ button.hero-chip {
   flex: 1;
   min-width: 0;
 }
+
+.recheck-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.recheck-form .date-field {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Beat the full-width submit-button rule so the date keeps its room. */
+.recheck-form button[type="submit"] {
+  width: auto;
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 650;
+  box-shadow: none;
+}

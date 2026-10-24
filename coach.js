@@ -97,6 +97,7 @@ let editingDay = false;
 let weighOpenFor = null;
 let mealOpenFor = null; // item id whose food panel (food.js) is open
 let feelOpenFor = null; // game/lift item id whose "how did it go?" card is open
+let recheckOpenFor = null; // injury recheck item whose "Cleared?" panel (injury.js) is open
 
 /* Meal items open a log-this-meal panel instead of a bare checkbox.
    Meal prep is cooking, not eating, so it stays a plain checkbox. */
@@ -107,6 +108,11 @@ function hasMealPanel(item) {
 /* Games and lifts get a quick "how did it go?" check-in once done. */
 function hasFeelPanel(item) {
   return (item.id === "game" || item.id === "lift") && typeof renderFeelPanel === "function";
+}
+
+/* The injury recheck asks "Cleared?" instead of a bare checkbox. */
+function hasRecheckPanel(item) {
+  return item.kind === "appointment" && typeof renderRecheckPanel === "function";
 }
 
 function setCheckin(dateStr, itemId, value) {
@@ -215,6 +221,8 @@ function renderChecklistItem(dateStr, item, checkin, now) {
       if (feelOpenFor === item.id) feelOpenFor = null;
     } else if (hasMealPanel(item)) {
       mealOpenFor = mealOpenFor === item.id ? null : item.id;
+    } else if (hasRecheckPanel(item)) {
+      recheckOpenFor = recheckOpenFor === item.id ? null : item.id;
     } else if (item.id === "weigh") {
       weighOpenFor = weighOpenFor === dateStr ? null : dateStr;
     } else {
@@ -292,6 +300,10 @@ function renderChecklistItem(dateStr, item, checkin, now) {
   if (feelOpenFor === item.id && done && hasFeelPanel(item)) {
     li.classList.add("has-panel");
     li.appendChild(renderFeelPanel(dateStr, item));
+  }
+  if (recheckOpenFor === item.id && !checkin && hasRecheckPanel(item)) {
+    li.classList.add("has-panel");
+    li.appendChild(renderRecheckPanel(dateStr, item));
   }
   return li;
 }

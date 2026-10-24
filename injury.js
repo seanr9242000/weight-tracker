@@ -158,6 +158,63 @@ injuryForm.addEventListener("submit", (e) => {
   showToast(injuryActive(loadInjury(), todayLocalDateString()) ? "Injury mode on" : "Injury saved");
 });
 
+/* The recheck item asks "Cleared?". Yes ends Injury mode as of
+   yesterday (the injury stays, so past days still read as injured);
+   Not yet asks for the next recheck date. */
+function renderRecheckPanel(dateStr, item) {
+  const panel = el("div", "meal-panel recheck-panel");
+  panel.appendChild(el("div", "meal-name", "Cleared?"));
+  const actions = el("div", "meal-actions");
+  const yes = el("button", "pill-btn dark", "Yes");
+  yes.type = "button";
+  yes.addEventListener("click", () => {
+    saveJSON(INJURY_KEY, endInjury(loadInjury(), dateStr));
+    setCheckin(dateStr, item.id, { status: "done", at: Date.now() });
+    recheckOpenFor = null;
+    recheckExtending = false;
+    renderInjury();
+    renderToday();
+    showToast("Injury mode off. Games and runs are back on the schedule.");
+  });
+  const notYet = el("button", "pill-btn", "Not yet");
+  notYet.type = "button";
+  notYet.addEventListener("click", () => {
+    recheckExtending = true;
+    renderToday();
+  });
+  actions.append(yes, notYet);
+  panel.appendChild(actions);
+
+  if (recheckExtending) {
+    const form = el("form", "recheck-form");
+    const field = el("div", "date-field");
+    const display = el("div", "date-display");
+    const input = el("input", "date-input-overlay");
+    input.type = "date";
+    input.required = true;
+    input.min = shiftDate(dateStr, 1);
+    input.value = shiftDate(dateStr, 14);
+    display.textContent = formatDate(input.value);
+    input.addEventListener("change", () => { display.textContent = input.value ? formatDate(input.value) : ""; });
+    field.append(display, input);
+    const save = el("button", "pill-btn dark", "Save");
+    save.type = "submit";
+    form.append(el("span", "feel-label", "Next recheck"), field, save);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!input.value || input.value <= dateStr) return;
+      saveJSON(INJURY_KEY, { ...loadInjury(), until: input.value });
+      recheckOpenFor = null;
+      recheckExtending = false;
+      renderInjury();
+      renderToday();
+      showToast(`Next recheck ${shortDate(input.value)}`);
+    });
+    panel.appendChild(form);
+  }
+  return panel;
+}
+
 document.getElementById("injury-end-btn").addEventListener("click", () => {
   const injury = loadInjury();
   if (!injury) return;
