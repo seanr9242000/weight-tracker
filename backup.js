@@ -237,14 +237,23 @@ async function importBackup(file, statusEl) {
   }
   const when = parsed.backup.savedAt ? new Date(parsed.backup.savedAt).toLocaleString() : "an unknown date";
   const n = parsed.photos.length;
-  const photos = n ? ` and ${n} photo${n === 1 ? "" : "s"}` : "";
-  if (!confirm(`Replace everything on this phone with the backup file from ${when}${photos}?`)) {
+  const photoNote = n ? ` Its ${n} photo${n === 1 ? "" : "s"} will be added to the ones already here.` : "";
+  if (!confirm(`Replace your logs and settings on this phone with the backup file from ${when}?${photoNote}`)) {
     statusEl.textContent = "Import cancelled. Nothing changed.";
     return;
   }
-  restoring = true;
-  applyBackup(localStorage, parsed.backup);
-  for (const p of parsed.photos) await addPhoto({ id: p.id, date: p.date, blob: await dataUrlToBlob(p.dataUrl) });
+  try {
+    // Decode every photo first so a corrupt file fails before anything changes.
+    const blobs = [];
+    for (const p of parsed.photos) blobs.push(await dataUrlToBlob(p.dataUrl));
+    restoring = true;
+    applyBackup(localStorage, parsed.backup);
+    for (let i = 0; i < n; i++) await addPhoto({ id: parsed.photos[i].id, date: parsed.photos[i].date, blob: blobs[i] });
+  } catch (err) {
+    restoring = false;
+    statusEl.textContent = `Couldn't import the backup: ${err.message || err}`;
+    return;
+  }
   reloadApp();
 }
 

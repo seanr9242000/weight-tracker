@@ -47,8 +47,19 @@ const pick = async (text) => {
 await pick("not a backup");
 await until(() => $("#restore-card-status").textContent !== "");
 eq("bad file explained", $("#restore-card-status").textContent, "That file isn't a Weight & Save backup.");
+// A corrupt photo fails before anything is replaced: error shown, no reload, storage untouched.
+const bad = JSON.parse(JSON.stringify(json));
+bad.photos[0].dataUrl = "data:image/png;base64,@@@not-base64@@@";
+await pick(JSON.stringify(bad));
+await until(() => $("#restore-card-status").textContent.startsWith("Couldn't import"));
+check("corrupt photo reports an error", $("#restore-card-status").textContent.startsWith("Couldn't import the backup:"));
+eq("no reload after failed import", reloads, 0);
+eq("storage unchanged after failed import", ls("weight-tracker-entries"), null);
+let asked = "";
+app().confirm = (m) => { asked = m; return true; };
 await pick(JSON.stringify(json));
 await until(() => reloads > 0);
 eq("weights imported", ls("weight-tracker-entries")[0].weight, 199.2);
 eq("photo imported", (await done(app().getAllPhotos())).map((p) => p.id), ["p1"]);
 eq("reloaded after import", reloads, 1);
+check("confirm wording", asked.startsWith("Replace your logs and settings on this phone with the backup file from ") && asked.endsWith("Its 1 photo will be added to the ones already here."));
