@@ -130,3 +130,9 @@ Session total: 1 commit (design Q&A on Sean's first-day feedback, plus diagnosin
 |-------|------------------------------------------------------------|---------|
 | 22:32 | Add Injury mode (ankle avulsion fracture, recheck 2026-12-07) to feedback batch 1 spec | — |
 | 22:34 | Pull training basics (step T) forward in feedback batch 1 order | 2 min |
+
+## Session: 2026-10-23 — Plan for steps 0 and 0.5
+
+| Time  | Change                                                  | Elapsed |
+|-------|------------------------------------------------------------|---------|
+| 22:25 | Add implementation plan for feedback batch 1 steps 0 and 0.5 (13a7af4) | — |
