@@ -150,6 +150,7 @@ const SNACK_PLAN = {
   "snack-am": {
     game: { tip: "Steady energy for the day: protein + fiber.", ideas: ["idea-apple-npb", "idea-cheese-apple", "idea-oikos-berries"] },
     lift: { tip: "Protein-forward — today's lift needs it.", ideas: ["idea-oikos-almonds", "idea-eggs-apple", "idea-cheese-almonds"] },
+    rest: { tip: "Steady energy for the day: protein + fiber.", ideas: ["idea-apple-npb", "idea-cheese-apple", "idea-oikos-berries"] },
   },
   "snack-pm": {
     game: { tip: "Carbs now fuel tonight's game; keep it 3–4 hours before tip.", ideas: ["idea-pb-toast-natural", "idea-almonds-raisins", "idea-oikos-oats"] },
@@ -158,9 +159,11 @@ const SNACK_PLAN = {
   },
   "pregame-snack": {
     game: { tip: "Fast natural carbs, low fat, so it sits light on the court.", ideas: ["idea-dates-banana", "idea-cakes-honey"] },
+    rest: { tip: "Something light that holds you to dinner.", ideas: ["idea-carrots-hummus", "idea-almonds-raisins", "idea-oikos-berries"] },
   },
   postgame: {
     game: { tip: "Protein + carbs to recover; lights-out is soon, so keep it moderate.", ideas: ["idea-shake-banana", "idea-cottage-berries"] },
+    rest: { tip: "Protein, nothing heavy before bed.", ideas: ["idea-cottage-berries", "idea-cheese-2", "idea-milk-banana"] },
   },
   "post-lift": {
     lift: { tip: "30–45 minutes after: ~20–40 g protein plus carbs.", ideas: ["idea-milk-banana", "idea-tuna-banana"] },

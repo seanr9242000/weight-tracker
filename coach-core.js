@@ -139,11 +139,82 @@ function daysBetween(fromStr, toStr) {
   return Math.round((parseLocalDate(toStr) - parseLocalDate(fromStr)) / 86400000);
 }
 
-/* Applies one day's override ({ removed: [id], moved: {id: time},
-   added: [item] }) on top of that weekday's template and returns the
-   day's items sorted by time. */
-function itemsForDate(dateStr, overrides) {
-  const base = WEEK_TEMPLATE[parseLocalDate(dateStr).getDay()];
+/* ---- Injury mode ----
+   While an injury is on (start <= date <= until), the schedule swaps
+   basketball for recovery: games and game prep go, the game-day snacks
+   stay under new names, lifts get an ankle-safe plan, walks become
+   optional, PT exercises are added daily, and a recheck sits on the
+   until date. An injury is { part, start, until, note, pt: [{ id, time, title }] }. */
+
+const INJURY_LIFT_NOTE = "Ankle-safe legs: leg extension, seated or lying leg curl, hip thrust or glute bridge (brace on), hip abduction/adduction. Single-leg work on the good leg. Upper body as normal. Finish with the arm bike or an upper-body circuit. Ask PT first: leg press (feet high), RDLs. Avoid until cleared: squats, lunges, step-ups, calf raises, jumps, sled, rower, running.";
+const INJURY_WALK_TITLE = "Easy walk in brace — skip if sore";
+const INJURY_REMOVED = ["game", "pregame-prep"];
+const INJURY_TITLES = {
+  "pregame-snack": "Late-afternoon snack",
+  postgame: "Evening snack",
+  "post-lunch": INJURY_WALK_TITLE,
+  "post-dinner": INJURY_WALK_TITLE,
+};
+const INJURY_OPTIONAL = ["post-lunch", "post-dinner"];
+const PAIN_WARNING = "Back off leg work and mention it to your PT.";
+
+function capitalize(s) {
+  return s ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+function injuryActive(injury, dateStr) {
+  return Boolean(injury && injury.start && injury.until && injury.start <= dateStr && dateStr <= injury.until);
+}
+
+function injuryItems(items, injury, dateStr) {
+  const out = items
+    .filter((item) => !INJURY_REMOVED.includes(item.id))
+    .map((item) => {
+      if (item.id === "lift") return { ...item, note: INJURY_LIFT_NOTE };
+      if (!INJURY_TITLES[item.id]) return item;
+      const changed = { ...item, title: INJURY_TITLES[item.id] };
+      delete changed.note; // "before tip", "note shots" no longer fit
+      if (INJURY_OPTIONAL.includes(item.id)) changed.optional = true;
+      return changed;
+    });
+  for (const pt of injury.pt || []) out.push({ id: pt.id, time: pt.time, title: pt.title, kind: "pt" });
+  if (dateStr === injury.until) {
+    out.push({ id: "injury-recheck", time: "09:00", title: `${capitalize(injury.part)} recheck`, kind: "appointment" });
+  }
+  return out;
+}
+
+/* Day N of M, counting both the start day and the recheck day. */
+function injuryDays(injury, dateStr) {
+  return { day: daysBetween(injury.start, dateStr) + 1, total: daysBetween(injury.start, injury.until) + 1 };
+}
+
+/* Ending keeps the injury (and its start) so past days still read as injured. */
+function endInjury(injury, todayStr) {
+  return { ...injury, until: shiftDate(todayStr, -1) };
+}
+
+/* After a lift: flag pain of 4+, or a 7-day average above the 7 days
+   before. `feelLog` already includes the check-in just saved. */
+function injuryPainFlag(feelLog, todayStr, pain) {
+  if (pain >= 4) return true;
+  const avg = (from, to) => {
+    const xs = feelLog.filter((r) => typeof r.injuryPain === "number" && r.date >= from && r.date <= to).map((r) => r.injuryPain);
+    return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+  };
+  const thisWeek = avg(shiftDate(todayStr, -6), todayStr);
+  const lastWeek = avg(shiftDate(todayStr, -13), shiftDate(todayStr, -7));
+  return thisWeek !== null && lastWeek !== null && thisWeek > lastWeek;
+}
+
+/* Applies Injury mode (if on that date) and then one day's override
+   ({ removed: [id], moved: {id: time}, added: [item] }) on top of that
+   weekday's template, and returns the day's items sorted by time.
+   Overrides apply last, so Edit day can still move or remove a PT item
+   or the recheck. */
+function itemsForDate(dateStr, overrides, injury) {
+  let base = WEEK_TEMPLATE[parseLocalDate(dateStr).getDay()];
+  if (injuryActive(injury, dateStr)) base = injuryItems(base, injury, dateStr);
   const o = (overrides && overrides[dateStr]) || {};
   const removed = new Set(o.removed || []);
   const moved = o.moved || {};
@@ -246,9 +317,11 @@ function formatGap(minutes) {
 
 /* An item is "due" once its time has passed. A day's score is the share
    of due items checked off as done; skips with a reason still count
-   against the score, so the number stays honest. */
+   against the score, so the number stays honest. Optional items (Injury
+   mode walks) never count either way. */
 function dayCompletion(items, checkins, dateStr, nowMinutes) {
   const due = items.filter((item) => {
+    if (item.optional) return false;
     if (nowMinutes === undefined) return true;
     const [h, m] = item.time.split(":").map(Number);
     return h * 60 + m <= nowMinutes;
@@ -263,7 +336,7 @@ function dayCompletion(items, checkins, dateStr, nowMinutes) {
 /* Consecutive past days (ending yesterday) where at least 80% of the
    day's items were done, plus today if today has already reached 80%.
    Days before the first-ever check-in don't break or extend it. */
-function completionStreak(checkins, overrides, todayStr, nowMinutes) {
+function completionStreak(checkins, overrides, todayStr, nowMinutes, injury) {
   const STREAK_PCT = 80;
   const dates = Object.keys(checkins).map((k) => k.split("|")[0]).sort();
   if (dates.length === 0) return 0;
@@ -271,11 +344,11 @@ function completionStreak(checkins, overrides, todayStr, nowMinutes) {
   let streak = 0;
   let d = shiftDate(todayStr, -1);
   while (d >= first) {
-    if (dayCompletion(itemsForDate(d, overrides), checkins, d).pct < STREAK_PCT) break;
+    if (dayCompletion(itemsForDate(d, overrides, injury), checkins, d).pct < STREAK_PCT) break;
     streak++;
     d = shiftDate(d, -1);
   }
-  const today = dayCompletion(itemsForDate(todayStr, overrides), checkins, todayStr, nowMinutes);
+  const today = dayCompletion(itemsForDate(todayStr, overrides, injury), checkins, todayStr, nowMinutes);
   if (today.due > 0 && today.pct >= STREAK_PCT) streak++;
   return streak;
 }
@@ -295,5 +368,6 @@ if (typeof module !== "undefined") {
     WEEK_TEMPLATE, TAPER_WEEKS, TRIGGER_TIPS, MISS_REASONS,
     addMinutes, shiftDate, daysBetween, itemsForDate, nextMonday, taperStepFor,
     quitDate, nicotineFreeStreak, pouchesAvoided, pouchTimeline, lastPouchAt, formatGap, dayCompletion, completionStreak, sleepHours,
+    INJURY_LIFT_NOTE, INJURY_WALK_TITLE, PAIN_WARNING, capitalize, injuryActive, injuryDays, endInjury, injuryPainFlag,
   };
 }

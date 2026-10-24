@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html><body><pre id="out"></pre>
+<script src="test-utils.js"></script>
+<script src="../coach-core.js"></script>
+<script src="../food-data.js"></script>
+<script src="../food-core.js"></script>
+<script>
+run(() => {
+  // 2026-10-12 Mon (game day), 10-14 Wed (lift day), 10-19 Mon.
+  const inj = { part: "ankle", start: "2026-10-12", until: "2026-10-19", note: "", pt: [] };
+  const has = (d, id, i) => itemsForDate(d, {}, i === undefined ? inj : i).some((x) => x.id === id);
+  const find = (d, id) => itemsForDate(d, {}, inj).find((x) => x.id === id);
+
+  eq("active on start", injuryActive(inj, "2026-10-12"), true);
+  eq("active on until", injuryActive(inj, "2026-10-19"), true);
+  eq("off the day before", injuryActive(inj, "2026-10-11"), false);
+  eq("off the day after", injuryActive(inj, "2026-10-20"), false);
+  eq("null injury is off", injuryActive(null, "2026-10-12"), false);
+
+  eq("game removed", has("2026-10-12", "game"), false);
+  eq("pregame prep removed", has("2026-10-12", "pregame-prep"), false);
+  eq("snacks retitled", ["pregame-snack", "postgame"].map((id) => find("2026-10-12", id).title), ["Late-afternoon snack", "Evening snack"]);
+  eq("game-day notes dropped", ["pregame-snack", "postgame"].map((id) => find("2026-10-12", id).note), [undefined, undefined]);
+  eq("lunch walk retitled + optional", [find("2026-10-12", "post-lunch").title, find("2026-10-12", "post-lunch").optional], [INJURY_WALK_TITLE, true]);
+  eq("lift title kept", find("2026-10-14", "lift").title, "Lift — 45 min");
+  eq("lift note swapped", find("2026-10-14", "lift").note, INJURY_LIFT_NOTE);
+  eq("dinner walk retitled", find("2026-10-14", "post-dinner").title, INJURY_WALK_TITLE);
+  eq("recheck on until", find("2026-10-19", "injury-recheck"), { id: "injury-recheck", time: "09:00", title: "Ankle recheck", kind: "appointment" });
+  eq("no recheck before until", has("2026-10-15", "injury-recheck"), false);
+  eq("games still off on the recheck day", has("2026-10-19", "game"), false);
+  eq("day after until unchanged", itemsForDate("2026-10-20", {}, inj), itemsForDate("2026-10-20", {}));
+  eq("day before start unchanged", itemsForDate("2026-10-11", {}, inj), itemsForDate("2026-10-11", {}));
+  eq("no injury = plain template", itemsForDate("2026-10-12", {}, null), itemsForDate("2026-10-12", {}));
+  eq("template not mutated", itemsForDate("2026-10-12", {}).find((i) => i.id === "pregame-snack").title, "Pre-game snack");
+
+  const withPt = { ...inj, pt: [{ id: "pt-1", time: "07:30", title: "Ankle alphabet" }] };
+  const tue = itemsForDate("2026-10-13", {}, withPt);
+  eq("PT item added daily", tue.find((i) => i.id === "pt-1"), { id: "pt-1", time: "07:30", title: "Ankle alphabet", kind: "pt" });
+  eq("PT keeps the day sorted", tue.map((i) => i.time), [...tue.map((i) => i.time)].sort());
+  eq("no PT outside the range", has("2026-10-20", "pt-1", withPt), false);
+  eq("Edit day can remove the recheck", itemsForDate("2026-10-19", { "2026-10-19": { removed: ["injury-recheck"] } }, inj).some((i) => i.id === "injury-recheck"), false);
+  eq("Edit day can move a PT item", itemsForDate("2026-10-13", { "2026-10-13": { moved: { "pt-1": "08:00" } } }, withPt).find((i) => i.id === "pt-1").time, "08:00");
+
+  // Optional walks never count against the score.
+  const day = [{ id: "a", time: "08:00" }, { id: "w", time: "09:00", optional: true }];
+  eq("optional items left out of the score", dayCompletion(day, {}, "2026-10-12"), { due: 1, done: 0, pct: 0 });
+  eq("score with the real item done", dayCompletion(day, { "2026-10-12|a": { status: "done" } }, "2026-10-12").pct, 100);
+
+  // The streak judges injured days by the injured schedule. Edit day strips
+  // both days down to the evening game block, so the plain schedule (game,
+  // prep, walk not done) scores 2/5 = 40%, while the injured one scores 100%.
+  const strip = { removed: ["wake", "weigh", "brush-am", "breakfast", "snack-am", "snack-pm", "close-food-log", "wind-down", "brush-pm", "lights-out", "lunch"], moved: {}, added: [] };
+  const ov = { "2026-10-12": strip, "2026-10-13": strip };
+  const full = {};
+  for (const d of ["2026-10-12", "2026-10-13"]) for (const i of itemsForDate(d, ov, inj)) if (!i.optional) full[`${d}|${i.id}`] = { status: "done", at: 0 };
+  eq("streak uses the injured schedule", completionStreak(full, ov, "2026-10-14", 0, inj), 2);
+  eq("without it, the missing games break it", completionStreak(full, ov, "2026-10-14", 0), 0);
+
+  // Water and snacks follow from the day type.
+  eq("game-day water bonus off", waterGoal({}, 200, dayType(itemsForDate("2026-10-12", {}, inj))), 100);
+  eq("bonus still on normally", waterGoal({}, 200, dayType(itemsForDate("2026-10-12", {}))), 132);
+  eq("rest-day ideas for former game-day snacks",
+    ["snack-am", "pregame-snack", "postgame"].map((s) => snackIdeasFor(SNACK_IDEAS, SNACK_PLAN, s, "rest").length > 0), [true, true, true]);
+
+  // Day counter, ending.
+  const sean = { part: "ankle", start: "2026-10-21", until: "2026-12-07" };
+  eq("day 1", injuryDays(sean, "2026-10-21"), { day: 1, total: 48 });
+  eq("recheck day", injuryDays(sean, "2026-12-07"), { day: 48, total: 48 });
+  const ended = endInjury(inj, "2026-10-15");
+  eq("end sets until to yesterday", ended.until, "2026-10-14");
+  eq("ended: off today", injuryActive(ended, "2026-10-15"), false);
+  eq("ended: history kept", injuryActive(ended, "2026-10-13"), true);
+
+  // Pain flag: 4+ now, or this week's average above last week's.
+  const rec = (date, injuryPain) => ({ date, injuryPain });
+  eq("pain 4 flags", injuryPainFlag([], "2026-10-14", 4), true);
+  eq("pain 3, no history", injuryPainFlag([rec("2026-10-14", 3)], "2026-10-14", 3), false);
+  eq("rising week flags", injuryPainFlag([rec("2026-10-05", 1), rec("2026-10-06", 1), rec("2026-10-12", 3), rec("2026-10-14", 3)], "2026-10-14", 3), true);
+  eq("falling week doesn't", injuryPainFlag([rec("2026-10-05", 3), rec("2026-10-12", 2), rec("2026-10-14", 2)], "2026-10-14", 2), false);
+  eq("records without pain ignored", injuryPainFlag([{ date: "2026-10-05" }, rec("2026-10-14", 2)], "2026-10-14", 2), false);
+});
+</script></body></html>
