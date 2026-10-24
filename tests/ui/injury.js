@@ -126,3 +126,17 @@ eq("warning toast", $("#toast-text").textContent, "Back off leg work and mention
 await liftDay(null);
 click(".check-box", item(LIFT));
 check("no pain question when not injured", !$$(".feel-panel .feel-label", item(LIFT)).some((e) => e.textContent.includes("pain")));
+
+// A pain answer picked before the injury ends must not outlive it: the
+// draft lives in memory, so end the injury in place and re-render.
+await liftDay(ankle(day(-3), day(10)));
+click(".check-box", item(LIFT));
+const draftLabels = $$(".feel-panel .feel-label", item(LIFT)).map((e) => e.textContent);
+clickText("5", $$(".feel-panel .chip-row", item(LIFT))[draftLabels.indexOf("Ankle pain (0–10)")]);
+check("pain warning shows before ending", Boolean($(".pain-warning", item(LIFT))));
+app().saveJSON("coach-injury", app().endInjury(ls("coach-injury"), today));
+app().renderToday();
+check("feel panel still open after re-render", Boolean(item(LIFT) && $(".feel-panel", item(LIFT))));
+check("no stale pain warning after ending", !$(".pain-warning", item(LIFT)));
+check("no pain question after ending", !$$(".feel-panel .feel-label", item(LIFT)).some((e) => e.textContent.includes("pain")));
+check("Save stays disabled on the invisible answer", $$(".feel-panel button", item(LIFT)).find((b) => b.textContent === "Save").disabled);

@@ -245,6 +245,8 @@ function renderFeelPanel(dateStr, item) {
   const draft = feelDrafts[item.id] || (feelDrafts[item.id] = {});
   const injury = loadInjury();
   const injuredPart = injuryActive(injury, dateStr) ? injury.part : null;
+  // Ending injury mode mid-draft must not leave a pain answer behind.
+  if (!injuredPart) delete draft.injuryPain;
   const panel = el("div", "meal-panel feel-panel");
   panel.appendChild(el("div", "meal-name", "How did it go?"));
   for (const q of feelQuestions(item.id, injuredPart)) {
