@@ -161,5 +161,12 @@ Session total: 10 commits (plan, then step 0 built task by task with a review af
 | 12:49 | Step 0.5: ankle pain (0-10) on lift check-ins with a back-off warning (73bb476) | 2 min |
 | 12:51 | Step 0.5: drop a draft pain answer once the injury has ended (678b6bc) | 2 min |
 | 13:01 | Step 0.5 final-review fixes: confirm End, prefill a recent injury, Enter adds PT, push opens Cleared?, no meal tip on injured walks (1ce1b93) | 10 min |
+| 13:38 | Plan: feedback batch 1 step A (swipe-to-close, timestamps, Chick-fil-A items) (33776a2) | 37 min |
+| 13:39 | Step A: clock-time helpers (clockTime, timeOnDate, atOnDate), v33 (6251943) | 1 min |
+| 13:42 | Step A1: swipe down to close the +, food and skip-reason sheets (d60d2b0) | 3 min |
+| 13:45 | Step A2: times on food and water entries, editable food time (494b6a7) | 3 min |
+| 13:47 | Step A2: times on pouches, cravings, weigh-ins and runs (7d82f37) | 2 min |
+| 13:50 | Step A3: Chick-fil-A items from the official page; rev keeps Sean's processing tag (053da0f) | 3 min |
+| 14:06 | Step A final-review fixes: lost pointer can't lock swiping, header-only touch-action, swipe close drops the keyboard (85b5314) | 16 min |
 
-Session total so far: step 0 shipped as v31 (main 6b7e2e4, Sean's phone check passed), then step 0.5 built on branch batch1-step05 task by task with a review after each and a final whole-branch review (per-plan commit approval).
+Session total so far: step 0 shipped as v31 (main 6b7e2e4, Sean's phone check passed), then step 0.5 built on branch batch1-step05 task by task with a review after each and a final whole-branch review (per-plan commit approval). Step 0.5 shipped as v32 (Sean's phone check passed); step A then planned and built inline on branch batch1-stepA (native execution, one final whole-branch review; per-plan commit approval).

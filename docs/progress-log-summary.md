@@ -276,4 +276,27 @@ reads the day's plan through one helper, so Today, food, water and push
 pings always agree. The final review's main catch: one stray tap or a
 missed recheck day would end Injury mode and lose the PT list, so End now
 asks first and a recently ended injury pre-fills when started again.
-Ships as v32 once Sean OKs the push.
+Shipped as v32 (main 50175e4) and passed Sean's phone check.
+
+## 2026-10-24 — Step A built: swipe to close, timestamps, Chick-fil-A
+
+All three sheets (the + sheet, the food picker and the skip-reason sheet)
+now close with a downward swipe: from the handle or header any time, or
+from the list once it's scrolled to the top. The sheet follows the finger,
+the + sheet's backdrop fades with it, and it closes past a third of its
+height or on a flick, otherwise it springs back. A drag that starts on a
+button never presses it, and sliders and text fields keep their own drags.
+Every log now shows when it happened ("8:42 AM"): food entries (and the
+time can be edited without ever moving the entry to another day), a new
+list of today's water in the water drawer, pouches, a new list of today's
+cravings on Habits, weigh-ins and runs. New weigh-ins and runs store their
+time; older ones show just the date. The food library gained 29
+Chick-fil-A items copied from the official nutrition page (fries, the
+sandwiches, Cool Wrap, mac & cheese, fruit cup, hash browns, Chick-n-Minis,
+the six sauces, lemonade and sweet tea), so they count as exact. The five
+older ones were corrected the same way, and a processing tag Sean picks
+himself now survives corrections like this. A search for "chick" no longer
+pushes the takeout presets out of the results. The final review led to
+three fixes in the swipe code; one iPhone-only question (an upward swipe
+at the top of a list) is on the phone check. Ships as v33 once Sean OKs the
+push.
