@@ -169,6 +169,85 @@ async function restoreFromCode(input, statusEl) {
   reloadApp();
 }
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function dataUrlToBlob(dataUrl) {
+  return (await fetch(dataUrl)).blob();
+}
+
+let preparedExport = null;
+
+/* Tap 1 builds the file (reading photos from IndexedDB takes a moment).
+   Tap 2 shares it: iOS only allows navigator.share straight from a tap.
+   Photos travel only in the file, which keeps cloud backups small. */
+async function exportBackup() {
+  const btn = document.getElementById("backup-export");
+  if (preparedExport) {
+    const file = preparedExport;
+    preparedExport = null;
+    btn.textContent = "Export backup";
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: "Weight & Save backup" });
+      } catch (err) {
+        if (err.name !== "AbortError") showToast("Couldn't share the backup file");
+      }
+    } else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+    return;
+  }
+  btn.textContent = "Preparing…";
+  btn.disabled = true;
+  try {
+    const photos = await Promise.all((await getAllPhotos()).map(async (p) => ({
+      id: p.id, date: p.date, dataUrl: await blobToDataUrl(p.blob),
+    })));
+    const json = JSON.stringify({ ...collectBackup(localStorage, Date.now()), photos });
+    preparedExport = new File([json], backupFileName(todayLocalDateString()), { type: "application/json" });
+    btn.textContent = "Share backup file";
+  } catch (err) {
+    btn.textContent = "Export backup";
+    showToast(`Couldn't build the backup: ${err.message || err}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* Reads a backup file and, once confirmed, replaces this phone's data
+   (and photos) with it, then reloads into the restored data. */
+async function importBackup(file, statusEl) {
+  let parsed;
+  try {
+    parsed = parseBackupFile(await file.text());
+  } catch (err) {
+    statusEl.textContent = err.message;
+    return;
+  }
+  const when = parsed.backup.savedAt ? new Date(parsed.backup.savedAt).toLocaleString() : "an unknown date";
+  const n = parsed.photos.length;
+  const photos = n ? ` and ${n} photo${n === 1 ? "" : "s"}` : "";
+  if (!confirm(`Replace everything on this phone with the backup file from ${when}${photos}?`)) {
+    statusEl.textContent = "Import cancelled. Nothing changed.";
+    return;
+  }
+  restoring = true;
+  applyBackup(localStorage, parsed.backup);
+  for (const p of parsed.photos) await addPhoto({ id: p.id, date: p.date, blob: await dataUrlToBlob(p.dataUrl) });
+  reloadApp();
+}
+
 document.getElementById("backup-toggle").addEventListener("click", () => {
   if (backupOn()) turnBackupOff();
   else turnBackupOn();
@@ -196,6 +275,16 @@ document.getElementById("backup-copy").addEventListener("click", async () => {
   } catch {
     showToast("Couldn't copy. Press and hold the code to copy it.");
   }
+});
+
+document.getElementById("backup-export").addEventListener("click", exportBackup);
+
+document.getElementById("backup-import-input").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const onRestoreCard = !document.getElementById("restore-card").hidden;
+  importBackup(file, document.getElementById(onRestoreCard ? "restore-card-status" : "backup-restore-status"));
 });
 
 document.addEventListener("visibilitychange", () => {

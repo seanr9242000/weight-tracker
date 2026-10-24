@@ -1,0 +1,54 @@
+// Export a backup file (two taps: build, then share) and import it into
+// a fresh install, progress photos included.
+const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+let shared = null;
+let reloads = 0;
+/* IndexedDB finishes in real time, which the headless virtual-time clock
+   doesn't wait for, so wait on it by spinning event-loop tasks (no timers). */
+const tick = () => new Promise((r) => { const c = new MessageChannel(); c.port1.onmessage = r; c.port2.postMessage(0); });
+const done = async (p) => { let d = false, v; p.then((x) => { d = true; v = x; }); for (let n = 0; !d && n < 2e6; n++) await tick(); return v; };
+const until = async (cond) => { for (let n = 0; !cond() && n < 2e6; n++) await tick(); };
+const stub = () => {
+  app().navigator.canShare = () => true;
+  app().navigator.share = async (data) => { shared = data; };
+  app().confirm = () => true;
+  app().reloadApp = () => { reloads++; };
+};
+
+await reload({ "coach-started-at": "0", "weight-tracker-entries": [{ id: "w", date: today, weight: 199.2, unit: "lbs" }] });
+stub();
+await done(app().addPhoto({ id: "p1", date: today, blob: await (await fetch(PNG)).blob() }));
+
+click("#backup-export");
+await until(() => $("#backup-export").textContent === "Share backup file");
+eq("tap 1 builds the file", $("#backup-export").textContent, "Share backup file");
+click("#backup-export");
+await wait(50);
+const file = shared && shared.files[0];
+check("tap 2 shares a file", Boolean(file));
+eq("file name", file.name, `weight-and-save-backup-${today}.json`);
+const json = JSON.parse(await file.text());
+eq("file has the weights", JSON.parse(json.keys["weight-tracker-entries"])[0].weight, 199.2);
+eq("file has the photo", json.photos.map((p) => [p.id, p.date, p.dataUrl.startsWith("data:image/png")]), [["p1", today, true]]);
+eq("button resets", $("#backup-export").textContent, "Export backup");
+
+// Import into a fresh install (photos live in IndexedDB, which reload() doesn't wipe).
+await reload({});
+stub();
+await done(app().deletePhotoRecord("p1"));
+eq("no photos before import", (await done(app().getAllPhotos())).length, 0);
+const pick = async (text) => {
+  const dt = new (app().DataTransfer)();
+  dt.items.add(new (app().File)([text], "backup.json", { type: "application/json" }));
+  $("#backup-import-input").files = dt.files;
+  $("#backup-import-input").dispatchEvent(new (app().Event)("change", { bubbles: true }));
+  await wait(500);
+};
+await pick("not a backup");
+await until(() => $("#restore-card-status").textContent !== "");
+eq("bad file explained", $("#restore-card-status").textContent, "That file isn't a Weight & Save backup.");
+await pick(JSON.stringify(json));
+await until(() => reloads > 0);
+eq("weights imported", ls("weight-tracker-entries")[0].weight, 199.2);
+eq("photo imported", (await done(app().getAllPhotos())).map((p) => p.id), ["p1"]);
+eq("reloaded after import", reloads, 1);

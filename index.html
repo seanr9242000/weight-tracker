@@ -37,6 +37,7 @@
           <button type="submit" class="pill-btn dark">Restore</button>
         </form>
         <p class="hint" id="restore-card-status"></p>
+        <label for="backup-import-input" class="link-btn">Import a backup file</label>
         <button type="button" id="restore-card-dismiss" class="link-btn">Start fresh</button>
       </section>
 
@@ -88,6 +89,11 @@
           <button type="button" id="backup-copy" class="pill-btn">Copy</button>
         </div>
         <p class="hint" id="backup-code-note" hidden>Save this code in Notes. On a new install it brings everything back.</p>
+        <div class="backup-actions">
+          <button type="button" id="backup-export" class="secondary-btn">Export backup</button>
+          <label for="backup-import-input" class="secondary-btn">Import backup</label>
+        </div>
+        <input id="backup-import-input" type="file" accept="application/json,.json" hidden>
         <form id="backup-restore-form" class="code-form">
           <input id="backup-restore-input" type="text" placeholder="Restore code" autocomplete="off" autocapitalize="characters" spellcheck="false">
           <button type="submit" class="pill-btn">Restore</button>
