@@ -37,7 +37,7 @@ const fmt = (x) => Math.round(x).toLocaleString();
    Fields added to a seed item later (e.g. `portion`) are filled in on
    stored copies too; stored values win, unless the seed item's `rev`
    is newer (a corrected label), which overwrites the seed's fields and
-   keeps the rest (e.g. favorite). */
+   keeps the rest (e.g. favorite, and a processing tag Sean set). */
 function mergeSeed(key, seed) {
   const copy = (x) => ({ ...JSON.parse(JSON.stringify(x)), source: "seed" });
   const stored = loadJSON(key, null);
@@ -53,7 +53,11 @@ function mergeSeed(key, seed) {
     if (!s || x.source !== "seed") return x;
     if ((s.rev || 0) > (x.rev || 0)) {
       changed = true;
-      return { ...x, ...copy(s) };
+      // A corrected label replaces the seed's fields, but a processing
+      // tag Sean picked himself stays his.
+      const next = { ...x, ...copy(s) };
+      if (x.processingSet) next.processing = x.processing;
+      return next;
     }
     const missing = Object.keys(s).filter((k) => !(k in x));
     if (!missing.length) return x;
@@ -719,6 +723,7 @@ function setFoodProcessing(foodId, tag) {
   const food = lib.find((f) => f.id === foodId);
   if (!food) return;
   food.processing = tag;
+  food.processingSet = true; // survives a seed correction (mergeSeed)
   saveJSON(FOOD_LIBRARY_KEY, lib);
 }
 

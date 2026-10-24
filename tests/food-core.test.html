@@ -301,5 +301,31 @@ run(() => {
   eq("needs 10 complete days", [notReady.ready, notReady.completeDays], [false, 9]);
   eq("incomplete days are ignored", proposeMaintenance(settings(), intake, {}, weights, "2026-10-21").completeDays, 0);
   eq("needs 8 weigh-ins", proposeMaintenance(settings(), intake, days, weights.slice(0, 7), "2026-10-21").ready, false);
+
+  // Chick-fil-A (step A3): official numbers, so "exact"
+  const CFA_IDS = ["cfa-sandwich", "cfa-spicy-sandwich", "cfa-deluxe", "cfa-grilled-sandwich", "cfa-cool-wrap",
+    "cfa-nuggets-8", "cfa-nuggets-12", "cfa-grilled-8", "cfa-grilled-12", "cfa-minis-4",
+    "cfa-fries-s", "cfa-fries-m", "cfa-fries-l", "cfa-mac-s", "cfa-mac-m", "cfa-fruit-cup", "cfa-hash-browns",
+    "cfa-sauce", "cfa-polynesian", "cfa-honey-mustard", "cfa-ranch", "cfa-buffalo", "cfa-bbq",
+    "cfa-lemonade-s", "cfa-lemonade-m", "cfa-lemonade-l", "cfa-sweet-tea-s", "cfa-sweet-tea-m", "cfa-sweet-tea-l"];
+  const cfa = lib.filter((f) => f.id.startsWith("cfa-"));
+  eq("every Chick-fil-A item present", CFA_IDS.filter((id) => !cfa.some((f) => f.id === id)), []);
+  eq("no stray Chick-fil-A ids", cfa.map((f) => f.id).filter((id) => !CFA_IDS.includes(id)), []);
+  eq("library ids unique", lib.length, new Set(lib.map((f) => f.id)).size);
+  eq("chain + exact", cfa.filter((f) => f.group !== "chain" || f.confidence !== "exact").map((f) => f.id), []);
+  eq("processing tagged", cfa.filter((f) => !["whole", "processed", "ultra"].includes(f.processing)).map((f) => f.id), []);
+  eq("no one-tap drink buttons", cfa.filter((f) => f.drink).map((f) => f.id), []);
+  eq("all 8 nutrients set", cfa.filter((f) => ["kcal", "protein", "carbs", "fat", "fiber", "sugar", "addedSugar", "sodium"]
+    .some((k) => typeof f.n[k] !== "number")).map((f) => f.id), []);
+  // A typo in one number shows up as kcal far from 4/4/9.
+  eq("kcal matches macros", cfa.filter((f) =>
+    Math.abs(4 * f.n.protein + 4 * f.n.carbs + 9 * f.n.fat - f.n.kcal) > Math.max(15, 0.12 * f.n.kcal)).map((f) => f.id), []);
+  eq("added sugar within sugar", cfa.filter((f) => f.n.addedSugar > f.n.sugar).map((f) => f.id), []);
+  const cfaItem = (id) => lib.find((f) => f.id === id);
+  eq("sandwich corrected", [cfaItem("cfa-sandwich").n.fat, cfaItem("cfa-sandwich").n.sodium], [16, 1470]);
+  eq("existing five get rev 1", ["cfa-sandwich", "cfa-nuggets-8", "cfa-nuggets-12", "cfa-grilled-8", "cfa-grilled-12"]
+    .map((id) => cfaItem(id).rev), [1, 1, 1, 1, 1]);
+  eq("tags", ["cfa-fruit-cup", "cfa-lemonade-m", "cfa-sweet-tea-m", "cfa-fries-m", "cfa-sauce"].map((id) => (cfaItem(id) || {}).processing),
+    ["whole", "processed", "processed", "ultra", "ultra"]);
 });
 </script></body></html>

@@ -8,7 +8,8 @@
      alcohol (g, 7 kcal each - already included in kcal).
    Planned-meal foods come from USDA / package labels and count as
    "exact". Chain items are published values but portions vary, so they
-   count as "estimate". `verify: true` = check against the real label.
+   count as "estimate", except where noted (Chick-fil-A's are copied
+   from the official page, so "exact"). `verify: true` = check against the real label.
    `rev` = a corrected seed: bump it and installs whose stored copy has
    a lower rev take the new seed fields (see food.js mergeSeed).
 
@@ -82,11 +83,43 @@ const FOOD_SEED_LIBRARY = [
   { id: "chipotle-my-bowl", group: "chain", name: "My Chipotle bowl", serving: "pollo asado, white rice, fajitas, sour cream, cheese, lettuce, green + corn salsa", n: nut(730, 48, 70, 29.5, 6, 10, 0, 1710), confidence: "estimate", processing: "processed" },
   { id: "chipotle-chili-lime-queso", group: "chain", name: "Chipotle chili lime chips & queso", serving: "regular chips + side queso (serves 2)", n: nut(790, 17, 80, 43, 7, 3, 0, 880), confidence: "estimate", processing: "processed" },
   { id: "chipotle-burrito", group: "chain", name: "Chipotle chicken burrito", serving: "same fillings as the bowl + tortilla", n: nut(990, 59, 122, 30, 14, 6, 0, 2410), confidence: "estimate", processing: "ultra" },
-  { id: "cfa-sandwich", group: "chain", name: "Chick-fil-A Chicken Sandwich", serving: "1 sandwich", n: nut(420, 29, 41, 18, 1, 6, 5, 1460), confidence: "estimate", processing: "ultra" },
-  { id: "cfa-nuggets-8", group: "chain", name: "Chick-fil-A nuggets, 8 ct", serving: "8 nuggets, no sauce", n: nut(250, 27, 11, 11, 0, 1, 1, 1210), confidence: "estimate", processing: "ultra" },
-  { id: "cfa-nuggets-12", group: "chain", name: "Chick-fil-A nuggets, 12 ct", serving: "12 nuggets, no sauce", n: nut(380, 40, 16, 17, 0, 1, 1, 1820), confidence: "estimate", processing: "ultra" },
-  { id: "cfa-grilled-8", group: "chain", name: "Chick-fil-A grilled nuggets, 8 ct", serving: "8 nuggets", n: nut(130, 25, 1, 3, 0, 1, 0, 440), confidence: "estimate", processing: "ultra" },
-  { id: "cfa-grilled-12", group: "chain", name: "Chick-fil-A grilled nuggets, 12 ct", serving: "12 nuggets", n: nut(200, 38, 2, 4.5, 0, 1, 0, 660), confidence: "estimate", processing: "ultra" },
+  // Chick-fil-A, from the official nutrition page (chick-fil-a.com/
+  // nutrition-allergens, read 2026-10-24), so "exact". The page has no
+  // added-sugar column, so addedSugar is estimated by one rule: all of
+  // the sugar for sauces and drinks; none for fruit, potato and mac &
+  // cheese; sugar minus 1 g for breaded or bun items. rev 1 = the
+  // original five corrected to the official page.
+  { id: "cfa-sandwich", rev: 1, group: "chain", name: "Chick-fil-A Chicken Sandwich", serving: "1 sandwich (183 g)", n: nut(420, 29, 41, 16, 1, 6, 5, 1470), confidence: "exact", processing: "ultra" },
+  { id: "cfa-spicy-sandwich", group: "chain", name: "Chick-fil-A Spicy Chicken Sandwich", serving: "1 sandwich (188 g)", n: nut(450, 28, 44, 18, 1, 6, 5, 1740), confidence: "exact", processing: "ultra" },
+  { id: "cfa-deluxe", group: "chain", name: "Chick-fil-A Deluxe Sandwich", serving: "1 sandwich, American cheese (247 g)", n: nut(490, 32, 43, 21, 1, 7, 6, 1710), confidence: "exact", processing: "ultra" },
+  { id: "cfa-grilled-sandwich", group: "chain", name: "Chick-fil-A Grilled Chicken Sandwich", serving: "1 sandwich (206 g)", n: nut(390, 28, 45, 11, 3, 11, 10, 765), confidence: "exact", processing: "ultra" },
+  { id: "cfa-cool-wrap", group: "chain", name: "Chick-fil-A Cool Wrap", serving: "1 wrap (231 g)", n: nut(660, 43, 32, 45, 14, 5, 4, 1420), confidence: "exact", processing: "ultra" },
+  { id: "cfa-nuggets-8", rev: 1, group: "chain", name: "Chick-fil-A nuggets, 8 ct", serving: "8 nuggets (113 g), no sauce", n: nut(250, 27, 11, 11, 0, 1, 0, 1210), confidence: "exact", processing: "ultra" },
+  { id: "cfa-nuggets-12", rev: 1, group: "chain", name: "Chick-fil-A nuggets, 12 ct", serving: "12 nuggets (170 g), no sauce", n: nut(380, 40, 16, 17, 0, 1, 0, 1820), confidence: "exact", processing: "ultra" },
+  { id: "cfa-grilled-8", rev: 1, group: "chain", name: "Chick-fil-A grilled nuggets, 8 ct", serving: "8 nuggets (95 g), no sauce", n: nut(130, 25, 1, 3, 0, 1, 0, 440), confidence: "exact", processing: "ultra" },
+  { id: "cfa-grilled-12", rev: 1, group: "chain", name: "Chick-fil-A grilled nuggets, 12 ct", serving: "12 nuggets (142 g), no sauce", n: nut(200, 38, 2, 4.5, 0, 1, 0, 660), confidence: "exact", processing: "ultra" },
+  { id: "cfa-minis-4", group: "chain", name: "Chick-fil-A Chick-n-Minis, 4 ct", serving: "4 minis (127 g)", n: nut(360, 20, 41, 13, 2, 8, 7, 1060), confidence: "exact", processing: "ultra" },
+  { id: "cfa-fries-s", group: "chain", name: "Chick-fil-A waffle fries, small", serving: "small (96 g)", n: nut(320, 4, 35, 19, 4, 1, 0, 190), confidence: "exact", processing: "ultra" },
+  { id: "cfa-fries-m", group: "chain", name: "Chick-fil-A waffle fries, medium", serving: "medium (125 g)", n: nut(420, 5, 45, 24, 5, 1, 0, 240), confidence: "exact", processing: "ultra" },
+  { id: "cfa-fries-l", group: "chain", name: "Chick-fil-A waffle fries, large", serving: "large (179 g)", n: nut(600, 7, 65, 35, 7, 1, 0, 340), confidence: "exact", processing: "ultra" },
+  { id: "cfa-mac-s", group: "chain", name: "Chick-fil-A mac & cheese, small", serving: "small (136 g)", n: nut(270, 12, 17, 17, 2, 2, 0, 710), confidence: "exact", processing: "ultra" },
+  { id: "cfa-mac-m", group: "chain", name: "Chick-fil-A mac & cheese, medium", serving: "medium (227 g)", n: nut(450, 20, 28, 29, 3, 3, 0, 1190), confidence: "exact", processing: "ultra" },
+  { id: "cfa-fruit-cup", group: "chain", name: "Chick-fil-A fruit cup", serving: "medium (125 g)", n: nut(70, 1, 16, 0, 2, 12, 0, 0), confidence: "exact", processing: "whole" },
+  { id: "cfa-hash-browns", group: "chain", name: "Chick-fil-A hash browns", serving: "regular (77 g)", n: nut(270, 3, 23, 18, 3, 0, 0, 440), confidence: "exact", processing: "ultra" },
+  { id: "cfa-sauce", group: "chain", name: "Chick-fil-A Sauce", serving: "1 packet (28 g)", n: nut(140, 0, 6, 13, 0, 6, 6, 170), confidence: "exact", processing: "ultra" },
+  { id: "cfa-polynesian", group: "chain", name: "Chick-fil-A Polynesian sauce", serving: "1 packet (28 g)", n: nut(110, 0, 14, 6, 0, 13, 13, 210), confidence: "exact", processing: "ultra" },
+  { id: "cfa-honey-mustard", group: "chain", name: "Chick-fil-A Honey Mustard sauce", serving: "1 packet (28 g)", n: nut(50, 0, 11, 0, 0, 10, 10, 160), confidence: "exact", processing: "ultra" },
+  { id: "cfa-ranch", group: "chain", name: "Chick-fil-A Garden Herb Ranch sauce", serving: "1 packet (21 g)", n: nut(100, 0, 1, 11, 0, 0, 0, 170), confidence: "exact", processing: "ultra" },
+  { id: "cfa-buffalo", group: "chain", name: "Chick-fil-A Zesty Buffalo sauce", serving: "1 packet (21 g)", n: nut(25, 0, 1, 2.5, 0, 0, 0, 570), confidence: "exact", processing: "ultra" },
+  { id: "cfa-bbq", group: "chain", name: "Chick-fil-A Barbeque sauce", serving: "1 packet (28 g)", n: nut(45, 0, 11, 0, 0, 9, 9, 200), confidence: "exact", processing: "ultra" },
+  // Lemonade (lemon juice, sugar, water) and brewed sweet tea are simple
+  // recipes, so "processed".
+  { id: "cfa-lemonade-s", group: "chain", name: "Chick-fil-A lemonade, small", serving: "small (465 g)", n: nut(190, 0, 49, 0, 0, 45, 45, 0), confidence: "exact", processing: "processed" },
+  { id: "cfa-lemonade-m", group: "chain", name: "Chick-fil-A lemonade, medium", serving: "medium (612 g)", n: nut(260, 0, 66, 0, 0, 60, 60, 0), confidence: "exact", processing: "processed" },
+  { id: "cfa-lemonade-l", group: "chain", name: "Chick-fil-A lemonade, large", serving: "large (916 g)", n: nut(380, 1, 98, 0, 1, 90, 90, 0), confidence: "exact", processing: "processed" },
+  { id: "cfa-sweet-tea-s", group: "chain", name: "Chick-fil-A sweet tea, small", serving: "small (451 g)", n: nut(90, 0, 22, 0, 0, 22, 22, 0), confidence: "exact", processing: "processed" },
+  { id: "cfa-sweet-tea-m", group: "chain", name: "Chick-fil-A sweet tea, medium", serving: "medium (604 g)", n: nut(120, 0, 31, 0, 0, 30, 30, 0), confidence: "exact", processing: "processed" },
+  { id: "cfa-sweet-tea-l", group: "chain", name: "Chick-fil-A sweet tea, large", serving: "large (893 g)", n: nut(170, 0, 44, 0, 0, 44, 44, 0), confidence: "exact", processing: "processed" },
   { id: "dominos-slice", group: "chain", name: "Domino's large cheese slice", serving: "1 of 8, hand tossed", n: nut(290, 12, 36, 11, 2, 3, 2, 590), confidence: "estimate", processing: "ultra" },
   { id: "bww-6", group: "chain", name: "BWW traditional wings, 6", serving: "6 wings, medium sauce", n: nut(480, 51, 2, 29, 0, 0, 0, 1400), confidence: "estimate", processing: "ultra" },
   { id: "bww-10", group: "chain", name: "BWW traditional wings, 10", serving: "10 wings, medium sauce", n: nut(800, 85, 3, 49, 0, 0, 0, 2300), confidence: "estimate", processing: "ultra" },

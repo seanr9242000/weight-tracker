@@ -339,12 +339,14 @@ function searchFoods(query, { log, library, meals, presets }, limit = 30) {
     .sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0))
     .filter((f) => matches(`${f.name} ${f.brand || ""}`))
     .map((item) => ({ type: "food", name: item.name, item }));
+  // The cap trims foods, never the handful of takeout presets: a word
+  // like "chick" matches dozens of chain items and would hide them.
+  const takeout = presets.filter((p) => matches(p.name)).map((item) => ({ type: "takeout", name: item.name, item }));
   return [
     ...recents,
     ...meals.filter((m) => matches(m.name)).map((item) => ({ type: "meal", name: item.name, item })).filter(fresh),
     ...foods.filter(fresh),
-    ...presets.filter((p) => matches(p.name)).map((item) => ({ type: "takeout", name: item.name, item })),
-  ].slice(0, limit);
+  ].slice(0, Math.max(0, limit - takeout.length)).concat(takeout);
 }
 
 /* A USDA FoodData Central result (as slimmed by the food-search Edge
