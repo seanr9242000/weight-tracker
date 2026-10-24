@@ -314,6 +314,41 @@ function formatGap(minutes) {
   return minutes % 60 ? `${h}h ${minutes % 60}m` : `${h}h`;
 }
 
+/* ---- Clock times ---- */
+
+/* A timestamp as "8:42 AM" in local time. Built by hand because newer
+   toLocaleTimeString output puts a narrow no-break space before AM. */
+function clockTime(at) {
+  const d = new Date(at);
+  const h = d.getHours();
+  return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/* The clock time of `at`, but only when it falls on `dateStr`. An entry
+   logged later for an earlier day, or one with no `at`, shows just its
+   date rather than a misleading time. */
+function timeOnDate(at, dateStr) {
+  if (typeof at !== "number" || !Number.isFinite(at)) return "";
+  return toDateString(new Date(at)) === dateStr ? clockTime(at) : "";
+}
+
+/* A timestamp as an <input type="time"> value, "08:42". */
+function timeInputValue(at) {
+  const d = new Date(at);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/* "08:42" on `dateStr` -> a timestamp on that same local day, so editing
+   a time never moves an entry to another date. null for a blank or
+   invalid time; callers keep the old timestamp. */
+function atOnDate(dateStr, hhmm) {
+  const m = /^(\d{2}):(\d{2})(?::\d{2})?$/.exec(hhmm || "");
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+  const d = parseLocalDate(dateStr);
+  d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+  return d.getTime();
+}
+
 /* ---- Check-in stats ---- */
 
 /* An item is "due" once its time has passed. A day's score is the share
@@ -368,7 +403,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     WEEK_TEMPLATE, TAPER_WEEKS, TRIGGER_TIPS, MISS_REASONS,
     addMinutes, shiftDate, daysBetween, itemsForDate, nextMonday, taperStepFor,
-    quitDate, nicotineFreeStreak, pouchesAvoided, pouchTimeline, lastPouchAt, formatGap, dayCompletion, completionStreak, sleepHours,
+    quitDate, nicotineFreeStreak, pouchesAvoided, pouchTimeline, lastPouchAt, formatGap, clockTime, timeOnDate, timeInputValue, atOnDate, dayCompletion, completionStreak, sleepHours,
     INJURY_LIFT_NOTE, INJURY_WALK_TITLE, PAIN_WARNING, capitalize, injuryActive, injuryDays, endInjury, injuryPainFlag,
   };
 }
