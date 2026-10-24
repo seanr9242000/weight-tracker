@@ -1266,6 +1266,10 @@ button[type="submit"]:active,
   color: var(--text-2);
 }
 
+.craving-times {
+  margin-top: 10px;
+}
+
 .pouch-remove {
   width: 32px;
   height: 32px;

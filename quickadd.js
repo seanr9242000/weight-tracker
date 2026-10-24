@@ -189,7 +189,7 @@ document.getElementById("qa-weight").addEventListener("submit", (e) => {
   const today = todayLocalDateString();
   const id = newId();
   const entries = loadEntries();
-  entries.push({ id, date: today, weight, unit: "lbs" });
+  entries.push({ id, date: today, weight, unit: "lbs", at: Date.now() });
   saveEntries(entries);
   const hadCheckin = Boolean(loadJSON(CHECKINS_KEY, {})[`${today}|weigh`]);
   if (!hadCheckin) setCheckin(today, "weigh", { status: "done", at: Date.now() });

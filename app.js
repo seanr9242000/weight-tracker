@@ -201,7 +201,9 @@ function renderList(entries) {
     weightSpan.textContent = `${entry.weight} ${entry.unit}`;
     const dateSpan = document.createElement("div");
     dateSpan.className = "entry-date";
-    dateSpan.textContent = formatDate(entry.date);
+    // Only weigh-ins logged on their own day have a time worth showing.
+    const time = timeOnDate(entry.at, entry.date);
+    dateSpan.textContent = time ? `${formatDate(entry.date)} · ${time}` : formatDate(entry.date);
     left.appendChild(weightSpan);
     left.appendChild(dateSpan);
 
@@ -286,6 +288,7 @@ document.getElementById("entry-form").addEventListener("submit", (e) => {
     date,
     weight,
     unit: "lbs",
+    at: Date.now(),
   });
   saveEntries(entries);
 
@@ -446,6 +449,7 @@ const runDateField = bindDateField(runDateInput, document.getElementById("run-da
 let runType = "run";
 let timerInterval = null;
 let stoppedDurationSeconds = 0;
+let stoppedStartedAt = null;
 let currentPath = [];
 let watchId = null;
 
@@ -614,6 +618,7 @@ function enterIdleState() {
   liveDistanceEl.hidden = true;
   setGpsStatus("");
   currentPath = [];
+  stoppedStartedAt = null;
 }
 
 function enterReviewState(durationSeconds) {
@@ -638,6 +643,7 @@ timerBtn.addEventListener("click", () => {
     enterRunningState(startedAt);
   } else {
     const active = readActiveRun();
+    stoppedStartedAt = active ? active.startedAt : null;
     localStorage.removeItem(ACTIVE_RUN_KEY);
     clearInterval(timerInterval);
     timerInterval = null;
@@ -667,6 +673,7 @@ runSaveForm.addEventListener("submit", (e) => {
     durationSeconds: stoppedDurationSeconds,
     distanceMiles: distance,
   };
+  if (stoppedStartedAt) run.startedAt = stoppedStartedAt;
   if (currentPath.length > 1) {
     run.path = currentPath.slice();
   }
@@ -761,7 +768,8 @@ function renderRunList() {
 
     const metaSpan = document.createElement("div");
     metaSpan.className = "entry-meta";
-    metaSpan.textContent = `${formatDate(run.date)} · ${formatPace(run.durationSeconds, run.distanceMiles)}`;
+    const time = timeOnDate(run.startedAt, run.date);
+    metaSpan.textContent = `${formatDate(run.date)}${time ? ` · ${time}` : ""} · ${formatPace(run.durationSeconds, run.distanceMiles)}`;
     left.appendChild(metaSpan);
 
     const actions = document.createElement("div");

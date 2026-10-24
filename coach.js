@@ -260,7 +260,7 @@ function renderChecklistItem(dateStr, item, checkin, now) {
       const weight = parseFloat(input.value);
       if (!Number.isFinite(weight)) return;
       const entries = loadEntries();
-      entries.push({ id: newId(), date: dateStr, weight, unit: "lbs" });
+      entries.push({ id: newId(), date: dateStr, weight, unit: "lbs", at: Date.now() });
       saveEntries(entries);
       render();
       setCheckin(dateStr, "weigh", { status: "done", at: Date.now() });
@@ -450,7 +450,7 @@ function renderPouchTimes() {
   const list = document.getElementById("pouch-times");
   list.innerHTML = "";
   for (const p of pouchTimeline(logs, todayLocalDateString())) {
-    const time = new Date(p.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    const time = clockTime(p.at);
     const row = el("li");
     row.appendChild(el("span", "pouch-time", time));
     row.appendChild(el("span", "pouch-gap", p.gapMin === null ? "first one logged" : `${formatGap(p.gapMin)} after the last`));
@@ -463,6 +463,24 @@ function renderPouchTimes() {
       renderToday();
     });
     row.appendChild(remove);
+    list.appendChild(row);
+  }
+}
+
+/* Today's cravings with their times, oldest first. */
+function renderCravingTimes() {
+  const list = document.getElementById("craving-times");
+  const today = todayLocalDateString();
+  const cravings = loadJSON(HABIT_LOG_KEY, [])
+    .filter((l) => l.type === "craving" && l.date === today)
+    .sort((a, b) => a.at - b.at);
+  list.innerHTML = "";
+  list.hidden = !cravings.length;
+  for (const c of cravings) {
+    const row = el("li");
+    row.appendChild(el("span", "pouch-time", clockTime(c.at)));
+    row.appendChild(el("span", "pouch-gap",
+      `${c.trigger ? capitalize(c.trigger) : "Craving"} · urge ${c.urge}/5 · ${c.resisted ? "resisted" : "used a pouch"}`));
     list.appendChild(row);
   }
 }
@@ -480,6 +498,7 @@ function renderHabits() {
   document.getElementById("doctor-note").hidden = localStorage.getItem(DOCTOR_NOTE_KEY) === "1";
   renderTaperPlan(start, today);
   renderPouchTimes();
+  renderCravingTimes();
 
   if (!start) return;
 
