@@ -1315,6 +1315,7 @@ function updateEntry(id, mutate) {
 }
 
 document.getElementById("food-sheet-cancel").addEventListener("click", closeFoodSheet);
+attachSwipeClose(foodSheet, { close: closeFoodSheet, scroller: document.getElementById("food-sheet-body") });
 document.getElementById("food-log-btn").addEventListener("click", () => openFoodSheet({ mode: "search" }));
 document.getElementById("food-takeout-btn").addEventListener("click", () => openFoodSheet({ mode: "takeout", title: "Takeout estimate" }));
 document.getElementById("food-quick-btn").addEventListener("click", () => openFoodSheet({ mode: "quick", title: "Quick add" }));

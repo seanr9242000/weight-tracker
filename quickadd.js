@@ -42,6 +42,7 @@ fab.addEventListener("click", () => {
 });
 qaScrim.addEventListener("click", closeQuickAdd);
 document.getElementById("qa-close").addEventListener("click", closeQuickAdd);
+attachSwipeClose(qaSheet, { close: closeQuickAdd, scrim: qaScrim });
 
 /* ---- Main view ---- */
 

@@ -1402,6 +1402,33 @@ button[type="submit"]:active,
   margin: 0 auto 12px;
 }
 
+/* Drags on the handle and title move the sheet (attachSwipeClose), never
+   the page; a sheet's chip row still scrolls sideways. */
+.sheet-handle,
+.sheet-title {
+  touch-action: none;
+}
+
+.sheet .chip-row {
+  touch-action: pan-x;
+}
+
+/* The handle is 5px tall; give the finger a bigger target. */
+.sheet-handle {
+  position: relative;
+}
+
+.sheet-handle::before {
+  content: "";
+  position: absolute;
+  inset: -12px -60px;
+}
+
+.sheet,
+.food-sheet-body {
+  overscroll-behavior: contain;
+}
+
 .sheet-title {
   font-size: 20px;
   font-weight: 800;

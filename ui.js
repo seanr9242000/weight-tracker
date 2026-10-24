@@ -144,3 +144,117 @@ function celebrate(message, color) {
   }
   showToast(message);
 }
+
+/* ---- Swipe down to close ---- */
+
+/* True when a downward drag of `dy` px, released at `velocity` px/ms,
+   should close a sheet `height` px tall: past a third of it, or a flick
+   that also travelled at least 24 px (so a twitch doesn't close it). */
+function swipeShouldClose(dy, height, velocity) {
+  return dy > height / 3 || (velocity > 0.5 && dy >= 24);
+}
+
+/* Lets a bottom sheet be dragged down to close. A drag can start on the
+   handle or anything outside `scroller` (the header) at any time, but
+   inside `scroller` only while it's scrolled to the top. Text fields,
+   selects and sliders keep their own drags. The sheet follows the finger
+   down (never up), `scrim` fades with it, and on release the sheet
+   either closes through `close` or springs back. */
+function attachSwipeClose(sheet, { close, scroller = sheet, scrim = null }) {
+  let drag = null;
+  let suppressClicksUntil = 0;
+
+  const clearStyles = () => {
+    sheet.style.transition = "";
+    sheet.style.transform = "";
+    if (scrim) {
+      scrim.style.transition = "";
+      scrim.style.opacity = "";
+    }
+  };
+
+  const settle = (closing) => {
+    sheet.style.transition = "transform 0.2s ease";
+    if (scrim) scrim.style.transition = "opacity 0.2s ease";
+    if (closing) {
+      sheet.style.transform = `translateY(${sheet.offsetHeight + 40}px)`;
+      if (scrim) scrim.style.opacity = "0";
+      setTimeout(() => {
+        close();
+        clearStyles();
+        sheet.style.animation = ""; // the next open plays its slide-up again
+      }, 200);
+    } else {
+      sheet.style.transform = "";
+      if (scrim) scrim.style.opacity = "";
+      setTimeout(clearStyles, 220);
+    }
+  };
+
+  sheet.addEventListener("pointerdown", (e) => {
+    suppressClicksUntil = 0; // a new touch is a new tap, never the drag's
+    if (drag || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (e.target.closest("input, textarea, select")) return;
+    const fromHeader = e.target.closest(".sheet-handle") || !scroller.contains(e.target);
+    if (!fromHeader && scroller.scrollTop > 0) return;
+    drag = { id: e.pointerId, y0: e.clientY, dy: 0, moving: false, lastY: e.clientY, lastT: e.timeStamp, v: 0 };
+  });
+
+  sheet.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dy = e.clientY - drag.y0;
+    if (!drag.moving) {
+      if (dy < -6) {
+        drag = null; // upward: that's a scroll, not a close
+        return;
+      }
+      if (dy < 6) return;
+      drag.moving = true;
+      // Inline transforms lose to a running animation; the open one is done.
+      sheet.style.animation = "none";
+      sheet.style.transition = "none";
+      if (scrim) scrim.style.transition = "none";
+      try {
+        sheet.setPointerCapture(e.pointerId);
+      } catch {
+        // Synthetic or already-ended pointer; the sheet still gets events.
+      }
+    }
+    const dt = e.timeStamp - drag.lastT;
+    if (dt > 0) drag.v = (e.clientY - drag.lastY) / dt;
+    drag.lastY = e.clientY;
+    drag.lastT = e.timeStamp;
+    drag.dy = Math.max(0, dy);
+    sheet.style.transform = `translateY(${drag.dy}px)`;
+    if (scrim) scrim.style.opacity = String(Math.max(0, 1 - drag.dy / sheet.offsetHeight));
+  });
+
+  const end = (e, cancelled) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag;
+    drag = null;
+    if (!d.moving) return;
+    // The release fires a click on whatever the drag started on; eat it.
+    suppressClicksUntil = performance.now() + 100;
+    // A finger that stopped before lifting isn't a flick.
+    const v = e.timeStamp - d.lastT > 100 ? 0 : d.v;
+    settle(!cancelled && swipeShouldClose(d.dy, sheet.offsetHeight, v));
+  };
+  sheet.addEventListener("pointerup", (e) => end(e, false));
+  sheet.addEventListener("pointercancel", (e) => end(e, true));
+
+  sheet.addEventListener("click", (e) => {
+    if (performance.now() < suppressClicksUntil) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+
+  /* iOS hands a downward touch on a scroller at its top to native
+     overscroll and cancels the pointer, unless the touchmove is
+     cancelled. A drag only exists where closing is allowed, so cancel
+     downward moves while one is live; upward ones still scroll. */
+  sheet.addEventListener("touchmove", (e) => {
+    if (drag && e.touches[0] && e.touches[0].clientY > drag.y0) e.preventDefault();
+  }, { passive: false });
+}

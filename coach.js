@@ -400,7 +400,7 @@ function openReasonSheet(dateStr, item, wasMissed) {
     btn.type = "button";
     btn.addEventListener("click", () => {
       setCheckin(dateStr, item.id, { status: "skipped", reason, missed: wasMissed, at: Date.now() });
-      reasonSheet.hidden = true;
+      closeReasonSheet();
       renderToday();
     });
     options.appendChild(btn);
@@ -408,9 +408,12 @@ function openReasonSheet(dateStr, item, wasMissed) {
   reasonSheet.hidden = false;
 }
 
-document.getElementById("reason-cancel").addEventListener("click", () => {
+function closeReasonSheet() {
   reasonSheet.hidden = true;
-});
+}
+
+document.getElementById("reason-cancel").addEventListener("click", closeReasonSheet);
+attachSwipeClose(reasonSheet, { close: closeReasonSheet });
 
 /* ---- Habits tab: Zyn taper ---- */
 
