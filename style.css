@@ -1139,6 +1139,19 @@ button[type="submit"]:active,
   height: 38px;
 }
 
+.weigh-inline input[type="time"] {
+  flex: 0 0 128px;
+}
+
+/* The global button[type="submit"] is full width and outranks .pill-btn,
+   which squeezed the inputs to nothing. Inline forms size it to fit. */
+.weigh-inline button[type="submit"] {
+  width: auto;
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 15px;
+}
+
 .check-item.has-panel {
   flex-wrap: wrap;
 }
@@ -1715,6 +1728,10 @@ button[type="submit"]:active,
 
 .water-buttons .water-undo {
   margin: 0 0 0 auto;
+}
+
+.water-times {
+  margin-top: 10px;
 }
 
 .fuel-head {

@@ -510,6 +510,18 @@ function waterCell(dateStr) {
     buttons.appendChild(undo);
   }
   cell.appendChild(buttons);
+  // Today's water with times, in the same row style as Today's pouches.
+  const entries = waterLog().filter((e) => e.date === dateStr).sort((a, b) => a.at - b.at);
+  if (entries.length) {
+    const list = el("ul", "pouch-times water-times");
+    for (const e of entries) {
+      const row = el("li");
+      row.appendChild(el("span", "pouch-time", timeOnDate(e.at, e.date) || "—"));
+      row.appendChild(el("span", "pouch-gap", `${fmt(e.oz)} oz`));
+      list.appendChild(row);
+    }
+    cell.appendChild(list);
+  }
   return cell;
 }
 
@@ -638,7 +650,8 @@ function renderFoodLog(today, log, days) {
     li.tabIndex = 0;
     const main = el("div", "food-entry-main");
     main.appendChild(el("div", "food-entry-name", `${e.name}${e.servings !== 1 ? ` × ${e.servings}` : ""}`));
-    main.appendChild(el("div", "food-entry-meta", `${titles[e.slot] || "Other"}${e.confidence !== "exact" ? " · estimate" : ""}`));
+    const when = timeOnDate(e.at, e.date);
+    main.appendChild(el("div", "food-entry-meta", `${when ? `${when} · ` : ""}${titles[e.slot] || "Other"}${e.confidence !== "exact" ? " · estimate" : ""}`));
     const t = entryTotal(e);
     const nums = el("div", "food-entry-nums");
     nums.appendChild(el("div", "food-entry-kcal", fmt(t.kcal)));
@@ -1268,6 +1281,7 @@ function openEditEntry(entry) {
   body.innerHTML = "";
   const per = entry.n;
   body.appendChild(el("p", "hint", `Per serving: ${fmt(per.kcal)} kcal · ${fmt(per.protein)} g protein${entry.confidence !== "exact" ? " · estimate" : ""}`));
+  body.appendChild(el("div", "feel-label", "Servings · time eaten"));
   const form = el("form", "weigh-inline");
   const input = el("input");
   input.type = "number";
@@ -1276,14 +1290,23 @@ function openEditEntry(entry) {
   input.min = "0.25";
   input.value = entry.servings;
   input.setAttribute("aria-label", "Servings");
-  const save = el("button", "pill-btn dark", "Save servings");
+  const time = el("input");
+  time.type = "time";
+  time.value = typeof entry.at === "number" ? timeInputValue(entry.at) : "";
+  time.setAttribute("aria-label", "Time eaten");
+  const save = el("button", "pill-btn dark", "Save");
   save.type = "submit";
-  form.append(input, save);
+  form.append(input, time, save);
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const v = parseFloat(input.value);
     if (!Number.isFinite(v) || v <= 0) return;
-    updateEntry(entry.id, (x) => { x.servings = v; });
+    // The time moves within the entry's own day; a blank field keeps it.
+    const at = atOnDate(entry.date, time.value);
+    updateEntry(entry.id, (x) => {
+      x.servings = v;
+      if (at !== null) x.at = at;
+    });
   });
   body.appendChild(form);
   // A single food can be retagged; the tag sticks for future logs too.
