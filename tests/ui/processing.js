@@ -1,6 +1,6 @@
 // "Mostly natural": processing tags, the ultra-processed signal, the
 // shake note, retagging, and whole-food snack swaps.
-await reload({ "coach-started-at": "0" }, "food-panel");
+await reload({ "coach-started-at": "0", "coach-injury": null }, "food-panel");
 const upfRow = () => $$("#food-signals .signal").find((li) => li.textContent.startsWith("Ultra-processed"));
 check("ultra-processed signal listed", !!upfRow());
 eq("starts at 0%", upfRow().querySelector(".fuel-value").textContent, "0% of kcal / 20% max");
@@ -36,7 +36,7 @@ check("note dismissed", $("#shake-note").hidden);
 eq("whey retagged", ls("food-library").find((f) => f.id === "on-whey").processing, "ultra");
 
 // Old installs: seed foods saved before tagging get their tag back-filled.
-await reload({ "coach-started-at": "0", "food-library": [
+await reload({ "coach-started-at": "0", "coach-injury": null, "food-library": [
   { id: "banana", name: "Banana", serving: "1 medium", source: "seed", confidence: "exact",
     n: { kcal: 105, protein: 1.3, carbs: 27, fat: 0.4, fiber: 3.1, sugar: 14.4, addedSugar: 0, sodium: 1, alcohol: 0 } }] });
 eq("back-filled tag", ls("food-library").find((f) => f.id === "banana").processing, "whole");

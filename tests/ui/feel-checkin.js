@@ -1,5 +1,6 @@
 // "How did it go?" after a game or lift, saved with what was eaten in
 // the 4 hours before; Fuel vs feel card on the Food tab.
+await reload({ "coach-started-at": "0", "coach-injury": null });
 const title = item("League game") ? "League game" : item("Lift — 45 min") ? "Lift — 45 min" : null;
 const id = title === "League game" ? "game" : "lift";
 
@@ -7,7 +8,7 @@ if (title) {
   // A snack logged into a slot in the window before the game/lift.
   const slot = item("Afternoon snack") ? "snack-pm" : "breakfast";
   await reload({
-    "coach-started-at": "0",
+    "coach-started-at": "0", "coach-injury": null,
     "food-log": [{ id: "f1", date: today, at: Date.now(), slot, name: "PB-banana toast", servings: 1, confidence: "exact",
       n: { kcal: 377, protein: 12, carbs: 0, fat: 0, fiber: 0, sugar: 0, addedSugar: 0, sodium: 0, alcohol: 0 } }],
   });
@@ -34,7 +35,7 @@ if (title) {
   check("no Rate it once rated", !$(".rate-btn", item(title)));
 
   // Skipping leaves a "Rate it" link; it reopens the card.
-  await reload({ "coach-started-at": "0" });
+  await reload({ "coach-started-at": "0", "coach-injury": null });
   click(".check-box", item(title));
   clickText("Skip", item(title));
   check("Rate it link after skip", !!$(".rate-btn", item(title)));
@@ -47,8 +48,8 @@ if (title) {
 
 // Fuel vs feel card: hidden under 3 ratings, then summarizes.
 const rec = (energy, stomach, ate) => ({ id: Math.random(), date: day(-1), itemId: "game", kind: "game", at: 0, energy, stomach, ate });
-await reload({ "coach-started-at": "0", "coach-feel-log": [rec(4, "right", ["Pretzels + raisins"]), rec(5, "right", ["Pretzels + raisins"])] }, "food-panel");
+await reload({ "coach-started-at": "0", "coach-injury": null, "coach-feel-log": [rec(4, "right", ["Pretzels + raisins"]), rec(5, "right", ["Pretzels + raisins"])] }, "food-panel");
 check("card hidden under 3 ratings", $("#food-feel").hidden);
-await reload({ "coach-started-at": "0", "coach-feel-log": [rec(4, "right", ["Pretzels + raisins"]), rec(5, "right", ["Pretzels + raisins"]), rec(2, "full", ["PB-banana toast"])] }, "food-panel");
+await reload({ "coach-started-at": "0", "coach-injury": null, "coach-feel-log": [rec(4, "right", ["Pretzels + raisins"]), rec(5, "right", ["Pretzels + raisins"]), rec(2, "full", ["PB-banana toast"])] }, "food-panel");
 check("card shown at 3 ratings", !$("#food-feel").hidden);
 eq("rows", $$("#food-feel-list .feel-row").map((r) => r.textContent), ["Pretzels + raisins2× · energy 4.5 · just right 2/2", "PB-banana toast1× · energy 2 · too full 1/1"]);

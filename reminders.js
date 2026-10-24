@@ -46,15 +46,15 @@ async function ensureSession() {
    turned into absolute instants here, in the phone's timezone, so the
    server never has to know it. */
 function pingRows(fromStr) {
-  const overrides = loadJSON(OVERRIDES_KEY, {});
   const checkins = loadJSON(CHECKINS_KEY, {});
   const rows = [];
   for (let i = 0; i < SYNC_DAYS; i++) {
     const day = shiftDate(fromStr, i);
     const quiet = new Date(`${day}T${QUIET_START}`).getTime();
-    for (const item of itemsForDate(day, overrides)) {
+    for (const item of scheduleFor(day)) {
       const due = new Date(`${day}T${item.time}`).getTime();
-      const stop = due < quiet
+      // Optional items (Injury mode walks) ping once; no repeats.
+      const stop = due < quiet && !item.optional
         ? Math.min(due + REPEAT_WINDOW_MINUTES * 60000, quiet)
         : due + LATE_ITEM_WINDOW_MINUTES * 60000;
       const checkin = checkins[`${day}|${item.id}`];

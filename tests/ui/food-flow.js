@@ -1,6 +1,6 @@
 // Click-through of Phase 2a food logging. Run with:
 //   python .claude/skills/phone-preview/preview.py --interact tests/ui/food-flow.js
-await reload({ "coach-started-at": "0" });
+await reload({ "coach-started-at": "0", "coach-injury": null });
 
 // Breakfast "As planned" from Today
 click(".check-box", item("Protein shake"));

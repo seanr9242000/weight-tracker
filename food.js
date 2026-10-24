@@ -197,7 +197,7 @@ function renderMealPanel(dateStr, item) {
 /* Snack ideas with exact portions, picked for the kind of day it is
    (food-data SNACK_PLAN). One tap logs the idea into this slot. */
 function renderSnackIdeas(panel, dateStr, item) {
-  const type = dayType(itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {})));
+  const type = dayType(scheduleFor(dateStr));
   const tip = snackTip(SNACK_PLAN, item.id, type);
   const ideas = snackIdeasFor(foodIdeas(), SNACK_PLAN, item.id, type);
   if (!tip && !ideas.length) return;
@@ -261,7 +261,7 @@ function renderFeelPanel(dateStr, item) {
   note.addEventListener("input", () => { draft.note = note.value; });
   panel.appendChild(note);
 
-  const items = itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {}));
+  const items = scheduleFor(dateStr);
   const ate = [...new Set(foodsBefore(foodLog(), items, dateStr, item.time).map((e) => e.name))];
   panel.appendChild(el("div", "meal-detail", ate.length
     ? `Ate in the 4 hours before: ${ate.join(", ")}`
@@ -471,7 +471,7 @@ function ringDetail(key, dateStr, d, detail) {
 /* ---- Water (Today fuel row) ---- */
 
 function waterGoalFor(dateStr) {
-  const type = dayType(itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {})));
+  const type = dayType(scheduleFor(dateStr));
   return waterGoal(foodSettings(), latestWeight(), type);
 }
 
@@ -611,7 +611,7 @@ function relog(e) {
 
 function slotTitles(dateStr) {
   const titles = { extra: "Other" };
-  for (const item of itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {}))) titles[item.id] = item.title;
+  for (const item of scheduleFor(dateStr)) titles[item.id] = item.title;
   return titles;
 }
 

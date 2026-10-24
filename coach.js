@@ -9,6 +9,7 @@ const HABIT_LOG_KEY = "coach-habit-log";
 const TAPER_START_KEY = "coach-taper-start";
 const DOCTOR_NOTE_KEY = "coach-doctor-note-dismissed";
 const COACH_START_KEY = "coach-started-at";
+const INJURY_KEY = "coach-injury";
 
 /* Items scheduled before the coach was first opened never show as
    missed - otherwise the first launch mid-afternoon would greet you
@@ -17,6 +18,16 @@ if (!localStorage.getItem(COACH_START_KEY)) {
   localStorage.setItem(COACH_START_KEY, String(Date.now()));
 }
 const coachStartedAt = Number(localStorage.getItem(COACH_START_KEY));
+
+/* Sean's ankle (avulsion fracture, 2026-10-21): brace 6 weeks, no
+   basketball, lifting OK, recheck Dec 7. Seeded once; after that the
+   Injury card owns it, so ending or editing it sticks. */
+if (localStorage.getItem(INJURY_KEY) === null) {
+  localStorage.setItem(INJURY_KEY, JSON.stringify({
+    part: "ankle", start: "2026-10-21", until: "2026-12-07",
+    note: "Avulsion fracture. Brace on; no basketball. Lifting OK, PT later.", pt: [],
+  }));
+}
 
 const MISSED_AFTER_MINUTES = 60;
 const COST_PER_CAN = 5.5;
@@ -33,6 +44,16 @@ function loadJSON(key, fallback) {
 
 function saveJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function loadInjury() {
+  return loadJSON(INJURY_KEY, null);
+}
+
+/* A day's checklist: the weekly plan, Injury mode, then that day's edits.
+   Everything that reads the schedule goes through here. */
+function scheduleFor(dateStr) {
+  return itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {}), loadInjury());
 }
 
 function newId() {
@@ -134,7 +155,7 @@ function renderTodaySummary(dateStr, items, checkins, overrides) {
 
   const stats = document.getElementById("today-stats");
   stats.innerHTML = "";
-  const streak = completionStreak(checkins, overrides, dateStr, now);
+  const streak = completionStreak(checkins, overrides, dateStr, now, loadInjury());
   const sleep = sleepHours(checkins, dateStr);
   const chip = (icon, strong, rest) => {
     const c = el("span", "hero-chip");
@@ -154,7 +175,7 @@ function renderChecklistItem(dateStr, item, checkin, now) {
   li.dataset.kind = item.kind || "routine";
   const isDue = timeToMinutes(item.time) <= now;
   const scheduledAt = new Date(`${dateStr}T${item.time}`).getTime();
-  const isMissed = !checkin && timeToMinutes(item.time) + MISSED_AFTER_MINUTES <= now && scheduledAt >= coachStartedAt;
+  const isMissed = !checkin && !item.optional && timeToMinutes(item.time) + MISSED_AFTER_MINUTES <= now && scheduledAt >= coachStartedAt;
   if (checkin) li.classList.add(checkin.status);
   else if (isMissed) li.classList.add("missed");
   else if (isDue) li.classList.add("due");
@@ -277,7 +298,7 @@ function renderToday() {
   syncWeighInFromEntries(dateStr);
   const overrides = loadJSON(OVERRIDES_KEY, {});
   const checkins = loadJSON(CHECKINS_KEY, {});
-  const items = itemsForDate(dateStr, overrides);
+  const items = scheduleFor(dateStr);
   const now = minutesNow();
 
   renderTodaySummary(dateStr, items, checkins, overrides);
@@ -326,7 +347,7 @@ document.getElementById("add-item-form").addEventListener("submit", (e) => {
    Meal items open straight into their log panel. */
 function openChecklistItem(id) {
   activateTab("today-panel");
-  const item = itemsForDate(todayLocalDateString(), loadJSON(OVERRIDES_KEY, {})).find((i) => i.id === id);
+  const item = scheduleFor(todayLocalDateString()).find((i) => i.id === id);
   if (item && hasMealPanel(item)) mealOpenFor = id;
   renderToday();
   const li = document.querySelector(`#checklist li[data-item-id="${CSS.escape(id)}"]`);

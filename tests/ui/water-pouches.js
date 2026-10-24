@@ -7,7 +7,7 @@ const extra = { game: 32, lift: 20, rest: 0 }[kind];
 const waterValue = () => $(".water-cell .fuel-value").textContent;
 
 // 200 lb -> base 100 oz, plus the day's extra.
-await reload({ "coach-started-at": "0", "weight-tracker-entries": [{ id: "w", date: today, weight: 200 }] });
+await reload({ "coach-started-at": "0", "coach-injury": null, "weight-tracker-entries": [{ id: "w", date: today, weight: 200 }] });
 click('.ring-tile[data-ring="water"]'); // water detail lives in its ring's drawer
 eq(`water goal for a ${kind} day`, waterValue(), `0 / ${100 + extra} oz`);
 eq("tumbler buttons", $$(".water-buttons .chip").map((b) => b.textContent), ["+8 oz", "+20 oz", "+40 oz"]);
@@ -34,7 +34,7 @@ eq("goal follows Targets", waterValue(), `40 / ${120 + { game: 32, lift: 24, res
 // Pouches: one last night, two today.
 const at = (date, hm) => new Date(`${date}T${hm}`).getTime();
 await reload({
-  "coach-started-at": "0",
+  "coach-started-at": "0", "coach-injury": null,
   "coach-habit-log": [
     { id: "p1", type: "pouch", date: day(-1), at: at(day(-1), "22:00") },
     { id: "p2", type: "pouch", date: today, at: at(today, "00:30") },
@@ -49,5 +49,5 @@ click(".pouch-remove", rows()[0]);
 eq("removed the chosen pouch", ls("coach-habit-log").map((l) => l.id), ["p1", "p3"]);
 eq("gap recomputed", rows()[0].querySelector(".pouch-gap").textContent, "4h 10m after the last");
 
-await reload({ "coach-started-at": "0" }, "habits-panel");
+await reload({ "coach-started-at": "0", "coach-injury": null }, "habits-panel");
 eq("empty state", $("#pouch-last").textContent, "No pouches logged yet.");

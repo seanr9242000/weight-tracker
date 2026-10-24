@@ -6,7 +6,7 @@ const kind = [1, 2, 4].includes(dow) ? "game" : [3, 5, 6].includes(dow) ? "lift"
 
 // An install from before this change: stored seed foods without `portion`.
 const oldLib = FOOD_LIB_WITHOUT_PORTIONS();
-await reload({ "coach-started-at": "0", "food-library": oldLib });
+await reload({ "coach-started-at": "0", "coach-injury": null, "food-library": oldLib });
 check("portion info merged into old installs", ls("food-library").find((f) => f.id === "banana").portion?.unit === "banana");
 check("stored values survive the merge", ls("food-library").find((f) => f.id === "banana").n.kcal === 111);
 const oikos = ls("food-library").find((f) => f.id === "oikos-pro");

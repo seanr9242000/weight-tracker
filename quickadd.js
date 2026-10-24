@@ -84,7 +84,7 @@ function renderQaSheet() {
    meal on today's schedule, water when behind pace, a due weigh-in. */
 function quickSuggestions() {
   const today = todayLocalDateString();
-  const items = itemsForDate(today, loadJSON(OVERRIDES_KEY, {}));
+  const items = scheduleFor(today);
   const checkins = loadJSON(CHECKINS_KEY, {});
   const now = minutesNow();
   const open = (i) => !checkins[`${today}|${i.id}`];
