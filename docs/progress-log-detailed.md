@@ -171,3 +171,17 @@ Session total: 10 commits (plan, then step 0 built task by task with a review af
 | 14:39 | Fix swipe-to-close on iPhone: a capture handoff no longer cancels the drag, v34 (465a6ca) | 33 min |
 
 Session total so far: step 0 shipped as v31 (main 6b7e2e4, Sean's phone check passed), then step 0.5 built on branch batch1-step05 task by task with a review after each and a final whole-branch review (per-plan commit approval). Step 0.5 shipped as v32 (Sean's phone check passed); step A then planned and built inline on branch batch1-stepA (native execution, one final whole-branch review; per-plan commit approval).
+
+## Session: 2026-10-25 — Step B: tray and meal sections
+
+| Time  | Change                                                  | Elapsed |
+|-------|------------------------------------------------------------|---------|
+| 18:07 | Plan: feedback batch 1 step B (tray / multi-add, meal sections), food before 4:00 AM counts as Snacks (1ce5069) | — |
+| 18:09 | Step B: meal mapping and tray logic in food-core, v35 (0ecb101) | 2 min |
+| 18:11 | Step B: swipe moves sheets with translate, one settle timer, mouse release; several scrollers (e8baa34) | 2 min |
+| 18:15 | Step B1: tray in the food sheet — picks collect, one Log writes the meal group (d1380fa) | 4 min |
+| 18:17 | Step B2: Food log in meal sections with + Add; editor moves entries between meals (1ff9974) | 2 min |
+| 18:19 | Backup leftovers: paused state survives a reopen, one restore at a time, clock-safe delay, photo types, import note (e5246c8) | 2 min |
+| 18:30 | Step B review fixes: Ate at keeps up with the clock, survives the iOS time wheel, saves change-only edits (3c80dd2) | 11 min |
+
+Session total so far: step B planned (Sean answered the plan's open calls), then built inline on branch batch1-stepB (native execution, one final whole-branch review; per-plan commit approval). Not pushed yet.

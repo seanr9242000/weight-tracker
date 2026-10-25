@@ -308,3 +308,28 @@ element under the finger, and moving that capture to the sheet fires a
 the sheet itself losing capture ends a drag now, pinned by a test that
 replays Safari's sequence. Sean confirmed the fix on the test page; it
 shipped as v34 and passed his full step A phone check.
+
+## 2026-10-25 — Step B built: log a whole meal at once, meal sections
+
+Picking a food in the food sheet no longer logs it straight away. It goes
+into a tray docked at the bottom of the sheet, which shows the count,
+calories and protein. Each row has − and + in half servings (never below
+½) and a remove button, plus meal chips and an "Ate at" time that follows
+the clock until Sean changes it. One "Log N items" writes everything as one
+meal group, the toast reads "Logged 3 items · 950 kcal", and Undo removes
+the whole group and puts a checklist item back exactly as it was (a skipped
+lunch stays skipped). Picking the same food twice, from any tab, raises its
+servings instead of adding a row. Closing or swiping the sheet keeps the
+tray, and each Today meal item has its own. The Food tab's log is now four
+sections, Breakfast, Lunch, Dinner and Snacks, each with subtotals and its
+own + Add, and tapping an entry lets Sean move it to another meal. Older
+entries are placed by their checklist item or the time they were eaten,
+and food eaten between midnight and 4 AM counts as a snack (Sean's call).
+The step also cleaned up leftovers from earlier steps. Sheets now move with
+a property that leaves their slide-up animation alone, so the animation no
+longer goes missing after a spring-back. A restore that fails badly keeps
+backup paused even after the app is reopened, so half-written data can't
+overwrite the cloud copy. The final review led to three fixes around "Ate
+at": it catches up when Sean comes back to the app, it stays visible while
+the iPhone's time wheel is open, and it saves edits that iOS reports only
+as a "change". Built on branch batch1-stepB as v35, not pushed yet.
