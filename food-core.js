@@ -349,6 +349,77 @@ function searchFoods(query, { log, library, meals, presets }, limit = 30) {
   ].slice(0, Math.max(0, limit - takeout.length)).concat(takeout);
 }
 
+/* ---- Meals (feedback batch 1, B2) ---- */
+
+const MEALS = ["breakfast", "lunch", "dinner", "snack"];
+const MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snacks" };
+const MEAL_BY_SLOT = {
+  breakfast: "breakfast", lunch: "lunch", dinner: "dinner", "treat-meal": "dinner",
+  "snack-am": "snack", "snack-pm": "snack", "snack-eve": "snack", "pregame-snack": "snack", "post-lift": "snack", postgame: "snack",
+};
+
+/* The meal a time of day (minutes after midnight) most likely is. Each
+   range includes its start: 10:00 is a snack, 11:30 is lunch. Late-night
+   food (before 4:00) is a snack, not breakfast. */
+function mealForTime(minutes) {
+  if (minutes < 240) return "snack";
+  if (minutes < 600) return "breakfast";
+  if (minutes < 690) return "snack";
+  if (minutes < 870) return "lunch";
+  if (minutes < 1020) return "snack";
+  if (minutes < 1230) return "dinner";
+  return "snack";
+}
+
+/* A checklist slot's meal; "extra" and slots that aren't meals (PT items,
+   one-off additions) go by the clock. */
+function mealForSlot(slot, minutes) {
+  return MEAL_BY_SLOT[slot] || mealForTime(minutes);
+}
+
+/* The section an entry belongs in. Entries from before meals existed have
+   no `meal`, so it comes from their slot, then from when they were eaten. */
+function mealForEntry(entry) {
+  if (MEALS.includes(entry.meal)) return entry.meal;
+  if (MEAL_BY_SLOT[entry.slot]) return MEAL_BY_SLOT[entry.slot];
+  if (typeof entry.at !== "number" || !Number.isFinite(entry.at)) return "snack";
+  const d = new Date(entry.at);
+  return mealForTime(d.getHours() * 60 + d.getMinutes());
+}
+
+/* ---- Tray (feedback batch 1, B1): picks waiting to be logged together ---- */
+
+const TRAY_MIN_SERVINGS = 0.5;
+
+/* One key per food however it was picked (search, My foods, Chains, a past
+   entry), so picking it twice raises its servings instead of adding a row. */
+function trayKey(ref, name, n) {
+  if (ref && ref.food) return `food:${ref.food}`;
+  if (ref && ref.meal) return `meal:${ref.meal}${ref.addons && ref.addons.length ? `+${[...ref.addons].sort().join(",")}` : ""}`;
+  if (ref && ref.takeout) return `takeout:${ref.takeout}:${ref.size}`;
+  return `name:${name}|${n.kcal}`;
+}
+
+function trayAdd(items, pick) {
+  if (items.some((i) => i.key === pick.key)) {
+    return items.map((i) => (i.key === pick.key ? { ...i, servings: i.servings + 1 } : i));
+  }
+  return [...items, { ...pick, servings: pick.servings || 1 }];
+}
+
+function trayStep(items, key, delta) {
+  return items.map((i) => (i.key === key ? { ...i, servings: Math.max(TRAY_MIN_SERVINGS, i.servings + delta) } : i));
+}
+
+function trayRemove(items, key) {
+  return items.filter((i) => i.key !== key);
+}
+
+function trayTotals(items) {
+  const t = sumNutrients(items.map(entryTotal));
+  return { count: items.length, kcal: t.kcal, protein: t.protein };
+}
+
 /* A USDA FoodData Central result (as slimmed by the food-search Edge
    Function: nutrients per 100 g) -> a library food. Branded foods use
    their label serving; generic foods (Foundation, SR Legacy, FNDDS)
@@ -477,6 +548,7 @@ if (typeof module !== "undefined") {
     NUTRIENT_KEYS, emptyNutrients, scaleNutrients, sumNutrients, foodNutrients, mealNutrients, takeoutNutrients, upfShare, classifyProcessing,
     entryTotal, dayTotals, weekDates, targetCalories, mifflinStJeor, startingMaintenance,
     defaultSettings, dailyGuide, inDiscovery, signalStatus, plannedMealFor, estimatedShare,
+    MEALS, MEAL_LABELS, mealForTime, mealForSlot, mealForEntry, trayKey, trayAdd, trayStep, trayRemove, trayTotals,
     recentFoods, searchFoods, usdaToFood, WATER_DEFAULTS, WATER_BUTTONS, waterSettings, waterGoal, waterTotal, dayType, snackIdeasFor, snackTip, fmtQty, portionText, foodsBefore, fuelVsFeel, weekAlcohol, weightSlope, proposeMaintenance,
   };
 }
