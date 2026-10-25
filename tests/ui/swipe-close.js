@@ -32,12 +32,40 @@ click("#fab");
 const h = qa().offsetHeight;
 check("+ sheet has height", h > 200, h);
 await swipe($(".sheet-handle", qa()), slow(h * 0.2), 100, null);
-check("follows the finger", /^translateY\(\d+(\.\d+)?px\)$/.test(qa().style.transform), qa().style.transform);
+check("follows the finger", /^0px \d+(\.\d+)?px$/.test(qa().style.translate), qa().style.translate);
 const fade = Number(scrim().style.opacity);
 check("scrim fades with the drag", fade > 0.5 && fade < 1, scrim().style.opacity);
 PE("pointerup", $(".sheet-handle", qa()), 0);
 await wait(300);
-eq("short drag springs back", [qa().hidden, qa().style.transform, scrim().style.opacity], [false, "", ""]);
+eq("short drag springs back", [qa().hidden, qa().style.translate, scrim().style.opacity], [false, "", ""]);
+eq("spring-back keeps the open animation", qa().style.animation, "");
+
+// A closing drag right after a spring-back isn't undone by the first
+// drag's leftover timer (it used to snap the sheet back into view).
+await swipe($(".sheet-handle", qa()), slow(h * 0.2));
+await swipe($(".sheet-handle", qa()), [30, 60, 90, 120, 150, 180], 16);
+await wait(160);
+check("closing sheet stays off-screen", /^0px \d+(\.\d+)?px$/.test(qa().style.translate) && parseFloat(qa().style.translate.split(" ")[1]) > h, qa().style.translate);
+await wait(200);
+eq("then it closes clean", [qa().hidden, qa().style.translate], [true, ""]);
+click("#fab");
+
+// Mouse: a button released outside the window never sends pointerup; a
+// move with no button down ends the drag instead of following the cursor.
+const ME = (type, target, y, buttons) => target.dispatchEvent(new (app().PointerEvent)(type, {
+  bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true, button: 0, buttons, clientX: 120, clientY: y,
+}));
+const mh = $(".sheet-handle", qa());
+const my0 = mh.getBoundingClientRect().top + 3;
+ME("pointerdown", mh, my0, 1);
+for (const dy of [20, 40, 60]) {
+  await wait(100);
+  ME("pointermove", mh, my0 + dy, 1);
+}
+await wait(100);
+ME("pointermove", mh, my0 + h * 0.6, 0);
+await wait(300);
+eq("a hovering mouse doesn't drag", [qa().hidden, qa().style.translate], [false, ""]);
 
 // Past a third closes, through closeQuickAdd.
 await swipe($(".sheet-handle", qa()), slow(h * 0.5));
@@ -46,7 +74,7 @@ eq("long drag closes", [qa().hidden, scrim().hidden, $("#fab").classList.contain
 
 // Reopening looks normal: nothing left over from the drag.
 click("#fab");
-eq("reopens clean", [qa().hidden, qa().style.transform, qa().style.animation, scrim().style.opacity], [false, "", "", ""]);
+eq("reopens clean", [qa().hidden, qa().style.translate, qa().style.animation, scrim().style.opacity], [false, "", "", ""]);
 
 // A quick flick closes even though it's short.
 await swipe($(".sheet-handle", qa()), [30, 60], 16);
@@ -57,12 +85,12 @@ eq("flick closes", qa().hidden, true);
 click("#fab");
 await swipe($(".sheet-title", qa()), [-20, -60, -100]);
 await wait(300);
-eq("upward drag ignored", [qa().hidden, qa().style.transform], [false, ""]);
+eq("upward drag ignored", [qa().hidden, qa().style.translate], [false, ""]);
 
 // iOS cancelling the pointer mid-drag springs back instead of sticking.
 await swipe($(".sheet-handle", qa()), slow(h * 0.5), 100, "pointercancel");
 await wait(300);
-eq("pointercancel springs back", [qa().hidden, qa().style.transform, scrim().style.opacity], [false, "", ""]);
+eq("pointercancel springs back", [qa().hidden, qa().style.translate, scrim().style.opacity], [false, "", ""]);
 
 // A drag that starts on a button closes the sheet without pressing it
 // (the release fires a click right after pointerup).
@@ -121,7 +149,7 @@ eq("craving chips scroll", ta($("#trigger-chips")), "auto");
 app().openQuickAdd("craving");
 await swipe($("#urge-input"), slow(h * 0.5));
 await wait(300);
-eq("slider drag leaves the sheet", [qa().hidden, qa().style.transform], [false, ""]);
+eq("slider drag leaves the sheet", [qa().hidden, qa().style.translate], [false, ""]);
 app().closeQuickAdd();
 
 // Food sheet: closes from its title.
@@ -158,7 +186,7 @@ body.scrollTop = 40;
 check("body scrolled", body.scrollTop > 0, body.scrollTop);
 await swipe($(".pick-row", body), slow(fs.offsetHeight * 0.5));
 await wait(300);
-eq("scrolled body doesn't drag", [fs.hidden, fs.style.transform, (ls("food-log") || []).length], [false, "", 0]);
+eq("scrolled body doesn't drag", [fs.hidden, fs.style.translate, (ls("food-log") || []).length], [false, "", 0]);
 body.scrollTop = 0;
 await swipe($(".pick-row", body), slow(fs.offsetHeight * 0.5));
 await wait(300);

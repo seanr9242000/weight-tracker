@@ -155,56 +155,68 @@ function swipeShouldClose(dy, height, velocity) {
 }
 
 /* Lets a bottom sheet be dragged down to close. A drag can start on the
-   handle or anything outside `scroller` (the header) at any time, but
-   inside `scroller` only while it's scrolled to the top. Text fields,
-   selects and sliders keep their own drags. The sheet follows the finger
-   down (never up), `scrim` fades with it, and on release the sheet
-   either closes through `close` or springs back. */
+   handle or anything outside the scrollers (the header) at any time, but
+   inside a scroller only while that one is scrolled to the top. Text
+   fields, selects and sliders keep their own drags. The sheet follows the
+   finger down (never up) through the `translate` property, which leaves
+   the open animation alone; `scrim` fades with it, and on release the
+   sheet either closes through `close` or springs back. */
 function attachSwipeClose(sheet, { close, scroller = sheet, scrim = null }) {
+  const scrollers = [].concat(scroller);
   let drag = null;
   let suppressClicksUntil = 0;
+  let settleTimer = null;
+  let closing = false; // released past the line; the close is under way
 
   const clearStyles = () => {
     sheet.style.transition = "";
-    sheet.style.transform = "";
+    sheet.style.translate = "";
     if (scrim) {
       scrim.style.transition = "";
       scrim.style.opacity = "";
     }
   };
 
-  const settle = (closing) => {
-    sheet.style.transition = "transform 0.2s ease";
+  /* One timer at a time: a spring-back's cleanup must not land in the
+     middle of a later close and snap the sheet back into view. */
+  const settle = (toClose) => {
+    clearTimeout(settleTimer);
+    sheet.style.transition = "translate 0.2s ease";
     if (scrim) scrim.style.transition = "opacity 0.2s ease";
-    if (closing) {
-      sheet.style.transform = `translateY(${sheet.offsetHeight + 40}px)`;
+    if (toClose) {
+      closing = true;
+      sheet.style.translate = `0 ${sheet.offsetHeight + 40}px`;
       if (scrim) scrim.style.opacity = "0";
-      setTimeout(() => {
+      settleTimer = setTimeout(() => {
+        closing = false;
         close();
         clearStyles();
-        sheet.style.animation = ""; // the next open plays its slide-up again
       }, 200);
     } else {
-      sheet.style.transform = "";
+      sheet.style.translate = "";
       if (scrim) scrim.style.opacity = "";
-      setTimeout(clearStyles, 220);
+      settleTimer = setTimeout(clearStyles, 220);
     }
   };
 
   sheet.addEventListener("pointerdown", (e) => {
     suppressClicksUntil = 0; // a new touch is a new tap, never the drag's
+    if (closing) return;
     // A second finger mid-drag is ignored, but a drag that never moved is
     // replaced: its pointerup may never have reached the sheet, and keeping
     // it would lock swiping until a reload.
     if ((drag && drag.moving && e.pointerId !== drag.id) || (e.pointerType === "mouse" && e.button !== 0)) return;
     if (e.target.closest("input, textarea, select")) return;
-    const fromHeader = e.target.closest(".sheet-handle") || !scroller.contains(e.target);
-    if (!fromHeader && scroller.scrollTop > 0) return;
+    const inScroller = e.target.closest(".sheet-handle") ? null : scrollers.find((s) => s.contains(e.target));
+    if (inScroller && inScroller.scrollTop > 0) return;
     drag = { id: e.pointerId, y0: e.clientY, dy: 0, moving: false, lastY: e.clientY, lastT: e.timeStamp, v: 0 };
   });
 
   sheet.addEventListener("pointermove", (e) => {
     if (!drag || e.pointerId !== drag.id) return;
+    // A mouse released outside the window never sends pointerup here; a
+    // move with no button down means the drag is already over.
+    if (e.pointerType === "mouse" && e.buttons === 0) return end(e, false);
     const dy = e.clientY - drag.y0;
     if (!drag.moving) {
       if (dy < -6) {
@@ -213,8 +225,7 @@ function attachSwipeClose(sheet, { close, scroller = sheet, scrim = null }) {
       }
       if (dy < 6) return;
       drag.moving = true;
-      // Inline transforms lose to a running animation; the open one is done.
-      sheet.style.animation = "none";
+      clearTimeout(settleTimer); // a spring-back still running is taken over
       sheet.style.transition = "none";
       if (scrim) scrim.style.transition = "none";
       try {
@@ -228,7 +239,7 @@ function attachSwipeClose(sheet, { close, scroller = sheet, scrim = null }) {
     drag.lastY = e.clientY;
     drag.lastT = e.timeStamp;
     drag.dy = Math.max(0, dy);
-    sheet.style.transform = `translateY(${drag.dy}px)`;
+    sheet.style.translate = `0 ${drag.dy}px`;
     if (scrim) scrim.style.opacity = String(Math.max(0, 1 - drag.dy / sheet.offsetHeight));
   });
 

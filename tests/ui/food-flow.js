@@ -23,9 +23,12 @@ if (item("Lunch — meal prep")) {
 }
 
 // "Something else" -> Chains
-const snack = item("Pre-game snack") ? ["Pre-game snack", "pregame-snack"] : ["Recovery snack (not chocolate milk)", "post-lift"];
+// Whichever snack today's schedule has (a Sunday has no game or lift).
+const snack = [["Pre-game snack", "pregame-snack"], ["Recovery snack (not chocolate milk)", "post-lift"], ["Afternoon snack", "snack-pm"],
+  ["Mid-morning snack", "snack-am"], ["Evening snack", "snack-eve"]].find(([title]) => item(title));
 click(".check-box", item(snack[0]));
-clickText("Something else", item(snack[0]));
+// A snack with a planned meal says "Something else"; one without, "Log food".
+$(".meal-actions .pill-btn:last-child", item(snack[0])).click();
 check("sheet open", !$("#food-sheet").hidden);
 clickText("Chains", $("#food-sheet-tabs"));
 click("#food-sheet-body .pick-row");
