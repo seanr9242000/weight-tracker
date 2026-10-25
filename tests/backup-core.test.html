@@ -72,6 +72,7 @@ run(() => {
   eq("first backup 30 s after a change", backupDelay(100000, 0), 30000);
   eq("at most once a minute", backupDelay(100000, 80000), 40000);
   eq("never sooner than 30 s", backupDelay(100000, 99000), 59000);
+  eq("a clock set back can't stretch the wait", backupDelay(100000, 500000), 60000);
   eq("ago", [0, 59e3, 120e3, 3 * 3600e3, 26 * 3600e3, 3 * 86400e3].map((ms) => formatAgo(1e9 - ms, 1e9)),
     ["just now", "just now", "2 min ago", "3 h ago", "yesterday", "3 days ago"]);
 
@@ -91,6 +92,12 @@ run(() => {
   ferr = null;
   try { parseBackupFile('{"app":"other","keys":{}}'); } catch (e) { ferr = e.message; }
   eq("file: someone else's JSON", ferr, "That file isn't a Weight & Save backup.");
+  const mixed = JSON.stringify({ app: "weight-and-save", format: 1, savedAt: 1, keys: {}, photos: [
+    { id: "a", date: "2026-10-20", dataUrl: "data:image/svg+xml;base64,PHN2Zz4=" },
+    { id: "b", date: "2026-10-20", dataUrl: "data:image/jpeg;base64,/9j/" },
+    { id: "c", date: "2026-10-20", dataUrl: "data:image/png;base64,iVBO" },
+  ] });
+  eq("only photo types the app makes", parseBackupFile(mixed).photos.map((p) => p.id), ["b", "c"]);
   eq("file name", backupFileName("2026-10-21"), "weight-and-save-backup-2026-10-21.json");
 });
 </script></body></html>

@@ -13,7 +13,13 @@ const RESTORE_DISMISSED_KEY = "backup-restore-dismissed";
 const BACKUP_DIRTY_KEY = "backup-dirty";
 /* Set after an import on a phone with no code, since the reload wipes any message. */
 const IMPORT_HINT_KEY = "backup-import-hint";
-const ROLLBACK_FAILED = "Restore failed and this phone's data may be incomplete. Close and reopen the app before logging anything.";
+/* Set when a restore failed and so did its rollback. Kept across launches,
+   so a reopened app can't upload the half-written data over the cloud copy. */
+const RESTORE_INCOMPLETE_KEY = "backup-restore-incomplete";
+const RESTORE_INCOMPLETE = "A restore didn't finish, so backup is paused. Enter your code below or import a backup file before logging anything.";
+/* A message from an import that must outlive the reload that follows it. */
+const IMPORT_NOTE_KEY = "backup-import-note";
+const ROLLBACK_FAILED = "Restore failed and this phone's data may be incomplete. Backup is paused until a restore finishes: enter your code again, or import a backup file.";
 const BACKUP_RETRY_MS = 5 * 60000;
 
 /* The only two server calls. On window so UI tests can stub them. */
@@ -37,7 +43,7 @@ let backupTimer = null;
 let backupDirty = false;
 let backupInFlight = false;
 let backupError = null;
-let restoring = false; // a restore is replacing everything; don't back up the half-written state
+let restoring = localStorage.getItem(RESTORE_INCOMPLETE_KEY) === "1"; // replacing everything; don't back up the half-written state
 
 function backupCode() {
   return localStorage.getItem(BACKUP_CODE_KEY);
@@ -142,6 +148,7 @@ function renderBackupCard() {
       : last
         ? `Last backed up ${formatAgo(last, Date.now())}.`
         : "Backing up…";
+  if (localStorage.getItem(RESTORE_INCOMPLETE_KEY) === "1") document.getElementById("backup-status").textContent = RESTORE_INCOMPLETE;
   document.getElementById("backup-code-row").hidden = !on;
   document.getElementById("backup-code-note").hidden = !on;
   document.getElementById("backup-code").textContent = backupCode() || "";
@@ -152,29 +159,46 @@ function renderBackupCard() {
 
 /* applyBackup can fail partway (it removes keys, then writes). Snapshot
    first and write it back on failure. Returns null on success, else the
-   message to show; when the rollback fails too, restoring stays true so
-   nothing gets backed up from the half-written state. */
+   message to show; when the rollback fails too, restoring stays true and
+   the paused state is stored, so nothing gets backed up from the
+   half-written state, even after the app is reopened. */
 function applyWithRollback(backup) {
   const snapshot = collectBackup(localStorage, Date.now());
   restoring = true;
   try {
     applyBackup(localStorage, backup);
+    nativeRemoveItem.call(localStorage, RESTORE_INCOMPLETE_KEY);
     return null;
   } catch (err) {
     try {
       applyBackup(localStorage, snapshot);
     } catch {
+      nativeSetItem.call(localStorage, RESTORE_INCOMPLETE_KEY, "1");
       return ROLLBACK_FAILED;
     }
-    restoring = false;
+    restoring = localStorage.getItem(RESTORE_INCOMPLETE_KEY) === "1";
     return err.message || String(err);
+  }
+}
+
+let restoreBusy = false;
+
+/* One restore at a time: a second tap while the first is still looking
+   up the code would ask to replace everything twice. */
+async function restoreFromCode(input, statusEl) {
+  if (restoreBusy) return;
+  restoreBusy = true;
+  try {
+    await lookUpAndRestore(input, statusEl);
+  } finally {
+    restoreBusy = false;
   }
 }
 
 /* Fetches the backup for a typed code and, once confirmed, replaces
    this phone's data with it. Keeps the code (and backup on) so backups
    continue under it, then reloads into the restored data. */
-async function restoreFromCode(input, statusEl) {
+async function lookUpAndRestore(input, statusEl) {
   const code = normalizeCode(input);
   if (!code) {
     statusEl.textContent = "That doesn't look like a restore code. It starts with WS- and has 12 letters and numbers.";
@@ -317,7 +341,8 @@ async function importBackup(file, statusEl) {
       failed++;
     }
   }
-  if (failed) statusEl.textContent = `Logs and settings restored, but ${failed} photo${failed === 1 ? "" : "s"} couldn't be saved.`;
+  // The reload wipes the status line, so the note waits in storage.
+  if (failed) nativeSetItem.call(localStorage, IMPORT_NOTE_KEY, `Logs and settings restored, but ${failed} photo${failed === 1 ? "" : "s"} couldn't be saved.`);
   reloadApp();
 }
 
@@ -368,6 +393,11 @@ document.addEventListener("visibilitychange", () => {
 setInterval(renderBackupCard, 60000);
 
 renderBackupCard();
+const importNote = localStorage.getItem(IMPORT_NOTE_KEY);
+if (importNote) {
+  nativeRemoveItem.call(localStorage, IMPORT_NOTE_KEY);
+  document.getElementById("backup-restore-status").textContent = importNote;
+}
 // Changes from the last session may not have gone up before it closed.
 // Only a pending change uploads: just opening a copy must not overwrite the cloud one.
 if (localStorage.getItem(BACKUP_DIRTY_KEY) === "1") noteBackupChange();

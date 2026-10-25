@@ -87,9 +87,10 @@ function normalizeCode(input) {
   return `WS-${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8)}`;
 }
 
-/* 30 s after a change, but no sooner than a minute after the last backup. */
+/* 30 s after a change, but no sooner than a minute after the last backup.
+   A last-backup time in the future (the clock was set back) counts as now. */
 function backupDelay(now, lastBackupAt) {
-  return Math.max(30000, (lastBackupAt || 0) + 60000 - now);
+  return Math.max(30000, Math.min(lastBackupAt || 0, now) + 60000 - now);
 }
 
 function formatAgo(then, now) {
@@ -102,8 +103,9 @@ function formatAgo(then, now) {
   return d === 1 ? "yesterday" : `${d} days ago`;
 }
 
-/* A backup file is a backup plus progress photos as data URLs. Photos
-   that aren't images are dropped rather than written to IndexedDB. */
+/* A backup file is a backup plus progress photos as data URLs. Only the
+   photo types the app makes (JPEG; PNG and WebP to be safe) are kept, so
+   nothing else reaches IndexedDB. */
 function parseBackupFile(text) {
   let data;
   try {
@@ -113,7 +115,7 @@ function parseBackupFile(text) {
   }
   if (!validBackup(data)) throw new Error(NOT_A_BACKUP_FILE);
   const photos = Array.isArray(data.photos)
-    ? data.photos.filter((p) => p && typeof p.id === "string" && typeof p.date === "string" && typeof p.dataUrl === "string" && p.dataUrl.startsWith("data:image/"))
+    ? data.photos.filter((p) => p && typeof p.id === "string" && typeof p.date === "string" && typeof p.dataUrl === "string" && /^data:image\/(jpeg|png|webp);/.test(p.dataUrl))
     : [];
   return { backup: { app: data.app, format: data.format, savedAt: data.savedAt, keys: data.keys }, photos };
 }

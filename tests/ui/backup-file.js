@@ -96,3 +96,8 @@ eq("full replace: photo added", (await done(app().getAllPhotos())).map((p) => p.
 eq("full replace: no code, so a hint is left for after the reload", app().localStorage.getItem("backup-import-hint"), "1");
 await reload({ "backup-import-hint": "1" });
 eq("hint shown while backup is off", $("#backup-status").textContent, "Imported. Turn backup on, or enter your restore code below so backups continue under it.");
+
+// A partial-photo message written before the reload shows after it, once.
+await reload({ "backup-import-note": "Logs and settings restored, but 1 photo couldn't be saved." });
+eq("import note shown after the reload", $("#backup-restore-status").textContent, "Logs and settings restored, but 1 photo couldn't be saved.");
+eq("…and only once", app().localStorage.getItem("backup-import-note"), null);

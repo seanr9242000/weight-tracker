@@ -90,9 +90,34 @@ stub(true);
 app().applyBackup = () => { throw new Error("storage gone"); };
 fill("#backup-restore-input", code);
 await submit("#backup-restore-form");
-eq("double failure explained", $("#backup-restore-status").textContent, "Restore failed and this phone's data may be incomplete. Close and reopen the app before logging anything.");
+eq("double failure explained", $("#backup-restore-status").textContent, "Restore failed and this phone's data may be incomplete. Backup is paused until a restore finishes: enter your code again, or import a backup file.");
 eq("restoring stays on", app().eval("restoring"), true);
 app().applyBackup = realApply;
+
+// The paused state survives closing the app: no upload from the half-written data.
+let saves = 0;
+await reload({ "weight-tracker-entries": mine, "backup-code": code, "backup-on": "1", "backup-dirty": "1", "backup-restore-incomplete": "1" });
+stub(true);
+app().backupRemote.save = async () => { saves++; };
+app().localStorage.setItem("food-log", "[]");
+await wait(50);
+eq("reopened: still paused", [app().eval("restoring"), app().eval("backupTimer"), saves], [true, null, 0]);
+eq("reopened: says why", $("#backup-status").textContent, "A restore didn't finish, so backup is paused. Enter your code below or import a backup file before logging anything.");
+fill("#backup-restore-input", code);
+await submit("#backup-restore-form");
+eq("a finished restore clears it", app().localStorage.getItem("backup-restore-incomplete"), null);
+
+// A second tap while the first restore is still looking up doesn't ask twice.
+await reload({ "weight-tracker-entries": mine });
+stub(false);
+let confirms = 0;
+app().confirm = () => { confirms++; return false; };
+app().backupRemote.load = (c) => new Promise((r) => setTimeout(() => r(c === code ? backup : null), 100));
+fill("#backup-restore-input", code);
+$("#backup-restore-form").requestSubmit();
+$("#backup-restore-form").requestSubmit();
+await wait(250);
+eq("double tap: one confirm", confirms, 1);
 
 // Restoring over a different code warns that the code is replaced.
 const oldCode = "WS-AAAA-BBBB-CCCC";
