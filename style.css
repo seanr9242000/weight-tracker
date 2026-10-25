@@ -1862,6 +1862,33 @@ button[type="submit"]:active,
   font-variant-numeric: tabular-nums;
 }
 
+/* Food log meal sections (B2) */
+.meal-section + .meal-section {
+  margin-top: 14px;
+}
+
+.meal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.meal-title {
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.meal-sub {
+  font-size: 13px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.meal-add {
+  margin-left: auto;
+}
+
 .toggle-row {
   display: flex;
   align-items: center;

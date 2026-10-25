@@ -19,7 +19,7 @@ await reload({
 // Food log
 const metas = () => $$("#food-log-list .food-entry-main .food-entry-meta").map((m) => m.textContent);
 const names = () => $$("#food-log-list .food-entry-name").map((m) => m.textContent);
-eq("food times", metas(), ["8:42 AM · Other", "12:30 PM · Other · estimate"]);
+eq("food times", metas(), ["8:42 AM", "12:30 PM · estimate"]);
 
 // Edit the time: same date, new time, and the log re-sorts.
 const f1 = () => ls("food-log").find((e) => e.id === "f1");
@@ -43,6 +43,13 @@ fill(timeField(), "");
 fill("#food-sheet-body input", "2");
 $("#food-sheet-body form").requestSubmit();
 eq("blank time keeps it", [f1().at, f1().servings], [at(today, "23:59"), 2]);
+
+// Midnight stays on the same day (and moves an old "Other" entry to Snacks by its time).
+click($$(".food-entry")[1]);
+fill(timeField(), "00:00");
+$("#food-sheet-body form").requestSubmit();
+eq("00:00 keeps the date", [f1().at, f1().date], [at(today, "00:00"), today]);
+eq("00:00 lands in Snacks", $('#food-log-list .meal-section[data-meal="snack"] .food-entry-name').textContent, "Eggs × 2");
 
 // Water drawer: today's water with times, oldest first.
 tab("today-panel");

@@ -645,28 +645,53 @@ function slotTitles(dateStr) {
   return titles;
 }
 
+/* Four sections in meal order (spec B2). Each shows its subtotal and a
+   + Add that opens the sheet on that meal; empty ones show just the header. */
 function renderFoodLog(today, log, days) {
   const list = document.getElementById("food-log-list");
   list.innerHTML = "";
   const entries = log.filter((e) => e.date === today).sort((a, b) => a.at - b.at);
   const titles = slotTitles(today);
-  for (const e of entries) {
-    const li = el("li", "food-entry");
-    li.tabIndex = 0;
-    const main = el("div", "food-entry-main");
-    main.appendChild(el("div", "food-entry-name", `${e.name}${e.servings !== 1 ? ` × ${e.servings}` : ""}`));
-    const when = timeOnDate(e.at, e.date);
-    main.appendChild(el("div", "food-entry-meta", `${when ? `${when} · ` : ""}${titles[e.slot] || "Other"}${e.confidence !== "exact" ? " · estimate" : ""}`));
-    const t = entryTotal(e);
-    const nums = el("div", "food-entry-nums");
-    nums.appendChild(el("div", "food-entry-kcal", fmt(t.kcal)));
-    nums.appendChild(el("div", "food-entry-meta", `${fmt(t.protein)} g P`));
-    li.append(main, nums);
-    li.addEventListener("click", () => openEditEntry(e));
-    list.appendChild(li);
+  for (const meal of MEALS) {
+    const mine = entries.filter((e) => mealForEntry(e) === meal);
+    const section = el("section", "meal-section");
+    section.dataset.meal = meal;
+    const head = el("div", "meal-head");
+    head.appendChild(el("span", "meal-title", MEAL_LABELS[meal]));
+    if (mine.length) {
+      const t = sumNutrients(mine.map(entryTotal));
+      head.appendChild(el("span", "meal-sub", `${fmt(t.kcal)} kcal · ${fmt(t.protein)} g P`));
+    }
+    const add = el("button", "chip small meal-add", "+ Add");
+    add.type = "button";
+    add.addEventListener("click", () => openFoodSheet({ meal, title: `Add to ${MEAL_LABELS[meal].toLowerCase()}` }));
+    head.appendChild(add);
+    section.appendChild(head);
+    if (mine.length) {
+      const ul = el("ul", "food-log");
+      for (const e of mine) ul.appendChild(foodEntryRow(e, titles));
+      section.appendChild(ul);
+    }
+    list.appendChild(section);
   }
-  document.getElementById("food-log-empty").hidden = entries.length > 0;
   document.getElementById("food-complete").checked = Boolean(days[today] && days[today].complete);
+}
+
+function foodEntryRow(e, titles) {
+  const li = el("li", "food-entry");
+  li.tabIndex = 0;
+  const main = el("div", "food-entry-main");
+  main.appendChild(el("div", "food-entry-name", `${e.name}${e.servings !== 1 ? ` × ${e.servings}` : ""}`));
+  // The section says which meal; a checklist slot's title still shows.
+  const meta = [timeOnDate(e.at, e.date), e.slot !== "extra" && titles[e.slot], e.confidence !== "exact" && "estimate"];
+  main.appendChild(el("div", "food-entry-meta", meta.filter(Boolean).join(" · ")));
+  const t = entryTotal(e);
+  const nums = el("div", "food-entry-nums");
+  nums.appendChild(el("div", "food-entry-kcal", fmt(t.kcal)));
+  nums.appendChild(el("div", "food-entry-meta", `${fmt(t.protein)} g P`));
+  li.append(main, nums);
+  li.addEventListener("click", () => openEditEntry(e));
+  return li;
 }
 
 const SIGNALS = [
@@ -1421,18 +1446,36 @@ function openEditEntry(entry) {
   const save = el("button", "pill-btn dark", "Save");
   save.type = "submit";
   form.append(input, time, save);
+  /* Saves what's typed above plus `extra`. The chips below save at once,
+     so they carry a typed servings or time edit instead of dropping it. */
+  const saveEdits = (extra) => {
+    const v = parseFloat(input.value);
+    // The time moves within the entry's own day; a blank field keeps it.
+    const at = atOnDate(entry.date, time.value);
+    updateEntry(entry.id, (x) => {
+      if (Number.isFinite(v) && v > 0) x.servings = v;
+      if (at !== null) x.at = at;
+      if (extra) extra(x);
+    });
+  };
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const v = parseFloat(input.value);
     if (!Number.isFinite(v) || v <= 0) return;
-    // The time moves within the entry's own day; a blank field keeps it.
-    const at = atOnDate(entry.date, time.value);
-    updateEntry(entry.id, (x) => {
-      x.servings = v;
-      if (at !== null) x.at = at;
-    });
+    saveEdits();
   });
   body.appendChild(form);
+  body.appendChild(el("div", "feel-label", "Meal"));
+  const meals = el("div", "chip-row meal-chips");
+  const currentMeal = mealForEntry(entry);
+  for (const meal of MEALS) {
+    const chip = el("button", `chip small${meal === currentMeal ? " active" : ""}`, MEAL_LABELS[meal]);
+    chip.type = "button";
+    chip.dataset.meal = meal;
+    chip.addEventListener("click", () => saveEdits((x) => { x.meal = meal; }));
+    meals.appendChild(chip);
+  }
+  body.appendChild(meals);
   // A single food can be retagged; the tag sticks for future logs too.
   const foodId = entry.ref && entry.ref.food;
   if (foodId || !entry.ref) {
@@ -1440,7 +1483,7 @@ function openEditEntry(entry) {
     body.appendChild(el("div", "feel-label", "Processing"));
     body.appendChild(processingChips(current, (tag) => {
       if (foodId) setFoodProcessing(foodId, tag);
-      updateEntry(entry.id, (x) => { x.n.upf = tag === "ultra" ? x.n.kcal : 0; });
+      saveEdits((x) => { x.n.upf = tag === "ultra" ? x.n.kcal : 0; });
     }));
   } else if (entry.n.upf > 0) {
     body.appendChild(el("p", "hint", `${fmt(entry.n.upf)} of ${fmt(entry.n.kcal)} kcal per serving are from ultra-processed ingredients.`));
