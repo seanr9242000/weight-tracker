@@ -98,12 +98,13 @@ mergeSeed(FOOD_MEALS_KEY, FOOD_SEED_MEALS);
 mergeSeed(FOOD_IDEAS_KEY, SNACK_IDEAS);
 foodSettings();
 
-/* Every log entry goes through here. Logging into a checklist slot
-   (e.g. "lunch") also checks that item off, which stops its pings. */
-function logFood({ slot = "extra", name, servings = 1, n, confidence, ref }) {
+/* Every single-tap log goes through here (the tray writes its own group,
+   logTray). Logging into a checklist slot (e.g. "lunch") also checks that
+   item off, which stops its pings. */
+function logFood({ slot = "extra", name, servings = 1, n, confidence, ref, meal }) {
   const date = todayLocalDateString();
   const log = foodLog();
-  log.push({ id: newId(), date, at: Date.now(), slot, name, servings, n, confidence, ref });
+  log.push({ id: newId(), date, at: Date.now(), slot, name, servings, n, confidence, ref, meal: meal || mealForSlot(slot, minutesNow()) });
   saveJSON(FOOD_LOG_KEY, log);
   if (slot !== "extra") setCheckin(date, slot, { status: "done", at: Date.now() });
   refreshFood();
@@ -982,15 +983,25 @@ document.getElementById("food-complete").addEventListener("change", (e) => {
 
 const foodSheet = document.getElementById("food-sheet");
 let sheetSlot = "extra";
+/* One tray per slot, in memory: closing the sheet (button or swipe) keeps
+   it, so reopening the same slot shows the same picks. sheetTray is the
+   open picker's tray, and null while the sheet edits an entry. */
+const trays = {};
+let sheetTray = null;
 
 const SHEET_MODES = [
   ["search", "Search"], ["quick", "Quick add"], ["takeout", "Takeout"], ["chains", "Chains"], ["mine", "My foods"],
 ];
 
-function openFoodSheet({ slot = "extra", title = "Log food", mode = "search" } = {}) {
+function openFoodSheet({ slot = "extra", title = "Log food", mode = "search", meal } = {}) {
   sheetSlot = slot;
+  sheetTray = trays[slot] || (trays[slot] = { items: [], meal: null, at: null });
+  // A section's + Add names its meal; an empty tray takes the default.
+  if (meal) sheetTray.meal = meal;
+  else if (!sheetTray.items.length) sheetTray.meal = mealForSlot(slot, minutesNow());
   document.getElementById("food-sheet-title").textContent = title;
   renderSheet(mode);
+  renderTray();
   foodSheet.hidden = false;
   fitSheetToKeyboard();
 }
@@ -1024,13 +1035,6 @@ function closeMealPanel() {
   if (typeof mealOpenFor !== "undefined") mealOpenFor = null;
 }
 
-function logFromSheet(fn) {
-  fn();
-  closeFoodSheet();
-  closeMealPanel();
-  refreshFood();
-}
-
 function renderSheet(mode) {
   const tabs = document.getElementById("food-sheet-tabs");
   tabs.innerHTML = "";
@@ -1057,6 +1061,124 @@ function pickRow(name, meta, onPick) {
   row.addEventListener("click", onPick);
   return row;
 }
+
+/* ---- Tray (spec B1): picks collect here and log together ---- */
+
+const foodPick = (food) => ({ key: trayKey({ food: food.id }), name: food.name, n: foodNutrients(food), confidence: food.confidence, ref: { food: food.id } });
+
+function mealPick(meal) {
+  const { n, confidence } = mealNutrients(meal, foodLibrary(), []);
+  const ref = { meal: meal.id, addons: [] };
+  return { key: trayKey(ref), name: meal.name, n, confidence, ref };
+}
+
+/* A past entry comes back with its own servings and numbers. */
+const entryPick = (e) => ({ key: trayKey(e.ref, e.name, e.n), name: e.name, servings: e.servings, n: { ...e.n }, confidence: e.confidence, ref: e.ref });
+
+function takeoutPick(preset, size, desc) {
+  const ref = { takeout: preset.id, size };
+  return { key: trayKey(ref), name: `${preset.name} (${desc})`, n: takeoutNutrients(preset, size), confidence: "estimate", ref };
+}
+
+function addToTray(pick) {
+  sheetTray.items = trayAdd(sheetTray.items, pick);
+  renderTray();
+  haptic();
+}
+
+function trayButton(className, text, label, onClick) {
+  const btn = el("button", className, text);
+  btn.type = "button";
+  btn.setAttribute("aria-label", label);
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+function renderTray() {
+  document.getElementById("food-tray").hidden = !sheetTray;
+  const list = document.getElementById("food-tray-items");
+  list.innerHTML = ""; // no stale rows, even hidden ones, once a tray is gone
+  if (!sheetTray) return;
+  const { items } = sheetTray;
+  for (const chip of document.getElementById("food-tray-meals").children) {
+    chip.classList.toggle("active", chip.dataset.meal === sheetTray.meal);
+  }
+  const atInput = document.getElementById("food-tray-at");
+  // Follows the clock until Sean edits it.
+  if (document.activeElement !== atInput) atInput.value = sheetTray.at || timeInputValue(Date.now());
+  const empty = !items.length;
+  document.getElementById("food-tray-hint").hidden = !empty;
+  for (const id of ["food-tray-summary", "food-tray-details", "food-tray-log"]) document.getElementById(id).hidden = empty;
+  if (empty) return;
+  const t = trayTotals(items);
+  const count = `${t.count} item${t.count === 1 ? "" : "s"}`;
+  document.getElementById("food-tray-summary").textContent = `${count} · ${fmt(t.kcal)} kcal · ${fmt(t.protein)} g P`;
+  document.getElementById("food-tray-log").textContent = `Log ${count}`;
+  for (const it of items) {
+    const row = el("li", "tray-item");
+    const step = (delta) => () => {
+      sheetTray.items = trayStep(sheetTray.items, it.key, delta);
+      renderTray();
+    };
+    row.append(
+      el("span", "tray-name", it.name),
+      trayButton("tray-step", "−", "Fewer", step(-0.5)),
+      el("span", "tray-servings", `× ${fmtQty(it.servings)}`),
+      trayButton("tray-step", "+", "More", step(0.5)),
+      trayButton("tray-remove", "✕", "Remove", () => {
+        sheetTray.items = trayRemove(sheetTray.items, it.key);
+        renderTray();
+      }),
+    );
+    list.appendChild(row);
+  }
+}
+
+/* One entry per row, sharing a meal group, meal, time and slot. The slot
+   is checked off once, and Undo puts back whatever it was before. */
+function logTray() {
+  const tray = sheetTray;
+  const slot = sheetSlot;
+  if (!tray || !tray.items.length) return;
+  const date = todayLocalDateString();
+  const at = atOnDate(date, tray.at) ?? Date.now();
+  const group = newId();
+  const log = foodLog();
+  for (const it of tray.items) {
+    log.push({ id: newId(), date, at, slot, name: it.name, servings: it.servings, n: it.n, confidence: it.confidence, ref: it.ref, meal: tray.meal, mealGroup: group });
+  }
+  saveJSON(FOOD_LOG_KEY, log);
+  const prev = loadJSON(CHECKINS_KEY, {})[`${date}|${slot}`] || null;
+  if (slot !== "extra") setCheckin(date, slot, { status: "done", at: Date.now() });
+  const t = trayTotals(tray.items);
+  delete trays[slot];
+  sheetTray = null;
+  renderTray();
+  closeFoodSheet();
+  closeMealPanel();
+  refreshFood();
+  haptic();
+  showToast(`Logged ${t.count} item${t.count === 1 ? "" : "s"} · ${fmt(t.kcal)} kcal`, () => {
+    saveJSON(FOOD_LOG_KEY, foodLog().filter((e) => e.mealGroup !== group));
+    if (slot !== "extra") setCheckin(date, slot, prev);
+    refreshFood();
+  });
+}
+
+for (const meal of MEALS) {
+  const chip = el("button", "chip small", MEAL_LABELS[meal]);
+  chip.type = "button";
+  chip.dataset.meal = meal;
+  chip.addEventListener("click", () => {
+    sheetTray.meal = meal;
+    renderTray();
+  });
+  document.getElementById("food-tray-meals").appendChild(chip);
+}
+document.getElementById("food-tray-at").addEventListener("input", (e) => {
+  if (sheetTray) sheetTray.at = e.target.value || null;
+});
+document.getElementById("food-tray-log").addEventListener("click", logTray);
 
 /* Search box over past entries, saved meals, foods, chains, and
    takeout (food-core searchFoods). Only the results list re-renders on
@@ -1136,11 +1258,10 @@ async function runOnlineSearch(wrap, query) {
     ? "Picking one also saves it to My foods."
     : `Nothing online for “${query}”. Try fewer or different words, or Quick add.`;
   for (const food of foods) {
-    wrap.appendChild(pickRow(food.name, `${food.serving} · ${fmt(food.n.kcal)} kcal · ${fmt(food.n.protein)} g P${food.processing === "ultra" ? " · ultra-processed" : ""}`, () =>
-      logFromSheet(() => {
-        saveToLibrary(food);
-        logLibraryFood(food, sheetSlot);
-      })));
+    wrap.appendChild(pickRow(food.name, `${food.serving} · ${fmt(food.n.kcal)} kcal · ${fmt(food.n.protein)} g P${food.processing === "ultra" ? " · ultra-processed" : ""}`, () => {
+      saveToLibrary(food);
+      addToTray(foodPick(food));
+    }));
   }
 }
 
@@ -1165,16 +1286,13 @@ function renderSearchResults(wrap, query) {
     if (r.type === "recent") {
       const e = r.item;
       const t = entryTotal(e);
-      wrap.appendChild(pickRow(e.name, `Logged before · ${fmt(t.kcal)} kcal · ${fmt(t.protein)} g P`, () =>
-        logFromSheet(() => logFood({ slot: sheetSlot, name: e.name, servings: e.servings, n: { ...e.n }, confidence: e.confidence, ref: e.ref }))));
+      wrap.appendChild(pickRow(e.name, `Logged before · ${fmt(t.kcal)} kcal · ${fmt(t.protein)} g P`, () => addToTray(entryPick(e))));
     } else if (r.type === "meal") {
       const { n } = mealNutrients(r.item, foodLibrary(), []);
-      wrap.appendChild(pickRow(r.name, `Saved meal · ${fmt(n.kcal)} kcal · ${fmt(n.protein)} g P`, () =>
-        logFromSheet(() => logMeal(r.item, sheetSlot, []))));
+      wrap.appendChild(pickRow(r.name, `Saved meal · ${fmt(n.kcal)} kcal · ${fmt(n.protein)} g P`, () => addToTray(mealPick(r.item))));
     } else if (r.type === "food") {
       const f = r.item;
-      wrap.appendChild(pickRow(f.name, `${f.serving} · ${fmt(f.n.kcal)} kcal · ${fmt(f.n.protein)} g P${f.processing === "ultra" ? " · ultra-processed" : ""}`, () =>
-        logFromSheet(() => logLibraryFood(f, sheetSlot))));
+      wrap.appendChild(pickRow(f.name, `${f.serving} · ${fmt(f.n.kcal)} kcal · ${fmt(f.n.protein)} g P${f.processing === "ultra" ? " · ultra-processed" : ""}`, () => addToTray(foodPick(f))));
     } else {
       wrap.appendChild(takeoutRow(r.item));
     }
@@ -1183,8 +1301,7 @@ function renderSearchResults(wrap, query) {
 
 function renderFoodList(body, foods) {
   for (const food of foods) {
-    body.appendChild(pickRow(food.name, `${food.serving} · ${fmt(food.n.kcal)} kcal · ${fmt(food.n.protein)} g P`, () =>
-      logFromSheet(() => logLibraryFood(food, sheetSlot))));
+    body.appendChild(pickRow(food.name, `${food.serving} · ${fmt(food.n.kcal)} kcal · ${fmt(food.n.protein)} g P`, () => addToTray(foodPick(food))));
   }
 }
 
@@ -1192,8 +1309,7 @@ function renderMine(body) {
   body.appendChild(el("div", "pick-section", "Saved meals"));
   for (const meal of foodMeals()) {
     const { n } = mealNutrients(meal, foodLibrary(), []);
-    body.appendChild(pickRow(meal.name, `${fmt(n.kcal)} kcal · ${fmt(n.protein)} g P`, () =>
-      logFromSheet(() => logMeal(meal, sheetSlot, []))));
+    body.appendChild(pickRow(meal.name, `${fmt(n.kcal)} kcal · ${fmt(n.protein)} g P`, () => addToTray(mealPick(meal))));
   }
   body.appendChild(el("div", "pick-section", "Foods"));
   const foods = foodLibrary().filter((f) => f.group !== "chain").sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
@@ -1215,9 +1331,7 @@ function takeoutRow(preset) {
     btn.type = "button";
     btn.appendChild(el("span", "size-letter", size));
     btn.appendChild(el("span", "size-desc", `${desc} · ${kcal}`));
-    btn.addEventListener("click", () => logFromSheet(() => logFood({
-      slot: sheetSlot, name: `${preset.name} (${desc})`, n: takeoutNutrients(preset, size), confidence: "estimate", ref: { takeout: preset.id, size },
-    })));
+    btn.addEventListener("click", () => addToTray(takeoutPick(preset, size, desc)));
     sizes.appendChild(btn);
   }
   row.appendChild(sizes);
@@ -1256,7 +1370,7 @@ function renderQuickAdd(body) {
   box.name = "keep";
   save.append(box, el("span", "", "Save to My foods"));
   form.appendChild(save);
-  const submit = el("button", "primary-btn", "Log it");
+  const submit = el("button", "primary-btn", "Add to tray");
   submit.type = "submit";
   form.appendChild(submit);
   form.addEventListener("submit", (e) => {
@@ -1273,7 +1387,8 @@ function renderQuickAdd(body) {
       lib.push({ id: `custom-${Date.now()}`, name, serving: "1 serving", n, confidence: "estimate", source: "custom", favorite: true, processing });
       saveJSON(FOOD_LIBRARY_KEY, lib);
     }
-    logFromSheet(() => logFood({ slot: sheetSlot, name, n, confidence: "estimate" }));
+    addToTray({ key: trayKey(undefined, name, n), name, n, confidence: "estimate" });
+    renderSheet("quick"); // a clean form for the next one
   });
   body.appendChild(form);
 }
@@ -1281,6 +1396,8 @@ function renderQuickAdd(body) {
 /* ---- Edit / delete a logged entry ---- */
 
 function openEditEntry(entry) {
+  sheetTray = null; // the editor shares the sheet; the slot's tray waits in `trays`
+  renderTray();
   sheetSlot = entry.slot;
   document.getElementById("food-sheet-title").textContent = entry.name;
   document.getElementById("food-sheet-tabs").innerHTML = "";
@@ -1345,7 +1462,7 @@ function updateEntry(id, mutate) {
 }
 
 document.getElementById("food-sheet-cancel").addEventListener("click", closeFoodSheet);
-attachSwipeClose(foodSheet, { close: closeFoodSheet, scroller: document.getElementById("food-sheet-body") });
+attachSwipeClose(foodSheet, { close: closeFoodSheet, scroller: [document.getElementById("food-sheet-body"), document.getElementById("food-tray-items")] });
 document.getElementById("food-log-btn").addEventListener("click", () => openFoodSheet({ mode: "search" }));
 document.getElementById("food-takeout-btn").addEventListener("click", () => openFoodSheet({ mode: "takeout", title: "Takeout estimate" }));
 document.getElementById("food-quick-btn").addEventListener("click", () => openFoodSheet({ mode: "quick", title: "Quick add" }));

@@ -9,12 +9,14 @@ check("shake note shown", !$("#shake-note").hidden);
 // Takeout (ultra) + an equal-size whole quick add = 50%.
 click("#food-takeout-btn");
 $$(".size-btn")[1].click(); // Pizza M, 290 kcal
+click("#food-tray-log");
 click("#food-quick-btn");
 fill("[name=name]", "Home-made rice bowl");
 fill("[name=kcal]", "290");
 fill("[name=protein]", "20");
 clickText("Whole", $(".quick-form"));
 $(".quick-form").requestSubmit();
+click("#food-tray-log");
 eq("quick add saved with its tag", ls("food-log").at(-1).n.upf, 0);
 eq("half the calories are ultra", upfRow().querySelector(".fuel-value").textContent, "50% of kcal / 20% max");
 

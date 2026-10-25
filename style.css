@@ -2095,6 +2095,107 @@ button[type="submit"]:active,
   margin-bottom: 4px;
 }
 
+/* Tray (B1): docked under the food sheet's body. While the keyboard is
+   up only its summary and Log button show, so the results keep the room. */
+.food-tray {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sep);
+}
+
+.tray-hint {
+  margin: 0;
+}
+
+.tray-summary {
+  font-size: 15px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.tray-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tray-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 28vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tray-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.tray-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.tray-servings {
+  min-width: 34px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tray-step,
+.tray-remove {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tray-remove {
+  background: transparent;
+  color: var(--text-2);
+  font-size: 15px;
+}
+
+.tray-at {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.tray-at input {
+  flex: 0 0 128px;
+}
+
+.food-sheet.keyboard-up .tray-details,
+.food-sheet.keyboard-up .tray-hint {
+  display: none;
+}
+
 .pick-row {
   display: flex;
   flex-direction: column;

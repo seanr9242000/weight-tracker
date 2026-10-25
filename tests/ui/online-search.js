@@ -22,6 +22,7 @@ eq("one call", calls, 1);
 check("per-serving meta", $(".online-results .pick-meta").textContent.startsWith("1 BAR · 190 kcal"), $(".online-results .pick-meta").textContent);
 
 clickText("Protein Bar, Cookies & Cream (Quest Bar)", $(".online-results"));
+click("#food-tray-log");
 check("sheet closed", $("#food-sheet").hidden);
 const e = ls("food-log").at(-1);
 eq("logged with label numbers", [e.name, Math.round(e.n.kcal), Math.round(e.n.protein), e.confidence], ["Protein Bar, Cookies & Cream (Quest Bar)", 190, 21, "exact"]);

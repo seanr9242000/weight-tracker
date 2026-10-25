@@ -202,3 +202,24 @@ await swipe($("#reason-sheet-title"), slow(rs.offsetHeight * 0.5));
 await wait(300);
 eq("reason sheet closes", rs.hidden, true);
 eq("closing it records nothing", (ls("coach-checkins") || {})[`${today}|test-item`], undefined);
+
+// The tray list scrolls like the body: a drag inside it closes the sheet
+// only when it's at the top, and the tray survives a swipe close.
+tab("food-panel");
+click("#food-log-btn");
+clickText("Chains", $("#food-sheet-tabs"));
+$$("#food-sheet-body .pick-row").slice(0, 6).forEach((r) => r.click());
+const trayList = $("#food-tray-items");
+trayList.style.maxHeight = "60px"; // force a scrollable tray
+trayList.scrollTop = 30;
+check("tray scrolled", trayList.scrollTop > 0, trayList.scrollTop);
+await swipe($(".tray-name", trayList), slow(fs.offsetHeight * 0.5));
+await wait(300);
+eq("scrolled tray doesn't close", fs.hidden, false);
+trayList.scrollTop = 0;
+await swipe($(".tray-name", trayList), slow(fs.offsetHeight * 0.5));
+await wait(300);
+eq("tray at top drags closed", fs.hidden, true);
+trayList.style.maxHeight = "";
+click("#food-log-btn");
+eq("tray survives a swipe close", [$$("#food-tray-items .tray-item").length, (ls("food-log") || []).length], [6, 0]);

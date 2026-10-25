@@ -20,6 +20,7 @@ if (dow >= 1 && dow <= 5) {
   fill(".food-search", "chick 12");
   eq("multi-word search", results(), ["Chick-fil-A nuggets, 12 ct", "Chick-fil-A grilled nuggets, 12 ct"]);
   clickText("Chick-fil-A grilled nuggets, 12 ct", $("#food-sheet-body"));
+  click("#food-tray-log");
   check("sheet closed after pick", $("#food-sheet").hidden);
   eq("logged into the afternoon slot", ls("food-log").at(-1).slot, "snack-pm");
   check("afternoon snack done", item("Afternoon snack").classList.contains("done"));
@@ -37,6 +38,7 @@ fill(".food-search", "zzzz");
 check("no-match message", $("#food-sheet-body").textContent.includes("No match"));
 fill(".food-search", "white claw");
 clickText("White Claw", $("#food-sheet-body"));
+click("#food-tray-log");
 eq("search result logs", ls("food-log").at(-1).name, "White Claw");
 
 // Reminder tap on a closed app: ?item=<id> opens Today on that item.

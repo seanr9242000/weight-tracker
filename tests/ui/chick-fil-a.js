@@ -28,6 +28,7 @@ fill("#food-sheet-body .food-search", "polynesian");
 const poly = () => $$("#food-sheet-body .search-results .pick-row").find((r) => r.querySelector(".pick-name").textContent === "Chick-fil-A Polynesian sauce");
 check("search finds it", Boolean(poly()), $$("#food-sheet-body .pick-name").map((x) => x.textContent));
 click(poly());
+click("#food-tray-log");
 eq("logs as exact", [ls("food-log").at(-1).name, ls("food-log").at(-1).confidence], ["Chick-fil-A Polynesian sauce", "exact"]);
 
 // Retagging a food marks it as Sean's choice.
