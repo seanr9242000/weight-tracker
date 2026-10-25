@@ -2218,7 +2218,9 @@ button[type="submit"]:active,
   flex: 0 0 128px;
 }
 
-.food-sheet.keyboard-up .tray-details,
+/* The details stay while "Ate at" itself is being edited: iOS may count
+   its time wheel as a keyboard. */
+.food-sheet.keyboard-up .tray-details:not(:focus-within),
 .food-sheet.keyboard-up .tray-hint {
   display: none;
 }

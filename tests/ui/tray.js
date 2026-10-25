@@ -54,10 +54,24 @@ eq("the tray survives a close", rows().length, 4);
 
 // "Ate at" follows the clock until edited.
 eq("Ate at follows the clock", $("#food-tray-at").value, app().timeInputValue(Date.now()));
+// Coming back to the app with the sheet still open shows the time again.
+$("#food-tray-at").value = "00:00"; // what an open sheet showed a while ago
+app().document.dispatchEvent(new Event("visibilitychange"));
+eq("Ate at catches up on return", $("#food-tray-at").value, app().timeInputValue(Date.now()));
+fill("#food-tray-at", "09:00");
+app().document.dispatchEvent(new Event("visibilitychange"));
+eq("an edited Ate at stays", $("#food-tray-at").value, "09:00");
 
 // Keyboard up: only the summary and Log stay.
 $("#food-sheet").classList.add("keyboard-up");
 eq("keyboard up tucks the details away", [app().getComputedStyle($("#food-tray-details")).display, app().getComputedStyle($("#food-tray-log")).display === "none"], ["none", false]);
+// iOS may count the time wheel as a keyboard: the field being edited stays.
+// (Focus comes first on the phone; keyboard-up follows the resize.)
+$("#food-sheet").classList.remove("keyboard-up");
+$("#food-tray-at").focus();
+$("#food-sheet").classList.add("keyboard-up");
+eq("editing Ate at keeps the details", app().getComputedStyle($("#food-tray-details")).display, "flex");
+$("#food-tray-at").blur();
 $("#food-sheet").classList.remove("keyboard-up");
 
 // Meal and time, then Log: one entry per row, sharing group, meal, time and slot.
@@ -84,6 +98,14 @@ searchPick("banana", "Banana");
 fill("#food-tray-at", "");
 click("#food-tray-log");
 check("blank Ate at logs now", Math.abs(ls("food-log").at(-1).at - Date.now()) < 5000, ls("food-log").at(-1).at);
+
+// Some iOS versions send only "change" from a time field.
+click("#food-log-btn");
+searchPick("banana", "Banana");
+$("#food-tray-at").value = "07:30";
+$("#food-tray-at").dispatchEvent(new Event("change", { bubbles: true }));
+click("#food-tray-log");
+eq("a change-only edit is kept", ls("food-log").at(-1).at, new Date(`${today}T07:30`).getTime());
 
 // A checklist slot: meal from the slot, checked off once, Undo restores the old state.
 await reload({ "coach-started-at": "0", "coach-injury": null,

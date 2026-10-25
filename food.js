@@ -1200,9 +1200,22 @@ for (const meal of MEALS) {
   });
   document.getElementById("food-tray-meals").appendChild(chip);
 }
-document.getElementById("food-tray-at").addEventListener("input", (e) => {
-  if (sheetTray) sheetTray.at = e.target.value || null;
-});
+/* Some iOS versions send only "change" from a time field. */
+for (const type of ["input", "change"]) {
+  document.getElementById("food-tray-at").addEventListener(type, (e) => {
+    if (sheetTray) sheetTray.at = e.target.value || null;
+  });
+}
+
+/* "Ate at" shows the clock until edited; this keeps it current while the
+   sheet stays open, and after a trip to another app. Only the field
+   changes, so a scrolled tray list stays put. */
+function syncTrayClock() {
+  const atInput = document.getElementById("food-tray-at");
+  if (foodSheet.hidden || !sheetTray || sheetTray.at || document.activeElement === atInput) return;
+  atInput.value = timeInputValue(Date.now());
+}
+setInterval(syncTrayClock, 60000);
 document.getElementById("food-tray-log").addEventListener("click", logTray);
 
 /* Search box over past entries, saved meals, foods, chains, and
@@ -1512,5 +1525,7 @@ document.getElementById("food-quick-btn").addEventListener("click", () => openFo
 
 refreshFood();
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") renderFood();
+  if (document.visibilityState !== "visible") return;
+  renderFood();
+  syncTrayClock();
 });
