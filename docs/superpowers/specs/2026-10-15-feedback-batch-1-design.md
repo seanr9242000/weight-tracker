@@ -318,6 +318,188 @@ from the same card.
 - **Entry editor:** gets a meal picker so an entry can be moved to
   another meal.
 
+### T. Training basics (Q&A 2026-10-25)
+**Context:** lifting is Sean's only training until the ankle recheck
+(2026-12-07). He doesn't know his working weights, so first sessions
+set the baseline. Gym (community center) has dumbbells up to ~200 lb, a
+barbell with bench and rack, cables, selectorized upper-body machines,
+and leg machines (extension, curl, hip abduction/adduction, leg press).
+No barbell hip thrusts; glute bridges are fine.
+
+**Schedule.** Upper / Lower, 4 days while Injury mode is on:
+
+| Day | Time | Workout |
+|---|---|---|
+| Mon | 18:30 | Upper A (only while Injury mode is on) |
+| Wed | 17:45 | Lower A (ankle-safe) |
+| Fri | 17:15 | Upper B |
+| Sat | 10:30 | Lower B (ankle-safe) |
+
+- `injuryItems` adds a Monday `lift` item at 18:30 (plus `post-lift` at
+  +50 min) in place of the removed game items. Outside Injury mode
+  Monday stays a game day and Wed / Fri / Sat keep their lifts. Which
+  workouts run after clearance is decided with the basketball work;
+  until then Wed / Fri / Sat keep Lower A / Upper B / Lower B (editable).
+- The injury `lift` note (`INJURY_LIFT_NOTE`) stays as the "Ask PT
+  first / Avoid until cleared" reference, shown in workout mode on
+  lower days.
+
+**Default plan** (sets × reps; rest: 120 s when the rep range tops out
+at ≤ 10, else 75 s). Swaps are listed after "/".
+
+- **Upper A (Mon):**
+  1. Barbell bench press 3 × 6–8 / DB bench press, machine chest press,
+     push-ups
+  2. Seated cable row 3 × 8–10 / machine row, chest-supported DB row,
+     one-arm DB row
+  3. Seated DB shoulder press 3 × 8–10 / machine shoulder press, seated
+     Arnold press
+  4. Lat pulldown 3 × 10–12 / neutral-grip pulldown, single-arm cable
+     pulldown
+  5. Cable triceps pushdown 2 × 12–15 / overhead cable triceps, DB skull
+     crusher
+  6. DB curl 2 × 12–15 / cable curl, incline DB curl, EZ-bar curl
+- **Lower A (Wed, ankle-safe):**
+  1. Leg extension 3 × 10–12 / single-leg leg extension, paused leg
+     extension
+  2. Seated leg curl 3 × 10–12 / lying leg curl, single-leg seated curl
+  3. Glute bridge (brace on, DB on hips once easy) 3 × 10–12 /
+     single-leg glute bridge (good leg), frog pump
+  4. Single-leg leg extension, good leg 2 × 10–12 / single-leg leg curl
+     (good leg)
+  5. Hip abduction machine 3 × 12–15 / banded seated abduction,
+     side-lying abduction
+  6. Hip adduction machine 2 × 12–15 / side-lying adduction, seated ball
+     squeeze
+  7. Machine ab crunch 3 × 12–15 / dead bug, captain's-chair knee raise
+  8. Arm bike 8 min (timed) / seated battle ropes, seated upper-body
+     circuit
+- **Upper B (Fri):**
+  1. Incline DB press 3 × 8–10 / incline barbell press, incline machine
+     press, low-to-high cable fly
+  2. Close-grip lat pulldown 3 × 8–10 / neutral-grip pulldown,
+     single-arm cable pulldown
+  3. Machine row 3 × 10–12 / seated cable row, one-arm DB row
+  4. Machine shoulder press 3 × 10–12 / seated DB press, seated Arnold
+     press
+  5. Cable lateral raise 2 × 12–15 / DB lateral raise, machine lateral
+     raise
+  6. Cable face pull 2 × 12–15 / reverse pec deck, seated rear-delt DB
+     fly
+  7. Hammer curl 2 × 12–15 / cable rope curl
+  8. Overhead cable triceps 2 × 12–15 / DB overhead extension
+- **Lower B (Sat, ankle-safe):**
+  1. Seated leg curl 3 × 10–12 / lying leg curl, single-leg seated curl
+  2. Leg extension 3 × 12–15 / single-leg leg extension, paused leg
+     extension
+  3. Glute bridge 3 × 12–15 / single-leg glute bridge (good leg), frog
+     pump
+  4. Single-leg leg curl, good leg 2 × 10–12 / single-leg leg extension
+     (good leg)
+  5. Hip abduction machine 3 × 12–15 / banded seated abduction,
+     side-lying abduction
+  6. Hip adduction machine 2 × 12–15 / side-lying adduction, seated ball
+     squeeze
+  7. Dead bug 3 × 10–12 / machine crunch, captain's-chair knee raise
+  8. Arm bike 8 min (timed) / seated battle ropes, seated upper-body
+     circuit
+
+Every exercise (main or swap) has a stable id and a `type`:
+`weighted` (weight × reps), `bodyweight` (reps only: push-ups, dead bug,
+knee raise, frog pump, bodyweight bridge) or `timed` (minutes). History
+is keyed by exercise id, so a swap shows its own last numbers.
+
+**Workout mode.**
+- **Start:** "Start workout" on the Today `lift` item and on the Train
+  tab's Lifts card. It opens a full-screen view that shows:
+  - the day name and an elapsed clock
+  - each exercise with "Last: 3 × 10 @ 50 lb" and the suggestion
+  - set rows with weight and reps pre-filled from the suggestion; ✓
+    logs the set, and the numbers can be changed first
+  - Swap (this session only) and Skip per exercise
+- **No accidental close:** swipe-to-close is off. A "–" button minimizes
+  it to a "Workout in progress · mm:ss" bar on Today that reopens it. The
+  active workout (`lift-active`) is saved after every change. A reload
+  or relaunch reopens workout mode with every set intact.
+- **Screen:** request a Screen Wake Lock while the mode is open. It's
+  best-effort, and failure is silent.
+- **Stop:** "Finish workout?" shows a summary (duration, sets done, new
+  bests by e1RM or reps at the same weight). Finish saves the session to
+  `lift-sessions`, marks the day's `lift` item done, and opens the
+  existing "how did it go?" card (with ankle pain while Injury mode is
+  on). Discard drops `lift-active` without saving.
+- **One active workout at a time.** Starting from a different day's item
+  while one is active offers "Resume" instead.
+
+**Rest timer.**
+- Starts on ✓ using the exercise's rest seconds.
+- A bottom bar shows the countdown with −15 s / +15 s / Skip.
+- It's based on the clock (an end timestamp), so it stays correct after
+  locking the phone or switching apps.
+- At 0 it plays a short Web Audio beep, but only while the page is
+  visible. iOS mutes it on silent. The bar also flashes.
+
+**Progression** (pure, in `lift-core.js`), from the last two sessions
+of that exercise id:
+- No history: "Pick a weight you could do for ~2 more reps than the
+  target." Fields stay blank, and that session is the baseline.
+- Every set of the last session reached the top of the range: suggest
+  last weight + 5 lb.
+- The last 2 sessions each had a set below the bottom of the range:
+  suggest last weight × 0.9, rounded to the nearest 5 lb (never below
+  5).
+- Otherwise: same weight, "beat last time's reps."
+- `bodyweight`: same logic on reps, with no weight shown. `timed`: shows
+  last time only.
+
+**Plan editor** (Train → Lifts → Edit plan):
+- Per day: add (from the catalog), remove, reorder, edit sets / rep
+  range / rest.
+- "Make default" on a swap replaces the main exercise.
+- "Reset to default" restores the shipped plan.
+- Stored as `lift-plan`. When it's absent, the shipped plan is used.
+
+**Train tab:** a Lifts card above runs shows the next lift day, Start
+workout, the last 5 sessions (date, day, duration, sets) and Edit plan.
+
+**Data:**
+- `lift-plan`: `{ days: { upperA|lowerA|upperB|lowerB: [{ exId, sets,
+  repMin, repMax, rest }] }, dayByWeekday: { 1: "upperA", 3: "lowerA",
+  5: "upperB", 6: "lowerB" } }`
+- `lift-sessions`: `[{ id, date, day, start, end, exercises: [{ exId,
+  sets: [{ w, reps, min }] }] }]`
+- `lift-active`: same shape plus `restEndsAt`
+- All three are added to the backup key list.
+
+**Also in step T:** the Injury mode backlog carried in the step B
+plan's appendix:
+- mixed-part pain trend
+- a new injury overwrites history
+- an upcoming injury can't be cancelled
+- "End now" on a same-day injury
+- the PT remove null guard
+- `visibilitychange` not re-rendering Today
+- the `injuryDays` null-`until` guard
+
+The deferred step B minors are fixed only if step T touches that code.
+
+**Tests:**
+- `tests/run.py`:
+  - progression (+5, −10% after two misses, hold, no history,
+    bodyweight, timed)
+  - history by exercise id including swaps
+  - Monday lift only inside the injury range
+  - plan defaults and editor edits round-trip
+  - the backup includes the lift keys
+- UI scripts:
+  - start → log sets → rest timer → minimize/resume → reload
+    mid-workout → stop → check-in
+  - swap and skip
+  - plan editor
+  - Lifts card
+- Full suite in light and dark at the end. Version 36: bump `CACHE_NAME`
+  and `version.js` together.
+
 ### C1. Savings
 - **New pure module `savings-core.js`** (DOM-free, tested):
   - `savingsFor(range, data, settings)` returns
@@ -453,6 +635,10 @@ from the same card.
   - Supabase: a `backups` table plus the `save_backup` / `load_backup`
     RPCs
   - new files: `version.js` and `backup-core.js`
+- Training (step T):
+  - new localStorage keys, all backed up: `lift-plan`, `lift-sessions`,
+    `lift-active`
+  - new files: `lift-core.js` and `lift.js`
 
 ## Order and verification
 Sean checks each step on his phone before the next one starts:
