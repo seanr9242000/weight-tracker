@@ -41,6 +41,7 @@
         <button type="button" id="restore-card-dismiss" class="link-btn">Start fresh</button>
       </section>
 
+      <button type="button" id="workout-bar" class="workout-bar" hidden></button>
       <section class="card glass-card hero">
         <div class="rings" id="today-fuel"></div>
         <div class="hero-stats" id="today-stats"></div>
@@ -569,6 +570,21 @@
     </div>
   </div>
 
+  <!-- Workout mode (step T, lift.js): full screen, no swipe-to-close. -->
+  <div id="workout" class="workout-mode" role="dialog" aria-label="Workout" hidden>
+    <header class="workout-head">
+      <button type="button" id="workout-min" class="pill-btn" aria-label="Minimize workout">–</button>
+      <div class="workout-title">
+        <select id="workout-day" aria-label="Workout day"></select>
+        <span id="workout-clock" class="workout-clock">0:00</span>
+      </div>
+      <button type="button" id="workout-stop" class="pill-btn danger">Stop</button>
+    </header>
+    <p class="hint workout-note" id="workout-note" hidden></p>
+    <div class="workout-body" id="workout-body"></div>
+    <div class="workout-finish" id="workout-finish" hidden></div>
+  </div>
+
   <div id="reason-sheet" class="sheet glass" hidden>
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="reason-sheet-title"></div>
@@ -609,6 +625,7 @@
 <script src="food.js"></script>
 <script src="quickadd.js"></script>
 <script src="injury.js"></script>
+<script src="lift.js"></script>
 <script src="updates.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script defer src="reminders.js"></script>

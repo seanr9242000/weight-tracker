@@ -300,6 +300,7 @@ function renderFeelPanel(dateStr, item) {
       energy: draft.energy, stomach: draft.stomach, legs: draft.legs, performance: draft.performance,
       injuryPain: pain, injuryPart: pain === undefined ? undefined : injuredPart,
       note: (draft.note || "").trim() || undefined, ate,
+      workoutId: item.id === "lift" && typeof liftSessionId === "function" ? liftSessionId(dateStr) : undefined,
     });
     saveJSON(FEEL_LOG_KEY, log);
     delete feelDrafts[item.id];

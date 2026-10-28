@@ -249,6 +249,10 @@ function renderChecklistItem(dateStr, item, checkin, now) {
   body.appendChild(el("div", "check-title", item.title));
   const note = item.trigger ? TRIGGER_TIPS[item.trigger] : item.note;
   if (note && !checkin) body.appendChild(el("div", "check-note", note));
+  // Step T: today's lift opens workout mode (lift.js).
+  if (item.id === "lift" && !checkin && dateStr === todayLocalDateString() && typeof liftStartButton === "function") {
+    body.appendChild(liftStartButton(dateStr));
+  }
 
   if (item.id === "weigh" && weighOpenFor === dateStr && !checkin) {
     const form = el("form", "weigh-inline");

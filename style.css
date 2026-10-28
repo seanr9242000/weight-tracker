@@ -2740,3 +2740,205 @@ button.hero-chip {
   font-weight: 650;
   color: var(--danger);
 }
+
+/* ---- Workout mode (step T) ---- */
+body.workout-open {
+  overflow: hidden;
+}
+
+.workout-bar {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--train);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.workout-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  padding: calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 8px);
+}
+
+.workout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.workout-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.workout-title select {
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+}
+
+.workout-clock {
+  font-size: 14px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.workout-note {
+  margin: 8px 0 0;
+}
+
+.workout-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0 112px;
+}
+
+.workout-ex {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.workout-ex.skipped {
+  opacity: 0.5;
+}
+
+.workout-ex-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.workout-ex-name {
+  font-weight: 600;
+  min-width: 0;
+}
+
+.workout-ex-target,
+.workout-ex-last {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.workout-ex-target {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.workout-ex-suggest {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--train);
+}
+
+.workout-ex-suggest.down {
+  color: var(--warn);
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.set-num {
+  width: 18px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.set-x {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+/* 17px keeps iOS from zooming in on focus. */
+.set-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--sep);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.set-row.done input {
+  opacity: 0.6;
+}
+
+.set-check {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--sep);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 18px;
+}
+
+.set-row.done .set-check {
+  border-color: var(--good);
+  background: var(--good);
+  color: #fff;
+}
+
+.workout-ex-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.workout-swaps {
+  margin-top: 8px;
+}
+
+.workout-finish {
+  position: absolute;
+  z-index: 2;
+  left: 16px;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom) + 16px);
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--glass-shadow);
+}
+
+.workout-bests {
+  color: var(--good);
+  font-weight: 600;
+}

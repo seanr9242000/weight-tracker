@@ -15,6 +15,7 @@ const ASSETS = [
   "./food.js",
   "./quickadd.js",
   "./injury.js",
+  "./lift.js",
   "./updates.js",
   "./reminders.js",
   "./backup.js",
