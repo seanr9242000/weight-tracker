@@ -10,6 +10,7 @@ const TAPER_START_KEY = "coach-taper-start";
 const DOCTOR_NOTE_KEY = "coach-doctor-note-dismissed";
 const COACH_START_KEY = "coach-started-at";
 const INJURY_KEY = "coach-injury";
+const INJURY_PAST_KEY = "coach-injury-past";
 
 /* Items scheduled before the coach was first opened never show as
    missed - otherwise the first launch mid-afternoon would greet you
@@ -50,10 +51,16 @@ function loadInjury() {
   return loadJSON(INJURY_KEY, null);
 }
 
+/* The current injury first, then older ones newest first, so each past
+   day is read with the injury that was on then. */
+function loadInjuries() {
+  return [loadInjury(), ...loadJSON(INJURY_PAST_KEY, []).slice().reverse()].filter(Boolean);
+}
+
 /* A day's checklist: the weekly plan, Injury mode, then that day's edits.
    Everything that reads the schedule goes through here. */
 function scheduleFor(dateStr) {
-  return itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {}), loadInjury());
+  return itemsForDate(dateStr, loadJSON(OVERRIDES_KEY, {}), loadInjuries());
 }
 
 function newId() {
@@ -161,7 +168,7 @@ function renderTodaySummary(dateStr, items, checkins, overrides) {
 
   const stats = document.getElementById("today-stats");
   stats.innerHTML = "";
-  const streak = completionStreak(checkins, overrides, dateStr, now, loadInjury());
+  const streak = completionStreak(checkins, overrides, dateStr, now, loadInjuries());
   const sleep = sleepHours(checkins, dateStr);
   const chip = (icon, strong, rest) => {
     const c = el("span", "hero-chip");

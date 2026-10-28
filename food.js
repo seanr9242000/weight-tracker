@@ -305,7 +305,7 @@ function renderFeelPanel(dateStr, item) {
     delete feelDrafts[item.id];
     feelOpenFor = null;
     refreshFood();
-    if (pain !== undefined && injuryPainFlag(log, dateStr, pain)) showToast(PAIN_WARNING);
+    if (pain !== undefined && injuryPainFlag(log, dateStr, pain, injuredPart)) showToast(PAIN_WARNING);
   });
   actions.append(skip, save);
   panel.appendChild(actions);

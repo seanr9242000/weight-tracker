@@ -193,3 +193,45 @@ check("reopened without the date picker", Boolean($(".recheck-panel", item("Ankl
 // Tapping the recheck push opens "Cleared?".
 await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-30), today) }, "food-panel", "item=injury-recheck");
 check("push tap opens the Cleared? panel", Boolean($(".recheck-panel", item("Ankle recheck"))));
+// ---- step T ----
+// An upcoming injury can be cancelled.
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(2), day(10)) });
+app().confirm = () => true;
+eq("upcoming: Cancel shown", [$("#injury-end-btn").hidden, $("#injury-end-btn").textContent], [false, "Cancel this injury"]);
+click("#injury-end-btn");
+eq("cancel removes it", ls("coach-injury"), null);
+eq("cancel toast", $("#toast-text").textContent, "Injury cancelled");
+
+// End on the start day drops it and the one before comes back.
+const wrist = { part: "wrist", start: day(-60), until: day(-40), note: "", pt: [] };
+await reload({ "coach-started-at": "0", "coach-injury": ankle(today, day(10)), "coach-injury-past": [wrist] });
+app().confirm = () => true;
+click("#injury-end-btn");
+eq("same-day End brings back the last one", [ls("coach-injury"), ls("coach-injury-past")], [wrist, []]);
+check("no chip after same-day End", !$(".injury-chip"));
+
+// A new injury keeps the old one's history.
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-30), day(-20)) });
+click("#injury-edit-btn");
+fill("#injury-part", "wrist");
+fill("#injury-start", today);
+fill("#injury-until", day(10));
+$("#injury-form").requestSubmit();
+eq("old injury moved to history", ls("coach-injury-past").map((i) => [i.part, i.start]), [["ankle", day(-30)]]);
+eq("new one is current", ls("coach-injury").part, "wrist");
+eq("past days read the old injury", app().injuryOn(app().loadInjuries(), day(-25)).part, "ankle");
+
+// Coming back to the app re-renders Today (coach.js), so the chip appears.
+await reload({ "coach-started-at": "0", "coach-injury": null });
+check("no chip before", !$(".injury-chip"));
+app().saveJSON("coach-injury", ankle(day(-3), day(10)));
+app().document.dispatchEvent(new Event("visibilitychange"));
+check("chip after visibilitychange", Boolean($(".injury-chip")));
+
+// Injured Monday: the lift shows on Today only on a Monday.
+await reload({ "coach-started-at": "0", "coach-injury": ankle(day(-3), day(10)) });
+const isMonday = new Date(`${today}T12:00`).getDay() === 1;
+if (isMonday) check("injured Monday shows the lift", Boolean(item(LIFT)));
+check("every injured Monday in range has a lift", Array.from({ length: 14 }, (_, i) => day(i - 3))
+  .filter((d) => new Date(`${d}T12:00`).getDay() === 1)
+  .every((d) => app().scheduleFor(d).some((i) => i.id === "lift")));

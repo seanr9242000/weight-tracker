@@ -58,7 +58,7 @@ run(() => {
   eq("without it, the missing games break it", completionStreak(full, ov, "2026-10-14", 0), 0);
 
   // Water and snacks follow from the day type.
-  eq("game-day water bonus off", waterGoal({}, 200, dayType(itemsForDate("2026-10-12", {}, inj))), 100);
+  eq("game-day water bonus off (injured Monday is a lift day now)", waterGoal({}, 200, dayType(itemsForDate("2026-10-12", {}, inj))), 120);
   eq("bonus still on normally", waterGoal({}, 200, dayType(itemsForDate("2026-10-12", {}))), 132);
   eq("rest-day ideas for former game-day snacks",
     ["snack-am", "pregame-snack", "postgame"].map((s) => snackIdeasFor(SNACK_IDEAS, SNACK_PLAN, s, "rest").length > 0), [true, true, true]);
@@ -79,5 +79,31 @@ run(() => {
   eq("rising week flags", injuryPainFlag([rec("2026-10-05", 1), rec("2026-10-06", 1), rec("2026-10-12", 3), rec("2026-10-14", 3)], "2026-10-14", 3), true);
   eq("falling week doesn't", injuryPainFlag([rec("2026-10-05", 3), rec("2026-10-12", 2), rec("2026-10-14", 2)], "2026-10-14", 2), false);
   eq("records without pain ignored", injuryPainFlag([{ date: "2026-10-05" }, rec("2026-10-14", 2)], "2026-10-14", 2), false);
+  // ---- step T ----  2026-10-12 is a Monday inside inj; 10-26 is a Monday after it.
+  eq("injured Monday gets a lift", ["lift", "post-lift"].map((id) => find("2026-10-12", id) && find("2026-10-12", id).time), ["18:30", "19:20"]);
+  eq("Monday lift reads like the others", [find("2026-10-12", "lift").title, find("2026-10-12", "lift").kind, find("2026-10-12", "lift").note], ["Lift — 45 min", "train", INJURY_LIFT_NOTE]);
+  eq("no Monday lift when not injured", has("2026-10-12", "lift", null), false);
+  eq("no Monday lift after the injury", has("2026-10-26", "lift"), false);
+  eq("Wednesday keeps one lift", itemsForDate("2026-10-14", {}, inj).filter((i) => i.id === "lift").length, 1);
+  eq("lift note drops hip thrusts", /thrust/i.test(INJURY_LIFT_NOTE), false);
+  eq("lift note still starts the same", INJURY_LIFT_NOTE.startsWith("Ankle-safe legs"), true);
+  eq("lift note ends with the avoid list", INJURY_LIFT_NOTE.endsWith(INJURY_LIFT_AVOID), true);
+
+  // History: a list of injuries, each shaping its own days. 09-07 and 09-28 are Mondays.
+  const old = { part: "wrist", start: "2026-09-01", until: "2026-09-20", note: "", pt: [] };
+  eq("injuryOn picks the active one", [injuryOn([inj, old], "2026-09-07"), injuryOn([inj, old], "2026-09-28"), injuryOn(inj, "2026-10-13"), injuryOn(null, "2026-10-13")], [old, null, inj, null]);
+  eq("a past injury still shapes its days", itemsForDate("2026-09-07", {}, [inj, old]).some((x) => x.id === "game"), false);
+  eq("between injuries: normal", itemsForDate("2026-09-28", {}, [inj, old]).some((x) => x.id === "game"), true);
+  eq("a single injury still works", itemsForDate("2026-10-12", {}, inj).some((x) => x.id === "game"), false);
+
+  // Ending: one that never ran a full day is removed, not left with until < start.
+  eq("End on the start day removes it", endInjury({ ...inj, start: "2026-10-15" }, "2026-10-15"), null);
+  eq("ending an upcoming one removes it", endInjury({ ...inj, start: "2026-10-20" }, "2026-10-15"), null);
+  eq("injuryDays guards", [injuryDays({ part: "ankle", start: "2026-10-12" }, "2026-10-13"), injuryDays(null, "2026-10-13")], [null, null]);
+
+  // Pain trend per body part: wrist pain this week must not raise the ankle's average.
+  const mixed = [{ date: "2026-10-05", injuryPain: 3, injuryPart: "ankle" }, { date: "2026-10-12", injuryPain: 9, injuryPart: "wrist" }, { date: "2026-10-14", injuryPain: 2, injuryPart: "ankle" }];
+  eq("pain trend ignores other parts", injuryPainFlag(mixed, "2026-10-14", 2, "ankle"), false);
+  eq("no part given: every record", injuryPainFlag(mixed, "2026-10-14", 2), true);
 });
 </script></body></html>

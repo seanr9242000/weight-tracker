@@ -146,7 +146,8 @@ function daysBetween(fromStr, toStr) {
    optional, PT exercises are added daily, and a recheck sits on the
    until date. An injury is { part, start, until, note, pt: [{ id, time, title }] }. */
 
-const INJURY_LIFT_NOTE = "Ankle-safe legs: leg extension, seated or lying leg curl, hip thrust or glute bridge (brace on), hip abduction/adduction. Single-leg work on the good leg. Upper body as normal. Finish with the arm bike or an upper-body circuit. Ask PT first: leg press (feet high), RDLs. Avoid until cleared: squats, lunges, step-ups, calf raises, jumps, sled, rower, running.";
+const INJURY_LIFT_AVOID = "Ask PT first: leg press (feet high), RDLs. Avoid until cleared: squats, lunges, step-ups, calf raises, jumps, sled, rower, running.";
+const INJURY_LIFT_NOTE = `Ankle-safe legs: leg extension, seated or lying leg curl, glute bridge (brace on), hip abduction/adduction. Single-leg work on the good leg. Upper body as normal. Finish with the arm bike or an upper-body circuit. ${INJURY_LIFT_AVOID}`;
 const INJURY_WALK_TITLE = "Easy walk in brace — skip if sore";
 const INJURY_REMOVED = ["game", "pregame-prep"];
 const INJURY_TITLES = {
@@ -178,6 +179,13 @@ function injuryItems(items, injury, dateStr) {
       if (INJURY_OPTIONAL.includes(item.id)) changed.optional = true;
       return changed;
     });
+  /* Step T: lifting takes Monday's league-game slot (Upper A). */
+  if (parseLocalDate(dateStr).getDay() === 1 && !out.some((i) => i.id === "lift")) {
+    out.push(
+      { id: "lift", time: "18:30", title: "Lift — 45 min", kind: "train", note: INJURY_LIFT_NOTE },
+      { id: "post-lift", time: "19:20", title: "Recovery snack (not chocolate milk)", kind: "meal", note: "Protein shake + banana." },
+    );
+  }
   for (const pt of injury.pt || []) out.push({ id: pt.id, time: pt.time, title: pt.title, kind: "pt" });
   if (dateStr === injury.until) {
     out.push({ id: "injury-recheck", time: "09:00", title: `${capitalize(injury.part)} recheck`, kind: "appointment" });
@@ -187,20 +195,27 @@ function injuryItems(items, injury, dateStr) {
 
 /* Day N of M, counting both the start day and the recheck day. */
 function injuryDays(injury, dateStr) {
+  if (!injury || !injury.start || !injury.until) return null;
   return { day: daysBetween(injury.start, dateStr) + 1, total: daysBetween(injury.start, injury.until) + 1 };
 }
 
-/* Ending keeps the injury (and its start) so past days still read as injured. */
+/* Ending keeps the injury (and its start) so past days still read as
+   injured. One that hasn't run a full day yet (it starts today or
+   later) has no history to keep, so it's removed instead (null). */
 function endInjury(injury, todayStr) {
+  if (injury.start >= todayStr) return null;
   return { ...injury, until: shiftDate(todayStr, -1) };
 }
 
 /* After a lift: flag pain of 4+, or a 7-day average above the 7 days
-   before. `feelLog` already includes the check-in just saved. */
-function injuryPainFlag(feelLog, todayStr, pain) {
+   before. `feelLog` already includes the check-in just saved. With
+   `part`, only that body part's records count. */
+function injuryPainFlag(feelLog, todayStr, pain, part) {
   if (pain >= 4) return true;
   const avg = (from, to) => {
-    const xs = feelLog.filter((r) => typeof r.injuryPain === "number" && r.date >= from && r.date <= to).map((r) => r.injuryPain);
+    const xs = feelLog
+      .filter((r) => typeof r.injuryPain === "number" && (!part || r.injuryPart === part) && r.date >= from && r.date <= to)
+      .map((r) => r.injuryPain);
     return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
   };
   const thisWeek = avg(shiftDate(todayStr, -6), todayStr);
@@ -208,14 +223,22 @@ function injuryPainFlag(feelLog, todayStr, pain) {
   return thisWeek !== null && lastWeek !== null && thisWeek > lastWeek;
 }
 
-/* Applies Injury mode (if on that date) and then one day's override
+/* The injury that was on that date, from one injury or a list (the
+   current one first, then past ones). */
+function injuryOn(injuries, dateStr) {
+  const list = Array.isArray(injuries) ? injuries : [injuries];
+  return list.find((i) => injuryActive(i, dateStr)) || null;
+}
+
+/* Applies Injury mode (whichever injury was on that date) and then one day's override
    ({ removed: [id], moved: {id: time}, added: [item] }) on top of that
    weekday's template, and returns the day's items sorted by time.
    Overrides apply last, so Edit day can still move or remove a PT item
    or the recheck. */
-function itemsForDate(dateStr, overrides, injury) {
+function itemsForDate(dateStr, overrides, injuries) {
   let base = WEEK_TEMPLATE[parseLocalDate(dateStr).getDay()];
-  if (injuryActive(injury, dateStr)) base = injuryItems(base, injury, dateStr);
+  const injury = injuryOn(injuries, dateStr);
+  if (injury) base = injuryItems(base, injury, dateStr);
   const o = (overrides && overrides[dateStr]) || {};
   const removed = new Set(o.removed || []);
   const moved = o.moved || {};
@@ -404,6 +427,6 @@ if (typeof module !== "undefined") {
     WEEK_TEMPLATE, TAPER_WEEKS, TRIGGER_TIPS, MISS_REASONS,
     addMinutes, shiftDate, daysBetween, itemsForDate, nextMonday, taperStepFor,
     quitDate, nicotineFreeStreak, pouchesAvoided, pouchTimeline, lastPouchAt, formatGap, clockTime, timeOnDate, timeInputValue, atOnDate, dayCompletion, completionStreak, sleepHours,
-    INJURY_LIFT_NOTE, INJURY_WALK_TITLE, PAIN_WARNING, capitalize, injuryActive, injuryDays, endInjury, injuryPainFlag,
+    INJURY_LIFT_NOTE, INJURY_LIFT_AVOID, INJURY_WALK_TITLE, PAIN_WARNING, capitalize, injuryActive, injuryDays, endInjury, injuryPainFlag, injuryOn,
   };
 }

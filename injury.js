@@ -15,8 +15,9 @@ function shortDate(dateStr) {
 }
 
 function injuryLine(injury, dateStr) {
-  const { day, total } = injuryDays(injury, dateStr);
-  return `${capitalize(injury.part)} · day ${day} of ${total} · recheck ${shortDate(injury.until)}`;
+  const days = injuryDays(injury, dateStr);
+  if (!days) return capitalize(injury.part);
+  return `${capitalize(injury.part)} · day ${days.day} of ${days.total} · recheck ${shortDate(injury.until)}`;
 }
 
 /* Called by coach.js renderTodaySummary; null when no injury is on. */
@@ -42,6 +43,19 @@ function recentInjury() {
   const injury = loadInjury();
   const today = todayLocalDateString();
   return injury && injury.until < today && injury.until >= shiftDate(today, -14) ? injury : null;
+}
+
+/* Saves an ended injury, or, when endInjury dropped it (it never ran a
+   full day), brings back the one before it so the card still reads
+   "Off. Last one: ...". */
+function finishInjury(ended) {
+  if (ended) {
+    saveJSON(INJURY_KEY, ended);
+    return;
+  }
+  const past = loadJSON(INJURY_PAST_KEY, []);
+  saveJSON(INJURY_KEY, past.pop() || null);
+  saveJSON(INJURY_PAST_KEY, past);
 }
 
 function setDateField(input, value) {
@@ -84,6 +98,7 @@ function renderPtList(current) {
     remove.setAttribute("aria-label", `Remove ${pt.title}`);
     remove.addEventListener("click", () => {
       const injury = loadInjury();
+      if (!injury) return;
       injury.pt = (injury.pt || []).filter((p) => p.id !== pt.id);
       saveJSON(INJURY_KEY, injury);
       renderInjury();
@@ -118,7 +133,10 @@ function renderInjury() {
   }
   document.getElementById("injury-edit-btn").textContent = injuryEditing ? "Cancel" : currentInjury() ? "Edit" : "Start";
   injuryForm.hidden = !injuryEditing;
-  document.getElementById("injury-end-btn").hidden = !active;
+  const upcoming = Boolean(injury && injury.start > today);
+  const endBtn = document.getElementById("injury-end-btn");
+  endBtn.hidden = !active && !upcoming;
+  endBtn.textContent = upcoming ? "Cancel this injury" : "End injury mode now";
   renderPtList(currentInjury());
   renderRunsPaused(injury, today);
 }
@@ -175,6 +193,9 @@ injuryForm.addEventListener("submit", (e) => {
   const recent = recentInjury();
   /* PT carries over when editing, or when restarting the same part. */
   const source = current || (recent && recent.part.toLowerCase() === part ? recent : null);
+  /* Starting a new injury keeps the old one, so its days stay injured. */
+  const old = loadInjury();
+  if (!current && old) saveJSON(INJURY_PAST_KEY, [...loadJSON(INJURY_PAST_KEY, []), old]);
   saveJSON(INJURY_KEY, { part, start, until, note: document.getElementById("injury-note").value.trim(), pt: source ? source.pt || [] : [] });
   injuryEditing = false;
   renderInjury();
@@ -192,7 +213,7 @@ function renderRecheckPanel(dateStr, item) {
   const yes = el("button", "pill-btn dark", "Yes");
   yes.type = "button";
   yes.addEventListener("click", () => {
-    saveJSON(INJURY_KEY, endInjury(loadInjury(), dateStr));
+    finishInjury(endInjury(loadInjury(), dateStr));
     setCheckin(dateStr, item.id, { status: "done", at: Date.now() });
     recheckOpenFor = null;
     recheckExtending = false;
@@ -242,12 +263,14 @@ function renderRecheckPanel(dateStr, item) {
 document.getElementById("injury-end-btn").addEventListener("click", () => {
   const injury = loadInjury();
   if (!injury) return;
-  if (!confirm("End injury mode? Games and runs come back on the schedule today.")) return;
-  saveJSON(INJURY_KEY, endInjury(injury, todayLocalDateString()));
+  const today = todayLocalDateString();
+  const upcoming = injury.start > today;
+  if (!confirm(upcoming ? "Cancel this upcoming injury?" : "End injury mode? Games and runs come back on the schedule today.")) return;
+  finishInjury(endInjury(injury, today));
   injuryEditing = false;
   renderInjury();
   renderToday();
-  showToast("Injury mode off. Games and runs are back on the schedule.");
+  showToast(upcoming ? "Injury cancelled" : "Injury mode off. Games and runs are back on the schedule.");
 });
 
 document.addEventListener("visibilitychange", () => {
