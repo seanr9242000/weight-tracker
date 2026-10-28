@@ -15,6 +15,8 @@ const workoutDaySelect = document.getElementById("workout-day");
 let swapOpenFor = null; // exercise index whose swap list is open
 let workoutTicker = null;
 let wakeLock = null;
+let audioCtx = null;
+let restDoneAt = null; // when the current rest hit 0 (for the 3 s flash)
 
 const loadSessions = () => loadJSON(LIFT_SESSIONS_KEY, []);
 const loadActive = () => loadJSON(LIFT_ACTIVE_KEY, null);
@@ -96,6 +98,8 @@ function closeWorkout() {
   clearInterval(workoutTicker);
   workoutTicker = null;
   keepAwake(false);
+  document.getElementById("rest-bar").hidden = true;
+  restDoneAt = null;
   renderWorkoutBar("");
 }
 
@@ -111,6 +115,7 @@ function tickWorkout() {
   const elapsed = formatDuration(Math.max(0, Math.floor((Date.now() - active.start) / 1000)));
   document.getElementById("workout-clock").textContent = elapsed;
   renderWorkoutBar(elapsed);
+  tickRest(active);
 }
 
 function updateActive(mutate) {
@@ -230,8 +235,93 @@ function toggleSet(i, j) {
   }
   set.done = !set.done;
   saveActive(a);
+  if (set.done) {
+    unlockAudio();
+    startRest(a.exercises[i].rest);
+  }
   renderWorkout();
 }
+
+/* iOS only lets audio start from a tap, so the ✓ tap unlocks it. */
+function unlockAudio() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    audioCtx = audioCtx || new Ctx();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch {
+    audioCtx = null;
+  }
+}
+
+/* Two short tones. iOS mutes Web Audio when the ring switch is on silent. */
+function beep() {
+  if (!audioCtx) return;
+  try {
+    const t = audioCtx.currentTime;
+    for (const at of [0, 0.3]) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.25, t + at);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + at + 0.2);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t + at);
+      osc.stop(t + at + 0.2);
+    }
+  } catch {
+    // Sound is a nice-to-have; the flash still shows.
+  }
+}
+
+function updateRest(end) {
+  const a = loadActive();
+  if (!a) return;
+  a.restEndsAt = end;
+  saveActive(a);
+  restDoneAt = null;
+  document.getElementById("rest-bar").classList.remove("rest-done");
+  tickRest(a);
+}
+
+function startRest(seconds) {
+  if (seconds > 0) updateRest(Date.now() + seconds * 1000);
+}
+
+function tickRest(active) {
+  const bar = document.getElementById("rest-bar");
+  if (!active.restEndsAt) {
+    bar.hidden = true;
+    return;
+  }
+  const now = Date.now();
+  const left = restLeft(active.restEndsAt, now);
+  bar.hidden = false;
+  document.getElementById("rest-time").textContent = formatDuration(left);
+  if (left > 0) return;
+  if (restDoneAt === null) {
+    /* Back long after it ended (phone locked, app switched): nothing to announce. */
+    if (now - active.restEndsAt >= 2000) {
+      updateRest(null);
+      return;
+    }
+    restDoneAt = now;
+    bar.classList.add("rest-done");
+    if (document.visibilityState === "visible") beep();
+  } else if (now - restDoneAt >= 3000) {
+    updateRest(null);
+  }
+}
+
+document.getElementById("rest-minus").addEventListener("click", () => {
+  const a = loadActive();
+  if (a) updateRest(adjustRest(a.restEndsAt, Date.now(), -15));
+});
+document.getElementById("rest-plus").addEventListener("click", () => {
+  const a = loadActive();
+  if (a) updateRest(adjustRest(a.restEndsAt, Date.now(), 15));
+});
+document.getElementById("rest-skip").addEventListener("click", () => updateRest(null));
 
 workoutDaySelect.addEventListener("change", () => {
   const a = loadActive();

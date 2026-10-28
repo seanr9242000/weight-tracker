@@ -2942,3 +2942,38 @@ body.workout-open {
   color: var(--good);
   font-weight: 600;
 }
+
+.rest-bar {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom) + 16px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+}
+
+.rest-label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.rest-time {
+  flex: 1;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rest-bar.rest-done {
+  animation: rest-flash 0.5s 3;
+}
+
+@keyframes rest-flash {
+  50% {
+    background: var(--good);
+    color: #fff;
+  }
+}
