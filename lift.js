@@ -363,13 +363,21 @@ function finishActive() {
   const sets = session.exercises.reduce((n, e) => n + e.sets.length, 0);
   saveJSON(LIFT_SESSIONS_KEY, [...loadSessions(), session]);
   closeWorkout();
+  /* A make-up workout (Monday's done on Tuesday, or a lift removed with
+     Edit day) puts a Lift item on its day at the time it started, so it
+     still gets checked off and asked about. */
+  if (!scheduleFor(a.date).some((it) => it.id === "lift")) {
+    updateOverride(a.date, (o) => {
+      o.removed = o.removed.filter((id) => id !== "lift");
+      o.added = o.added.filter((it) => it.id !== "lift");
+      o.added.push({ id: "lift", time: timeInputValue(a.start), title: "Lift — 45 min", kind: "train" });
+    });
+  }
   /* The lift on the workout's own day gets checked off (a workout left
      open past midnight counts for the day it started). Only today's
      opens the "how did it go?" card. */
-  if (scheduleFor(a.date).some((it) => it.id === "lift")) {
-    setCheckin(a.date, "lift", { status: "done", at: Date.now() });
-    if (a.date === todayLocalDateString()) feelOpenFor = "lift";
-  }
+  setCheckin(a.date, "lift", { status: "done", at: Date.now() });
+  if (a.date === todayLocalDateString()) feelOpenFor = "lift";
   activateTab("today-panel");
   renderToday();
   showToast(`Workout saved · ${sets} ${sets === 1 ? "set" : "sets"}`);

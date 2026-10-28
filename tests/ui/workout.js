@@ -109,3 +109,18 @@ click(".set-check", exs()[0]);
 click("#workout-stop");
 clickText("Finish", $("#workout-finish"));
 check("yesterday's workout checks off yesterday", Boolean(ls("coach-checkins")[`${day(-1)}|lift`]) && !ls("coach-checkins")[`${today}|lift`]);
+
+// A make-up workout on a day with no lift (Monday's done on Tuesday, or a
+// lift removed with Edit day) adds a Lift item, checks it off and asks how it went.
+await reload({ "coach-started-at": "0", "coach-injury": null,
+  "coach-overrides": { [today]: { removed: ["lift"], moved: {}, added: [] } } }, "train-panel");
+check("no lift on the day", !item(LIFT));
+click("#lift-start-btn");
+fill($(".set-w", exs()[0]), "50");
+fill($(".set-reps", exs()[0]), "8");
+click(".set-check", exs()[0]);
+click("#workout-stop");
+clickText("Finish", $("#workout-finish"));
+check("make-up lift added to the day", Boolean(item(LIFT)));
+eq("make-up lift checked off", ((ls("coach-checkins") || {})[`${today}|lift`] || {}).status, "done");
+check("make-up asks how it went", Boolean(item(LIFT) && $(".feel-panel", item(LIFT))));
