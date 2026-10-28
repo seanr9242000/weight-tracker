@@ -80,6 +80,7 @@ function openWorkout() {
   if (!workoutTicker) workoutTicker = setInterval(tickWorkout, 1000);
   tickWorkout();
   keepAwake(true);
+  renderLifts();
 }
 
 function minimizeWorkout() {
@@ -88,6 +89,7 @@ function minimizeWorkout() {
   keepAwake(false);
   tickWorkout();
   renderToday();
+  renderLifts();
 }
 
 /* Finish and Discard both end here: nothing in progress any more. */
@@ -367,19 +369,168 @@ function finishActive() {
   activateTab("today-panel");
   renderToday();
   showToast(`Workout saved · ${sets} ${sets === 1 ? "set" : "sets"}`);
+  renderLifts();
 }
 
 function discardWorkout() {
   if (!confirm("Discard this workout? Its sets won't be saved.")) return;
   closeWorkout();
   renderToday();
+  renderLifts();
 }
+
+/* ---- Train tab: Lifts card and Edit plan ---- */
+
+let planEditing = false;
+let planDay = "upperA";
+
+function nextLiftLine(plan, sessions) {
+  const today = todayLocalDateString();
+  const checkins = loadJSON(CHECKINS_KEY, {});
+  for (let i = 0; i < 8; i++) {
+    const d = shiftDate(today, i);
+    const lift = scheduleFor(d).find((it) => it.id === "lift");
+    if (!lift || (i === 0 && checkins[`${d}|lift`])) continue;
+    const when = i === 0 ? "Today" : parseLocalDate(d).toLocaleDateString(undefined, { weekday: "short" });
+    return `Next: ${liftDayName(liftDayFor(plan, d, sessions))} · ${when} ${formatTime12(lift.time)}`;
+  }
+  return "No lift on the schedule this week.";
+}
+
+function renderLifts() {
+  const sessions = loadSessions();
+  document.getElementById("lift-next").textContent = nextLiftLine(currentPlan(), sessions);
+  document.getElementById("lift-start-btn").textContent = loadActive() ? "Resume workout" : "Start workout";
+  const list = document.getElementById("lift-history");
+  list.innerHTML = "";
+  const recent = [...sessions].sort((a, b) => b.start - a.start).slice(0, 5);
+  document.getElementById("lift-history-empty").style.display = recent.length ? "none" : "block";
+  for (const s of recent) {
+    const li = el("li");
+    const main = el("div", "entry-main");
+    const sets = s.exercises.reduce((n, e) => n + e.sets.length, 0);
+    main.appendChild(el("div", "entry-weight", `${liftDayName(s.day)} · ${Math.max(1, Math.round((s.end - s.start) / 60000))} min`));
+    main.appendChild(el("div", "entry-meta", `${formatDate(s.date)} · ${sets} ${sets === 1 ? "set" : "sets"}`));
+    li.append(main, actionBtn("Delete", () => {
+      if (!confirm("Delete this workout? Its numbers stop counting toward suggestions.")) return;
+      saveJSON(LIFT_SESSIONS_KEY, loadSessions().filter((x) => x.id !== s.id));
+      renderLifts();
+    }, "delete-btn"));
+    list.appendChild(li);
+  }
+  renderPlanEditor();
+}
+
+/* Each edit saves at once; liftPlan() cleans the values on read. The
+   workout in progress is a snapshot, so edits never change it. */
+function savePlan(mutate) {
+  const plan = currentPlan();
+  mutate(plan.days[planDay]);
+  saveJSON(LIFT_PLAN_KEY, { days: plan.days });
+  renderLifts();
+}
+
+function renderPlanRow(row, i, count) {
+  const type = LIFT_EXERCISES[row.exId].type;
+  const li = el("li", "plan-row");
+  const pick = el("select", "plan-ex");
+  for (const id of [row.exId, ...swapOptions(row)]) {
+    const o = el("option", null, exerciseName(id));
+    o.value = id;
+    o.selected = id === row.exId;
+    pick.appendChild(o);
+  }
+  pick.disabled = pick.options.length < 2;
+  pick.setAttribute("aria-label", "Exercise");
+  /* Picking a swap here makes it this day's default. */
+  pick.addEventListener("change", () => savePlan((r) => { r[i].exId = pick.value; }));
+  li.appendChild(pick);
+
+  const nums = el("div", "plan-nums");
+  const num = (key, label, cls) => {
+    const input = el("input", `plan-num ${cls}`);
+    input.type = "number";
+    input.inputMode = "numeric";
+    input.value = row[key];
+    input.setAttribute("aria-label", label);
+    input.addEventListener("change", () => savePlan((r) => {
+      r[i][key] = Number(input.value);
+      if (type === "timed") r[i].repMax = r[i].repMin;
+    }));
+    return input;
+  };
+  if (type === "timed") {
+    nums.append(num("repMin", "Minutes", "plan-min"), el("span", "set-x", "min"));
+  } else {
+    nums.append(num("sets", "Sets", "plan-sets"), el("span", "set-x", "×"), num("repMin", "Fewest reps", "plan-rep-min"),
+      el("span", "set-x", "–"), num("repMax", "Most reps", "plan-rep-max"), el("span", "set-x", "rest"),
+      num("rest", "Rest seconds", "plan-rest"), el("span", "set-x", "s"));
+  }
+  li.appendChild(nums);
+
+  const tools = el("div", "plan-tools");
+  const up = actionBtn("↑", () => savePlan((r) => { [r[i - 1], r[i]] = [r[i], r[i - 1]]; }), "pill-btn plan-up");
+  up.disabled = i === 0;
+  up.setAttribute("aria-label", "Move up");
+  const down = actionBtn("↓", () => savePlan((r) => { [r[i + 1], r[i]] = [r[i], r[i + 1]]; }), "pill-btn plan-down");
+  down.disabled = i === count - 1;
+  down.setAttribute("aria-label", "Move down");
+  const remove = actionBtn("✕", () => savePlan((r) => { r.splice(i, 1); }), "pill-btn danger plan-remove");
+  remove.setAttribute("aria-label", `Remove ${exerciseName(row.exId)}`);
+  tools.append(up, down, remove);
+  li.appendChild(tools);
+  return li;
+}
+
+function renderPlanEditor() {
+  const box = document.getElementById("lift-plan-editor");
+  document.getElementById("lift-plan-btn").textContent = planEditing ? "Done" : "Edit plan";
+  box.hidden = !planEditing;
+  if (!planEditing) return;
+  box.innerHTML = "";
+  const seg = el("div", "segmented plan-days");
+  for (const day of LIFT_DAY_ORDER) {
+    seg.appendChild(actionBtn(liftDayName(day), () => {
+      planDay = day;
+      renderPlanEditor();
+    }, `seg-btn${day === planDay ? " active" : ""}`));
+  }
+  box.appendChild(seg);
+  const rows = currentPlan().days[planDay];
+  const list = el("ul", "plan-list");
+  rows.forEach((row, i) => list.appendChild(renderPlanRow(row, i, rows.length)));
+  box.appendChild(list);
+  if (!rows.length) box.appendChild(el("p", "hint", "No exercises. Add one below."));
+  const add = el("div", "plan-add");
+  const pick = el("select", "plan-add-select");
+  pick.setAttribute("aria-label", "Exercise to add");
+  for (const id of Object.keys(LIFT_EXERCISES).sort((a, b) => exerciseName(a).localeCompare(exerciseName(b)))) {
+    const o = el("option", null, exerciseName(id));
+    o.value = id;
+    pick.appendChild(o);
+  }
+  add.append(pick, actionBtn("Add", () => savePlan((r) => { r.push(newPlanRow(pick.value)); })));
+  box.appendChild(add);
+  box.appendChild(actionBtn("Reset to default", () => {
+    if (!confirm("Reset all four days to the default plan?")) return;
+    saveJSON(LIFT_PLAN_KEY, null);
+    renderLifts();
+  }, "link-btn"));
+}
+
+document.getElementById("lift-plan-btn").addEventListener("click", () => {
+  planEditing = !planEditing;
+  renderPlanEditor();
+});
+document.getElementById("lift-start-btn").addEventListener("click", () => startWorkout(todayLocalDateString()));
 
 document.getElementById("workout-min").addEventListener("click", minimizeWorkout);
 document.getElementById("workout-stop").addEventListener("click", renderFinish);
 document.getElementById("workout-bar").addEventListener("click", openWorkout);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible" || !loadActive()) return;
+  if (document.visibilityState !== "visible") return;
+  renderLifts();
+  if (!loadActive()) return;
   if (!workoutEl.hidden) keepAwake(true);
   tickWorkout();
 });
@@ -387,4 +538,5 @@ document.addEventListener("visibilitychange", () => {
 // A workout left in progress (reload, update, iOS closing the app) reopens.
 if (loadActive()) openWorkout();
 // coach.js rendered Today before this file loaded; add the Start button now.
+renderLifts();
 renderToday();

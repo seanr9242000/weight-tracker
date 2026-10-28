@@ -373,9 +373,21 @@
     <!-- ================= TRAIN ================= -->
     <div id="train-panel" class="tab-panel area-train" hidden>
       <header class="page-head">
-        <div class="page-eyebrow">Runs &amp; walks</div>
+        <div class="page-eyebrow">Lifts, runs &amp; walks</div>
         <h1 class="page-title">Train</h1>
       </header>
+
+      <section class="card area-train" id="lifts-card">
+        <div class="card-head">
+          <h2>Lifts</h2>
+          <button type="button" id="lift-plan-btn" class="pill-btn">Edit plan</button>
+        </div>
+        <p class="hint" id="lift-next"></p>
+        <button type="button" id="lift-start-btn" class="pill-btn dark">Start workout</button>
+        <div id="lift-plan-editor" class="lift-plan-editor" hidden></div>
+        <ul id="lift-history" class="entry-list"></ul>
+        <p id="lift-history-empty" class="empty-message">No workouts yet.</p>
+      </section>
 
       <section class="card glass-card hero">
         <p class="runs-paused" id="runs-paused" hidden></p>
