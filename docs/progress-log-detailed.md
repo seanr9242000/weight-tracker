@@ -198,5 +198,6 @@ Session total so far: step B planned (Sean answered the plan's open calls), then
 | 22:48 | Rest timer: ±15 s / Skip, beeps once when it just ended, survives reloads (21651d0) | 1 min |
 | 22:50 | Train tab Lifts card: next lift, recent workouts with Delete, Edit plan (3d0e311) | 2 min |
 | 23:01 | Review fixes: no Skip after a logged set, same-day history first, iOS audio resume (d75aa80) | 11 min |
+| 23:08 | Make-up workouts: a workout finished on a day with no lift adds a checked-off Lift item and asks how it went (d34d82e) | — |
 
 Session total so far: step T built inline on branch batch1-stepT (native execution, per-task commits approved by Sean, one final Opus review). All 22 UI scripts pass light and dark. Not pushed yet.

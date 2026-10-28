@@ -356,5 +356,7 @@ start day removes it, and the pain trend no longer mixes body parts. The
 final review led to three fixes: Skip is gone once a set is logged (it
 used to hide them), each lift day judges suggestions by its own sessions
 first (Lower A and B use different rep ranges), and the beep recovers
-after iOS interrupts audio. Built on branch batch1-stepT as v36, not
-pushed yet.
+after iOS interrupts audio. A make-up workout (say Monday's done on
+Tuesday from the Train tab) now adds a Lift item to that day, checks it
+off and asks "How did it go?", so the ankle check-in isn't skipped.
+Built on branch batch1-stepT as v36, not pushed yet.
