@@ -185,3 +185,18 @@ Session total so far: step 0 shipped as v31 (main 6b7e2e4, Sean's phone check pa
 | 18:30 | Step B review fixes: Ate at keeps up with the clock, survives the iOS time wheel, saves change-only edits (3c80dd2) | 11 min |
 
 Session total so far: step B planned (Sean answered the plan's open calls), then built inline on branch batch1-stepB (native execution, one final whole-branch review; per-plan commit approval). Not pushed yet.
+
+## Session: 2026-10-25 / 10-27 — Step T: training basics
+
+| Time  | Change                                                  | Elapsed |
+|-------|------------------------------------------------------------|---------|
+| 10-25 22:32 | Spec step T: 4-day Upper/Lower, workout mode, rest timer, progression (50a60ba) | — |
+| 22:37 | Plan step T: lift logic, injury backlog, workout mode, rest timer, Lifts card (ced1952) | — |
+| 22:42 | Lift logic: catalog, 4-day plan, progression, workout shapes, rest math; lift keys backed up; v36 (2b3f108) | 5 min |
+| 22:45 | Injury mode for step T: injured-Monday lift, injury history, cancel upcoming, same-day End, pain trend per part (b99b1be) | 3 min |
+| 22:47 | Workout mode: Start, log sets, swap/skip, minimize/resume, survives reloads, Stop → Finish/Discard (9164fb9) | 2 min |
+| 22:48 | Rest timer: ±15 s / Skip, beeps once when it just ended, survives reloads (21651d0) | 1 min |
+| 22:50 | Train tab Lifts card: next lift, recent workouts with Delete, Edit plan (3d0e311) | 2 min |
+| 23:01 | Review fixes: no Skip after a logged set, same-day history first, iOS audio resume (d75aa80) | 11 min |
+
+Session total so far: step T built inline on branch batch1-stepT (native execution, per-task commits approved by Sean, one final Opus review). All 22 UI scripts pass light and dark. Not pushed yet.

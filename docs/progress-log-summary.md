@@ -333,3 +333,28 @@ overwrite the cloud copy. The final review led to three fixes around "Ate
 at": it catches up when Sean comes back to the app, it stays visible while
 the iPhone's time wheel is open, and it saves edits that iOS reports only
 as a "change". Built on branch batch1-stepB as v35, not pushed yet.
+
+## 2026-10-25 / 10-27 — Step T built: training basics (4-day Upper/Lower, workout mode, rest timer)
+
+Lifting is Sean's only training until the ankle recheck, so the app now
+runs it. Monday gets an Upper A lift at 6:30 PM while Injury mode is on,
+next to Lower A on Wednesday, Upper B on Friday and Lower B on Saturday,
+all with ankle-safe lower days. "Start workout" on the Today lift item (or
+the new Lifts card on Train) opens a full-screen workout. Each exercise
+shows last time's numbers and a suggestion (+5 lb when every set hit the
+top of the range, −10% after two tough sessions, otherwise beat the reps),
+with weight and reps pre-filled. Tapping ✓ logs a set and starts a rest
+timer with −15 s, +15 s and Skip, which beeps when it ends. Exercises can
+be swapped or skipped, the workout can be minimized to a bar on Today, and
+it saves after every keystroke, so a reload or update brings it back
+intact. Stop → Finish saves the session, checks off the lift on the day
+it started and opens "How did it go?". The Lifts card shows the next lift
+and the last 5 workouts, and Edit plan changes sets, reps, rest, order and
+default swaps. Injury mode also got its leftovers fixed: past injuries keep
+their own days, an upcoming injury can be cancelled, ending one on its
+start day removes it, and the pain trend no longer mixes body parts. The
+final review led to three fixes: Skip is gone once a set is logged (it
+used to hide them), each lift day judges suggestions by its own sessions
+first (Lower A and B use different rep ranges), and the beep recovers
+after iOS interrupts audio. Built on branch batch1-stepT as v36, not
+pushed yet.
