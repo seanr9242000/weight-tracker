@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html><body><pre id="out"></pre>
+<script src="test-utils.js"></script>
+<script src="../coach-core.js"></script>
+<script src="../lift-core.js"></script>
+<script>
+run(() => {
+  // ---- catalog and default plan ----
+  const ids = Object.keys(LIFT_EXERCISES);
+  eq("every swap is in the catalog", ids.flatMap((id) => LIFT_EXERCISES[id].swaps).filter((s) => !LIFT_EXERCISES[s]), []);
+  eq("timed swaps stay timed", ids.filter((id) => LIFT_EXERCISES[id].swaps.some((s) => (LIFT_EXERCISES[s].type === "timed") !== (LIFT_EXERCISES[id].type === "timed"))), []);
+  eq("no hip thrusts", ids.filter((id) => /thrust/i.test(LIFT_EXERCISES[id].name)), []);
+  const plan = liftPlan(null);
+  eq("four days", Object.keys(plan.days), ["upperA", "lowerA", "upperB", "lowerB"]);
+  eq("weekday map", plan.dayByWeekday, { 1: "upperA", 3: "lowerA", 5: "upperB", 6: "lowerB" });
+  eq("Upper A lineup", plan.days.upperA.map((r) => [r.exId, r.sets, r.repMin, r.repMax, r.rest]), [
+    ["bench-press", 3, 6, 8, 120], ["seated-cable-row", 3, 8, 10, 120], ["seated-db-press", 3, 8, 10, 120],
+    ["lat-pulldown", 3, 10, 12, 75], ["triceps-pushdown", 2, 12, 15, 75], ["db-curl", 2, 12, 15, 75]]);
+  eq("Lower A lineup", plan.days.lowerA.map((r) => r.exId),
+    ["leg-extension", "seated-leg-curl", "glute-bridge", "sl-leg-extension", "hip-abduction", "hip-adduction", "machine-crunch", "arm-bike"]);
+  eq("Upper B lineup", plan.days.upperB.map((r) => r.exId),
+    ["incline-db-press", "close-grip-pulldown", "machine-row", "machine-shoulder-press", "cable-lateral-raise", "face-pull", "hammer-curl", "overhead-triceps"]);
+  eq("Lower B lineup", plan.days.lowerB.map((r) => r.exId),
+    ["seated-leg-curl", "leg-extension", "glute-bridge", "sl-leg-curl", "hip-abduction", "hip-adduction", "dead-bug", "arm-bike"]);
+  eq("Lower B is the lighter day", plan.days.lowerB.slice(1, 3).map((r) => [r.repMin, r.repMax]), [[12, 15], [12, 15]]);
+  eq("arm bike is 1 × 8 min, no rest", ["sets", "repMin", "repMax", "rest"].map((k) => plan.days.lowerA[7][k]), [1, 8, 8, 0]);
+  eq("lower days stay off the ankle", [...plan.days.lowerA, ...plan.days.lowerB]
+    .flatMap((r) => [r.exId, ...LIFT_EXERCISES[r.baseId].swaps])
+    .filter((id) => /squat|lunge|step-up|calf|jump|sled|rower|run|press|standing|kneeling/i.test(exerciseName(id))), []);
+  eq("day names", LIFT_DAY_ORDER.map(liftDayName), ["Upper A", "Lower A", "Upper B", "Lower B"]);
+  eq("lower flags", LIFT_DAY_ORDER.map((d) => LIFT_DAYS[d].lower), [false, true, false, true]);
+
+  // ---- stored plans ----
+  const edited = liftPlan({ days: { upperA: [{ exId: "db-bench-press", baseId: "bench-press", sets: "4", repMin: 8, repMax: 6, rest: 90 }, { exId: "nope", sets: 3 }] } });
+  eq("stored day wins, unknown dropped, reps fixed", edited.days.upperA, [{ exId: "db-bench-press", baseId: "bench-press", sets: 4, repMin: 8, repMax: 8, rest: 90 }]);
+  eq("missing days fall back to default", edited.days.lowerA.length, 8);
+  eq("JSON round trip is stable", liftPlan(JSON.parse(JSON.stringify(edited))), edited);
+  eq("an emptied day stays empty", liftPlan({ days: { upperB: [] } }).days.upperB, []);
+  eq("clamps", cleanRow({ exId: "leg-extension", sets: 0, repMin: -3, repMax: 500, rest: 9999 }),
+    { exId: "leg-extension", baseId: "leg-extension", sets: 1, repMin: 1, repMax: 100, rest: 600 });
+  eq("default rest from reps", [cleanRow({ exId: "leg-extension", sets: 3, repMin: 8, repMax: 10 }).rest, cleanRow({ exId: "leg-extension", sets: 3, repMin: 12, repMax: 15 }).rest], [120, 75]);
+  eq("new rows", [newPlanRow("push-up"), newPlanRow("arm-bike")], [
+    { exId: "push-up", baseId: "push-up", sets: 3, repMin: 10, repMax: 12, rest: 75 },
+    { exId: "arm-bike", baseId: "arm-bike", sets: 1, repMin: 8, repMax: 8, rest: 0 }]);
+  eq("swap options", swapOptions({ exId: "db-bench-press", baseId: "bench-press" }), ["bench-press", "machine-chest-press", "push-up"]);
+  eq("good-leg slot swaps", swapOptions(plan.days.lowerA[3]), ["sl-leg-curl"]);
+
+  // ---- which day ----  2026-10-26 Mon, 27 Tue, 28 Wed, 30 Fri, 31 Sat
+  eq("day by weekday", ["2026-10-26", "2026-10-28", "2026-10-30", "2026-10-31"].map((d) => liftDayFor(plan, d, [])), ["upperA", "lowerA", "upperB", "lowerB"]);
+  eq("unmapped day, no history: Upper A", liftDayFor(plan, "2026-10-27", []), "upperA");
+  eq("unmapped day: next after the last session", liftDayFor(plan, "2026-10-27", [{ day: "upperA", start: 1 }, { day: "upperB", start: 2 }]), "lowerB");
+  eq("rotation wraps", liftDayFor(plan, "2026-10-27", [{ day: "lowerB", start: 5 }]), "upperA");
+
+  // ---- history and suggestions ----
+  const S = (start, exId, sets) => ({ id: `s${start}`, date: "2026-10-20", day: "upperA", start, end: start + 1, exercises: [{ exId, baseId: exId, sets }] });
+  const W = (w, ...reps) => reps.map((r) => ({ w, reps: r, min: null }));
+  const B = (...reps) => reps.map((r) => ({ w: null, reps: r, min: null }));
+  const bench = plan.days.upperA[0]; // 3 × 6–8
+  const sessions = [S(1, "bench-press", W(95, 6, 6, 5)), S(3, "bench-press", W(95, 8, 8, 8)), S(2, "db-bench-press", W(40, 10, 10, 9))];
+  eq("history newest first, per exercise", exerciseHistory(sessions, "bench-press").map((h) => h.sets[0].reps), [8, 6]);
+  eq("a swap keeps its own history", exerciseHistory(sessions, "db-bench-press").length, 1);
+  eq("no history", suggestNext(bench, []), { kind: "new", weight: null, reps: null, text: NEW_WEIGHTED_HINT });
+  eq("all top reps: +5", suggestNext(bench, exerciseHistory(sessions, "bench-press")), { kind: "up", weight: 100, reps: 6, text: "↑ Try 100 lb" });
+  eq("fewer sets than planned: no increase", suggestNext(bench, [{ sets: W(95, 8, 8) }]).kind, "hold");
+  eq("in range: hold", suggestNext(bench, [{ sets: W(95, 8, 7, 6) }]), { kind: "hold", weight: 95, reps: null, text: "Beat last time's reps." });
+  eq("one miss: hold", suggestNext(bench, [{ sets: W(95, 6, 5, 5) }, { sets: W(95, 7, 7, 6) }]).kind, "hold");
+  eq("two misses: -10%", suggestNext(bench, [{ sets: W(100, 6, 5, 4) }, { sets: W(100, 5, 5, 5) }]),
+    { kind: "down", weight: 90, reps: 6, text: "↓ Two tough sessions. Drop to 90 lb." });
+  eq("-10% rounds to 5 lb and always drops", [25, 55, 10].map((w) => suggestNext(bench, [{ sets: W(w, 4, 4, 4) }, { sets: W(w, 4, 4, 4) }]).weight), [20, 50, 5]);
+  eq("5 lb never drops below 5", suggestNext(bench, [{ sets: W(5, 4, 4, 4) }, { sets: W(5, 4, 4, 4) }]).kind, "hold");
+  const bridge = plan.days.lowerA[2]; // 3 × 10–12, 0 lb = bodyweight
+  eq("bridge tops out at BW: add a dumbbell", suggestNext(bridge, [{ sets: W(0, 12, 12, 12) }]), { kind: "up", weight: 5, reps: 10, text: "↑ Add a 5 lb dumbbell" });
+  const pushRow = { exId: "push-up", baseId: "bench-press", sets: 3, repMin: 6, repMax: 8, rest: 120 };
+  eq("bodyweight: all top → one more rep", suggestNext(pushRow, [{ sets: B(8, 9, 8) }]), { kind: "up", reps: 10, text: "↑ All reps hit. Aim for 10." });
+  eq("bodyweight: first time", suggestNext(pushRow, []), { kind: "new", reps: null, text: "First time: aim for 6–8 clean reps." });
+  eq("bodyweight: hold has no weight", suggestNext(pushRow, [{ sets: B(6, 6, 6) }]), { kind: "hold", reps: null, text: "Beat last time's reps." });
+  const bike = plan.days.lowerA[7];
+  eq("timed: first time uses the plan", suggestNext(bike, []), { kind: "new", min: 8, text: "" });
+  eq("timed: last time", suggestNext(bike, [{ sets: [{ w: null, reps: null, min: 10 }] }]), { kind: "hold", min: 10, text: "" });
+  eq("format weighted", formatSets("weighted", W(50, 10, 10, 8)), "50 lb × 10, 10, 8");
+  eq("format mixed weights", formatSets("weighted", [...W(50, 10), ...W(55, 8)]), "50 lb × 10, 55 lb × 8");
+  eq("format BW bridge", formatSets("weighted", W(0, 12, 12)), "BW × 12, 12");
+  eq("format bodyweight", formatSets("bodyweight", B(12, 10)), "12, 10 reps");
+  eq("format timed", formatSets("timed", [{ min: 8 }]), "8 min");
+
+  // ---- workouts ----
+  const w = newWorkout(plan, "upperA", "2026-10-26", sessions, 1000);
+  eq("workout shape", [w.id, w.date, w.day, w.start, w.restEndsAt, w.exercises.length], ["lift-1000", "2026-10-26", "upperA", 1000, null, 6]);
+  const blank = { w: null, reps: null, min: null, done: false };
+  eq("bench pre-filled from the suggestion", w.exercises[0].log, [0, 1, 2].map(() => ({ w: 100, reps: 6, min: null, done: false })));
+  eq("last session kept for display", w.exercises[0].last.sets.length, 3);
+  eq("hold pre-fills last time's reps per set", newWorkout(plan, "upperA", "x", [S(1, "bench-press", W(95, 8, 7))], 1).exercises[0].log.map((s) => [s.w, s.reps]), [[95, 8], [95, 7], [95, 7]]);
+  eq("new exercise is blank", [w.exercises[1].log[0], w.exercises[1].last], [blank, null]);
+  eq("timed row", newWorkout(plan, "lowerA", "x", [], 1).exercises[7].log, [{ ...blank, min: 8 }]);
+  const swapped = swapExercise(w, 0, "db-bench-press", sessions);
+  eq("swap uses the swap's history", [swapped.exercises[0].exId, swapped.exercises[0].baseId, swapped.exercises[0].suggestion.kind, swapped.exercises[0].log[0].w], ["db-bench-press", "bench-press", "up", 45]);
+  eq("swap keeps the slot's sets and reps", [swapped.exercises[0].sets, swapped.exercises[0].repMin, swapped.exercises[0].repMax], [3, 6, 8]);
+  eq("swap leaves the rest alone", swapped.exercises.slice(1), w.exercises.slice(1));
+  const logged = { ...w, exercises: w.exercises.map((ex, i) => (i === 0 ? { ...ex, log: ex.log.map((s, j) => ({ ...s, done: j < 2 })) } : ex)) };
+  eq("no swap after a logged set", swapExercise(logged, 0, "push-up", sessions), logged);
+  eq("counts", workoutCounts(logged), { done: 2, total: 16 });
+  const skipped = { ...logged, exercises: logged.exercises.map((ex, i) => (i === 5 ? { ...ex, skipped: true } : ex)) };
+  eq("skipped exercises don't count", workoutCounts(skipped), { done: 2, total: 14 });
+  eq("finish keeps done sets only", finishWorkout(logged, 5000), { id: "lift-1000", date: "2026-10-26", day: "upperA", start: 1000, end: 5000,
+    exercises: [{ exId: "bench-press", baseId: "bench-press", sets: [{ w: 100, reps: 6, min: null }, { w: 100, reps: 6, min: null }] }] });
+
+  // ---- new bests ----
+  const one = (exId, sets) => ({ exercises: [{ exId, baseId: exId, sets }] });
+  eq("best by estimated max", sessionBests(one("bench-press", W(100, 8)), sessions), ["bench-press"]);
+  eq("not a best", sessionBests(one("bench-press", W(95, 7)), sessions), []);
+  eq("more reps at the same weight is a best", sessionBests(one("bench-press", W(95, 9)), sessions), ["bench-press"]);
+  eq("first time is never a best", sessionBests(one("lat-pulldown", W(80, 10)), sessions), []);
+  eq("BW reps count", sessionBests(one("glute-bridge", W(0, 15)), [S(1, "glute-bridge", W(0, 12))]), ["glute-bridge"]);
+  eq("timed never", sessionBests(one("arm-bike", [{ w: null, reps: null, min: 12 }]), [S(1, "arm-bike", [{ w: null, reps: null, min: 8 }])]), []);
+
+  // ---- rest timer math ----
+  eq("rest left", [restLeft(null, 0), restLeft(10500, 0), restLeft(1000, 5000)], [0, 11, 0]);
+  eq("rest +15 / -15", [adjustRest(60000, 0, 15), adjustRest(60000, 0, -15), adjustRest(10000, 0, -15), adjustRest(0, 5000, 15)], [75000, 45000, null, 20000]);
+});
+</script></body></html>

@@ -5,7 +5,7 @@
 
 const BACKUP_APP = "weight-and-save";
 const BACKUP_FORMAT = 1;
-const BACKUP_PREFIXES = ["weight-tracker-", "coach-", "food-", "ui-", "savings-"];
+const BACKUP_PREFIXES = ["weight-tracker-", "coach-", "food-", "ui-", "savings-", "lift-"];
 const BACKUP_EXACT = ["water-log"];
 /* Device-specific: reminders belong to this phone's push subscription;
    the open tab, a run in progress and the Progress segment are screen
@@ -13,7 +13,7 @@ const BACKUP_EXACT = ["water-log"];
 const BACKUP_EXCLUDED = ["coach-reminders-on", "weight-tracker-active-tab", "weight-tracker-active-run", "weight-tracker-progress-seg"];
 /* Things a person logged. Seeded libraries and settings don't count,
    so a fresh install still offers Restore. */
-const USER_DATA_KEYS = ["weight-tracker-entries", "weight-tracker-runs", "coach-checkins", "coach-habit-log", "food-log", "water-log"];
+const USER_DATA_KEYS = ["weight-tracker-entries", "weight-tracker-runs", "coach-checkins", "coach-habit-log", "food-log", "water-log", "lift-sessions"];
 /* Crockford base32: no I, L, O or U, so a code copied by hand can't mix
    up 1/I/L or 0/O. 12 characters ≈ 60 bits. */
 const CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";

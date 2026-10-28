@@ -1,4 +1,4 @@
-const CACHE_NAME = "weight-tracker-v35";
+const CACHE_NAME = "weight-tracker-v36";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const ASSETS = [
   "./coach-core.js",
   "./food-data.js",
   "./food-core.js",
+  "./lift-core.js",
   "./backup-core.js",
   "./app.js",
   "./coach.js",

@@ -99,5 +99,8 @@ run(() => {
   ] });
   eq("only photo types the app makes", parseBackupFile(mixed).photos.map((p) => p.id), ["b", "c"]);
   eq("file name", backupFileName("2026-10-21"), "weight-and-save-backup-2026-10-21.json");
+  // Step T: workouts are backed up, and a logged one counts as user data.
+  eq("lift keys are backed up", ["lift-plan", "lift-sessions", "lift-active"].map(isBackupKey), [true, true, true]);
+  eq("a logged workout is user data", hasUserData(fakeStorage({ "lift-sessions": '[{"id":"s1"}]' })), true);
 });
 </script></body></html>
