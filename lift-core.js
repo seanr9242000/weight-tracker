@@ -222,9 +222,12 @@ function formatSets(type, sets) {
 }
 
 /* One exercise of a workout, pre-filled from its suggestion: the new
-   weight, else last time's reps set by set, else blank. */
-function workoutExercise(row, sessions) {
-  const history = exerciseHistory(sessions, row.exId);
+   weight, else last time's reps set by set, else blank. Sessions of the
+   same plan day come first, since Lower A and Lower B use different rep
+   ranges for the same exercise; any day's history is the fallback. */
+function workoutExercise(row, sessions, day) {
+  const sameDay = exerciseHistory(sessions.filter((s) => s.day === day), row.exId);
+  const history = sameDay.length ? sameDay : exerciseHistory(sessions, row.exId);
   const suggestion = suggestNext(row, history);
   const last = history[0] || null;
   const timed = LIFT_EXERCISES[row.exId].type === TIMED;
@@ -243,7 +246,7 @@ function workoutExercise(row, sessions) {
 function newWorkout(plan, day, dateStr, sessions, now) {
   return {
     id: `lift-${now}`, date: dateStr, day, start: now, restEndsAt: null,
-    exercises: plan.days[day].map((row) => workoutExercise(row, sessions)),
+    exercises: plan.days[day].map((row) => workoutExercise(row, sessions, day)),
   };
 }
 
@@ -253,7 +256,7 @@ function swapExercise(active, index, exId, sessions) {
   if (cur.log.some((s) => s.done)) return active;
   const exercises = active.exercises.slice();
   const { baseId, sets, repMin, repMax, rest } = cur;
-  exercises[index] = workoutExercise({ exId, baseId, sets, repMin, repMax, rest }, sessions);
+  exercises[index] = workoutExercise({ exId, baseId, sets, repMin, repMax, rest }, sessions, active.day);
   return { ...active, exercises };
 }
 

@@ -104,6 +104,13 @@ run(() => {
   eq("finish keeps done sets only", finishWorkout(logged, 5000), { id: "lift-1000", date: "2026-10-26", day: "upperA", start: 1000, end: 5000,
     exercises: [{ exId: "bench-press", baseId: "bench-press", sets: [{ w: 100, reps: 6, min: null }, { w: 100, reps: 6, min: null }] }] });
 
+  // Lower A (10–12) and Lower B (12–15) share leg extension: each day judges its own sessions first.
+  const LE = (start, day, w, reps) => ({ id: `le${start}`, date: "2026-10-20", day, start, end: start + 1, exercises: [{ exId: "leg-extension", baseId: "leg-extension", sets: W(w, reps, reps, reps) }] });
+  const le = [LE(1, "lowerA", 100, 10), LE(2, "lowerB", 80, 15)];
+  eq("same-day history first", [newWorkout(plan, "lowerA", "x", le, 3).exercises[0].suggestion, newWorkout(plan, "lowerA", "x", le, 3).exercises[0].last.sets[0].w],
+    [{ kind: "hold", weight: 100, reps: null, text: "Beat last time's reps." }, 100]);
+  eq("other day's history when the day has none", newWorkout(plan, "lowerB", "x", [le[0]], 3).exercises[1].last.sets[0].w, 100);
+
   // ---- new bests ----
   const one = (exId, sets) => ({ exercises: [{ exId, baseId: exId, sets }] });
   eq("best by estimated max", sessionBests(one("bench-press", W(100, 8)), sessions), ["bench-press"]);

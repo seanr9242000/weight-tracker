@@ -31,6 +31,8 @@ click(".set-check", exs()[0]);
 eq("set logged", ls("lift-active").exercises[0].log[0].done, true);
 check("row marked done", $$(".set-row", exs()[0])[0].classList.contains("done"));
 check("no Swap after a logged set", !byText("Swap", exs()[0]));
+/* Skip would hide logged sets and drop them from the Finish count. */
+check("no Skip after a logged set", !byText("Skip", exs()[0]));
 check("day locked after a set", $("#workout-day").disabled);
 click(".set-check", $$(".set-row", exs()[0])[1]);
 eq("blank set not logged", ls("lift-active").exercises[0].log[1].done, false);

@@ -172,7 +172,8 @@ function renderExercise(e, i) {
       renderWorkout();
     }));
   }
-  actions.appendChild(actionBtn(e.skipped ? "Unskip" : "Skip", () => updateActive((a) => { a.exercises[i].skipped = !a.exercises[i].skipped; })));
+  /* Like Swap, Skip goes once a set is logged: it would hide those sets. */
+  if (!started || e.skipped) actions.appendChild(actionBtn(e.skipped ? "Unskip" : "Skip", () => updateActive((a) => { a.exercises[i].skipped = !a.exercises[i].skipped; })));
   card.appendChild(actions);
 
   if (swapOpenFor === i && !started && !e.skipped) {
@@ -250,7 +251,8 @@ function unlockAudio() {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     audioCtx = audioCtx || new Ctx();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    /* iOS also reports "interrupted" after an app switch or a call. */
+    if (audioCtx.state !== "running") audioCtx.resume();
   } catch {
     audioCtx = null;
   }
@@ -324,6 +326,8 @@ document.getElementById("rest-plus").addEventListener("click", () => {
   if (a) updateRest(adjustRest(a.restEndsAt, Date.now(), 15));
 });
 document.getElementById("rest-skip").addEventListener("click", () => updateRest(null));
+/* Any tap counts, so a rest restored by a reload can still beep. */
+workoutEl.addEventListener("click", unlockAudio);
 
 workoutDaySelect.addEventListener("change", () => {
   const a = loadActive();

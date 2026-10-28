@@ -56,3 +56,14 @@ check("bar back after reload", !$("#rest-bar").hidden);
 // Undoing a set leaves the timer alone; timed rows have no rest.
 click(".set-check", $$(".set-row", $$(".workout-ex")[0])[1]);
 eq("undo keeps the timer", ls("lift-active").restEndsAt, end2);
+
+// iOS reports "interrupted" (not "suspended") after an app switch, and a
+// reload starts with no audio at all: any tap in workout mode unlocks it.
+await reload({ "coach-started-at": "0", "coach-injury": null,
+  "lift-active": app().newWorkout(app().liftPlan(null), "upperA", today, [], Date.now()) });
+let made = 0;
+let resumes = 0;
+app().AudioContext = function () { made++; this.state = "interrupted"; this.resume = () => { resumes++; }; };
+click("#workout-clock");
+eq("a tap in workout mode makes the audio", made, 1);
+eq("interrupted audio resumes", resumes, 1);
